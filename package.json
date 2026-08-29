@@ -1,0 +1,33 @@
+{
+  "name": "hausmeister",
+  "description": "",
+  "version": "0.0.1-dev",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "lint": "biome check --write",
+    "lint:ci": "biome ci",
+    "check": "turbo run check",
+    "build": "turbo run build",
+    "test": "turbo run test"
+  },
+  "packageManager": "bun@1.4.0",
+  "catalog": {
+    "drizzle-kit": "~0.31.10",
+    "drizzle-orm": "~0.45.2",
+    "hono": "~4.13.5",
+    "@hono/valibot-validator": "~0.6.1",
+    "better-result": "~3.0.1",
+    "valibot": "~1.4.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.11",
+    "@types/bun": "1.4.0",
+    "@types/node": "~26.4.0",
+    "typescript": "~7.0.2",
+    "turbo": "~2.10.12"
+  }
+}
