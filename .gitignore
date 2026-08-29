@@ -9,7 +9,12 @@ node_modules/
 *.tsbuildinfo
 playwright-report/
 test-results/
+*.db-shm
+*.db-wal
 
 # editor files
 .vscode/
 !.vscode/extensions.json
+
+# data
+*.db
