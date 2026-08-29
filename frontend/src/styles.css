@@ -1,0 +1,122 @@
+/* Shared button styles with smooth hover transitions */
+
+.btn-primary,
+.btn-ghost,
+.btn-icon {
+	transition:
+		background 150ms ease,
+		border-color 150ms ease,
+		color 150ms ease,
+		transform 150ms ease,
+		box-shadow 150ms ease;
+}
+
+.btn-primary {
+	background: #111827;
+	color: white;
+	border: 1px solid #111827;
+	border-radius: 8px;
+	padding: 0.5rem 0.9rem;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.875rem;
+}
+
+.btn-primary:hover {
+	background: #1f2937;
+	border-color: #1f2937;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(17, 24, 39, 0.18);
+}
+
+.btn-primary:active {
+	transform: translateY(0);
+	box-shadow: none;
+	background: #030712;
+}
+
+.btn-primary:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+.btn-ghost {
+	background: white;
+	color: #111827;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+	padding: 0.45rem 0.7rem;
+	cursor: pointer;
+	font-weight: 500;
+	font-size: 0.875rem;
+}
+
+.btn-ghost:hover {
+	background: #f9fafb;
+	border-color: #d1d5db;
+	transform: translateY(-1px);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.btn-ghost:active {
+	transform: translateY(0);
+	box-shadow: none;
+	background: #f3f4f6;
+}
+
+.btn-icon {
+	background: white;
+	color: #374151;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+	padding: 0.45rem;
+	cursor: pointer;
+	font-weight: 500;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 0;
+}
+
+.btn-icon:hover {
+	background: #f3f4f6;
+	border-color: #d1d5db;
+	color: #111827;
+	transform: translateY(-1px);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.btn-icon:active {
+	transform: translateY(0);
+	box-shadow: none;
+	background: #e5e7eb;
+}
+
+.btn-icon--danger {
+	color: #dc2626;
+}
+
+.btn-icon--danger:hover {
+	background: #fef2f2;
+	border-color: #fecaca;
+	color: #b91c1c;
+	box-shadow: 0 1px 4px rgba(220, 38, 38, 0.12);
+}
+
+.btn-icon--danger:active {
+	background: #fee2e2;
+}
+
+/* focus accessibility */
+.btn-primary:focus-visible,
+.btn-ghost:focus-visible,
+.btn-icon:focus-visible {
+	outline: 2px solid #111827;
+	outline-offset: 2px;
+}
+
+.btn-icon--danger:focus-visible {
+	outline-color: #dc2626;
+}

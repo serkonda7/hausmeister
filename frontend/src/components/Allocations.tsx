@@ -1,3 +1,4 @@
+import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api } from '../lib/api'
 import { formatEUR, liquidityLabels } from '../lib/format'
@@ -107,7 +108,7 @@ export default function Allocations() {
 				<button
 					type="button"
 					onClick={openCreate}
-					style={primaryBtn}
+					class="btn-primary"
 					disabled={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}
 				>
 					+ Zuweisung
@@ -212,10 +213,10 @@ export default function Allocations() {
 						<p style={{ color: '#ef4444', 'font-size': '0.875rem' }}>{error()}</p>
 					</Show>
 					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
-						<button type="button" onClick={() => setShowForm(false)} style={ghostBtn}>
+						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
 							Abbrechen
 						</button>
-						<button type="submit" style={primaryBtn}>
+						<button type="submit" class="btn-primary">
 							{editingId() ? 'Speichern' : 'Anlegen'}
 						</button>
 					</div>
@@ -260,16 +261,20 @@ export default function Allocations() {
 								<button
 									type="button"
 									onClick={() => openEdit(a.id)}
-									style={ghostBtn}
+									class="btn-icon"
+									aria-label="Bearbeiten"
+									title="Bearbeiten"
 								>
-									Edit
+									<IconPencil size={18} />
 								</button>
 								<button
 									type="button"
 									onClick={() => remove(a.id)}
-									style={{ ...ghostBtn, color: '#dc2626' }}
+									class="btn-icon btn-icon--danger"
+									aria-label="Löschen"
+									title="Löschen"
 								>
-									Löschen
+									<IconTrash size={18} />
 								</button>
 							</div>
 						</div>
@@ -295,22 +300,4 @@ const inputStyle: Record<string, string> = {
 	'border-radius': '8px',
 	padding: '0.5rem 0.6rem',
 	'font-size': '0.875rem',
-}
-const primaryBtn: Record<string, string> = {
-	background: '#111827',
-	color: 'white',
-	border: 'none',
-	'border-radius': '8px',
-	padding: '0.5rem 0.9rem',
-	cursor: 'pointer',
-	'font-weight': '600',
-}
-const ghostBtn: Record<string, string> = {
-	background: 'white',
-	color: '#111827',
-	border: '1px solid #e5e7eb',
-	'border-radius': '8px',
-	padding: '0.45rem 0.7rem',
-	cursor: 'pointer',
-	'font-weight': '500',
 }

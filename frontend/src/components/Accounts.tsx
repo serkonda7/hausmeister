@@ -1,3 +1,4 @@
+import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { accountTypeLabels, formatEUR, liquidityLabels } from '../lib/format'
@@ -98,19 +99,7 @@ export default function Accounts() {
 				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
 					Konten · Wo liegt das Geld
 				</h2>
-				<button
-					type="button"
-					onClick={openCreate}
-					style={{
-						background: '#111827',
-						color: 'white',
-						border: 'none',
-						'border-radius': '8px',
-						padding: '0.5rem 0.9rem',
-						cursor: 'pointer',
-						'font-weight': '600',
-					}}
-				>
+				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Konto
 				</button>
 			</div>
@@ -221,10 +210,10 @@ export default function Accounts() {
 						<p style={{ color: '#ef4444', 'font-size': '0.875rem' }}>{error()}</p>
 					</Show>
 					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
-						<button type="button" onClick={() => setShowForm(false)} style={ghostBtn}>
+						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
 							Abbrechen
 						</button>
-						<button type="submit" style={primaryBtn}>
+						<button type="submit" class="btn-primary">
 							{editing() ? 'Speichern' : 'Anlegen'}
 						</button>
 					</div>
@@ -268,15 +257,23 @@ export default function Accounts() {
 								<div style={{ 'font-weight': '700', 'white-space': 'nowrap' }}>
 									{formatEUR(a.balanceCents)}
 								</div>
-								<button type="button" onClick={() => openEdit(a)} style={ghostBtn}>
-									Edit
+								<button
+									type="button"
+									onClick={() => openEdit(a)}
+									class="btn-icon"
+									aria-label="Bearbeiten"
+									title="Bearbeiten"
+								>
+									<IconPencil size={18} />
 								</button>
 								<button
 									type="button"
 									onClick={() => remove(a.id)}
-									style={{ ...ghostBtn, color: '#dc2626' }}
+									class="btn-icon btn-icon--danger"
+									aria-label="Löschen"
+									title="Löschen"
 								>
-									Löschen
+									<IconTrash size={18} />
 								</button>
 							</div>
 						</div>
@@ -297,22 +294,4 @@ const inputStyle: Record<string, string> = {
 	'border-radius': '8px',
 	padding: '0.5rem 0.6rem',
 	'font-size': '0.875rem',
-}
-const primaryBtn: Record<string, string> = {
-	background: '#111827',
-	color: 'white',
-	border: 'none',
-	'border-radius': '8px',
-	padding: '0.5rem 0.9rem',
-	cursor: 'pointer',
-	'font-weight': '600',
-}
-const ghostBtn: Record<string, string> = {
-	background: 'white',
-	color: '#111827',
-	border: '1px solid #e5e7eb',
-	'border-radius': '8px',
-	padding: '0.45rem 0.7rem',
-	cursor: 'pointer',
-	'font-weight': '500',
 }
