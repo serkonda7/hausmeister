@@ -1,7 +1,7 @@
 import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
-import { formatEUR, formatPercent } from '../lib/format'
+import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
 
 export default function Pools() {
 	const [pools, { refetch }] = createResource(() => api.pools.list())
@@ -96,7 +96,7 @@ export default function Pools() {
 	}
 
 	async function remove(id: string) {
-		if (!confirm('Pool löschen? Zuweisungen bleiben, werden aber entkoppelt (CASCADE).')) {
+		if (!confirm('Pool löschen? Zuweisungen bleiben erhalten.')) {
 			return
 		}
 		await api.pools.remove(id)
@@ -113,7 +113,7 @@ export default function Pools() {
 				}}
 			>
 				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Pools · Zweck & Zielallokation
+					Pools
 				</h2>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Pool
@@ -184,7 +184,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label style={labelStyle}>
-							Ziel % (0-100){' '}
+							Ziel %{' '}
 							<input
 								type="number"
 								min="0"
@@ -209,17 +209,23 @@ export default function Pools() {
 							/>
 						</label>
 						<label style={labelStyle}>
-							Risiko 1-5{' '}
-							<input
-								type="number"
-								min="1"
-								max="5"
+							Risiko{' '}
+							<select
 								value={form().riskLevel}
-								onInput={(e) =>
+								onChange={(e) =>
 									setForm({ ...form(), riskLevel: e.currentTarget.value })
 								}
 								style={inputStyle}
-							/>
+							>
+								<option value="">—</option>
+								<For each={[1, 2, 3, 4, 5]}>
+									{(level) => (
+										<option value={level.toString()}>
+											{level} – {riskLevelLabels[level]}
+										</option>
+									)}
+								</For>
+							</select>
 						</label>
 						<label style={labelStyle}>
 							Volatilität %{' '}
@@ -354,9 +360,9 @@ export default function Pools() {
 										: ''}
 								</span>
 								<span>Rendite: {formatPercent(p.expectedReturnBps)}</span>
-								<span>Risiko: {p.riskLevel ?? '—'}/5</span>
-								<span>Vol: {formatPercent(p.volatilityBps)}</span>
-								<span>Horizont: {p.horizonMonths ?? '—'} M</span>
+								<span>Risiko: {formatRiskLevel(p.riskLevel)}</span>
+								<span>Volatilität: {formatPercent(p.volatilityBps)}</span>
+								<span>Horizont: {p.horizonMonths != null ? `${p.horizonMonths} Monate` : '—'}</span>
 							</div>
 						</div>
 					)}

@@ -87,9 +87,6 @@ export default function App(): JSX.Element {
 							<div style={{ 'font-weight': '700', 'letter-spacing': '-0.02em' }}>
 								Hausmeister
 							</div>
-							<div style={{ color: 'var(--muted)', 'font-size': '0.75rem' }}>
-								Finanzen · minimal & klar · EUR
-							</div>
 						</div>
 					</div>
 					<div
@@ -143,17 +140,6 @@ export default function App(): JSX.Element {
 					</Match>
 				</Switch>
 			</main>
-
-			<footer
-				style={{
-					'text-align': 'center',
-					color: 'var(--faint)',
-					'font-size': '0.75rem',
-					padding: '1.5rem',
-				}}
-			>
-				Lokal · SQLite · Keine Cloud · EUR only
-			</footer>
 		</div>
 	)
 }

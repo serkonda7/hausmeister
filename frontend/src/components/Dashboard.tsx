@@ -4,6 +4,7 @@ import {
 	formatDateISO,
 	formatEUR,
 	formatPercent,
+	formatRiskLevel,
 	liquidityColors,
 	liquidityLabels,
 } from '../lib/format'
@@ -11,7 +12,6 @@ import {
 export default function Dashboard() {
 	const [summary, { refetch }] = createResource(() => api.summary())
 
-	// refetch on focus
 	createEffect(() => {
 		const h = () => refetch()
 		window.addEventListener('focus', h)
@@ -29,7 +29,6 @@ export default function Dashboard() {
 			<Show when={summary()}>
 				{(data) => (
 					<>
-						{/* Total */}
 						<section
 							style={{
 								background: 'var(--surface)',
@@ -69,7 +68,6 @@ export default function Dashboard() {
 							</div>
 						</section>
 
-						{/* Liquidity */}
 						<section
 							style={{
 								background: 'var(--surface)',
@@ -138,19 +136,8 @@ export default function Dashboard() {
 									}}
 								</For>
 							</div>
-							<p
-								style={{
-									color: 'var(--muted)',
-									'font-size': '0.75rem',
-									'margin-top': '0.75rem',
-								}}
-							>
-								Effektiv: Override auf Zuweisung schlägt Konto-Default. Restguthaben
-								zählt zum Konto-Tier.
-							</p>
 						</section>
 
-						{/* Pools vs Target */}
 						<section
 							style={{
 								background: 'var(--surface)',
@@ -264,7 +251,7 @@ export default function Dashboard() {
 															: '—'}
 													</span>
 													<span>
-														Range:{' '}
+														Bereich:{' '}
 														{pt.targetMin != null
 															? formatEUR(pt.targetMin)
 															: '—'}{' '}
@@ -274,17 +261,17 @@ export default function Dashboard() {
 															: '—'}
 													</span>
 													<span>
-														Erwartung:{' '}
+														Rendite:{' '}
 														{formatPercent(pt.pool.expectedReturnBps)}{' '}
 														p.a.
 													</span>
 													<span>
-														Risiko: {pt.pool.riskLevel ?? '—'} / 5
+														Risiko: {formatRiskLevel(pt.pool.riskLevel)}
 													</span>
 													<span>
 														Horizont:{' '}
 														{pt.pool.horizonMonths != null
-															? `${pt.pool.horizonMonths} M`
+															? `${pt.pool.horizonMonths} Monate`
 															: '—'}
 													</span>
 													<span
@@ -311,7 +298,6 @@ export default function Dashboard() {
 													<div
 														style={{
 															width: `${Math.min(100, pct * 2)}%`,
-															// pct bar scaled: 50% = full width. Better: pct relative to 100
 															height: '100%',
 															background: ok
 																? 'var(--success-bright)'
@@ -341,7 +327,6 @@ export default function Dashboard() {
 							</div>
 						</section>
 
-						{/* Timeline two cols */}
 						<div
 							style={{
 								display: 'grid',
@@ -438,12 +423,11 @@ export default function Dashboard() {
 										'font-weight': '600',
 									}}
 								>
-									Verfügbar ab · Unlocks
+									Verfügbar ab
 								</h2>
 								<Show when={data().unlocks.length === 0}>
 									<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
-										Nichts gesperrt. Festgeld/Allocations mit Datum erscheinen
-										hier.
+										Nichts gesperrt in Festgeld / Zuweisungen.
 									</p>
 								</Show>
 								<div style={{ display: 'grid', gap: '0.6rem' }}>
@@ -466,7 +450,7 @@ export default function Dashboard() {
 															'font-size': '0.75rem',
 														}}
 													>
-														{formatDateISO(u.unlockAt)} · {u.type}
+														{formatDateISO(u.unlockAt)}
 													</div>
 												</div>
 												<div style={{ 'font-weight': '600' }}>

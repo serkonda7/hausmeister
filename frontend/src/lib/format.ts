@@ -45,3 +45,18 @@ export const accountTypeLabels: Record<string, string> = {
 	festgeld: 'Festgeld',
 	other: 'Sonstiges',
 }
+
+export const riskLevelLabels: Record<number, string> = {
+	1: 'Sehr niedrig',
+	2: 'Niedrig',
+	3: 'Mittel',
+	4: 'Hoch',
+	5: 'Sehr hoch',
+}
+
+export function formatRiskLevel(level: number | null | undefined): string {
+	if (level == null) {
+		return '—'
+	}
+	return riskLevelLabels[level] ?? '—'
+}

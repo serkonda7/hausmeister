@@ -103,7 +103,7 @@ export default function Allocations() {
 				}}
 			>
 				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Zuweisungen · Pool ↔ Konto
+					Zuweisungen
 				</h2>
 				<button
 					type="button"
@@ -183,7 +183,7 @@ export default function Allocations() {
 							/>
 						</label>
 						<label style={labelStyle}>
-							Override Verfügbarkeit (optional)
+							Verfügbarkeit
 							<select
 								value={form().liquidityOverride}
 								onChange={(e) =>
@@ -191,7 +191,7 @@ export default function Allocations() {
 								}
 								style={inputStyle}
 							>
-								<option value="">— Konto-Default</option>
+								<option value="">— Standard vom Konto</option>
 								<For each={Object.entries(liquidityLabels)}>
 									{([k, v]) => <option value={k}>{v}</option>}
 								</For>
@@ -247,8 +247,8 @@ export default function Allocations() {
 								</div>
 								<div style={{ color: 'var(--muted)', 'font-size': '0.75rem' }}>
 									{a.liquidityOverride
-										? `Override: ${liquidityLabels[a.liquidityOverride]}`
-										: 'Konto-Default'}{' '}
+										? `Abweichend: ${liquidityLabels[a.liquidityOverride]}`
+										: 'Standard vom Konto'}{' '}
 									<Show when={a.unlockAt}>· ab {a.unlockAt}</Show>
 								</div>
 							</div>

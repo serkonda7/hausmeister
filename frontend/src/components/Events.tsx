@@ -116,7 +116,7 @@ export default function Events() {
 				}}
 			>
 				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Zeitstrahl · Verfügbarkeit & Fälligkeiten
+					Zeitstrahl
 				</h2>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Ereignis

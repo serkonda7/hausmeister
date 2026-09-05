@@ -97,7 +97,7 @@ export default function Accounts() {
 				}}
 			>
 				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Konten · Wo liegt das Geld
+					Konten
 				</h2>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Konto
@@ -187,7 +187,7 @@ export default function Accounts() {
 							/>
 						</label>
 						<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
-							Verfügbar ab (ISO Datum){' '}
+							Verfügbar ab{' '}
 							<input
 								type="date"
 								value={form().unlockAt}
