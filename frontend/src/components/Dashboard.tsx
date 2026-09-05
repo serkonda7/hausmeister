@@ -21,10 +21,10 @@ export default function Dashboard() {
 	return (
 		<div style={{ display: 'grid', gap: '1.25rem' }}>
 			<Show when={summary.loading}>
-				<p style={{ color: '#6b7280' }}>Laden…</p>
+				<p style={{ color: 'var(--muted)' }}>Laden…</p>
 			</Show>
 			<Show when={summary.error}>
-				<p style={{ color: '#ef4444' }}>Fehler: {(summary.error as Error).message}</p>
+				<p style={{ color: 'var(--error)' }}>Fehler: {(summary.error as Error).message}</p>
 			</Show>
 			<Show when={summary()}>
 				{(data) => (
@@ -32,15 +32,15 @@ export default function Dashboard() {
 						{/* Total */}
 						<section
 							style={{
-								background: 'white',
-								border: '1px solid #e5e7eb',
+								background: 'var(--surface)',
+								border: '1px solid var(--border)',
 								'border-radius': '12px',
 								padding: '1.25rem',
 							}}
 						>
 							<div
 								style={{
-									color: '#6b7280',
+									color: 'var(--muted)',
 									'font-size': '0.875rem',
 									'text-transform': 'uppercase',
 									'letter-spacing': '0.05em',
@@ -59,7 +59,7 @@ export default function Dashboard() {
 							</div>
 							<div
 								style={{
-									color: '#6b7280',
+									color: 'var(--muted)',
 									'font-size': '0.875rem',
 									'margin-top': '0.25rem',
 								}}
@@ -72,8 +72,8 @@ export default function Dashboard() {
 						{/* Liquidity */}
 						<section
 							style={{
-								background: 'white',
-								border: '1px solid #e5e7eb',
+								background: 'var(--surface)',
+								border: '1px solid var(--border)',
 								'border-radius': '12px',
 								padding: '1.25rem',
 							}}
@@ -109,14 +109,14 @@ export default function Dashboard() {
 													}}
 												>
 													<span>{liquidityLabels[tier] ?? tier}</span>
-													<span style={{ color: '#6b7280' }}>
+													<span style={{ color: 'var(--muted)' }}>
 														{formatEUR(cents)} · {pct.toFixed(1)}%
 													</span>
 												</div>
 												<div
 													style={{
 														height: '8px',
-														background: '#f3f4f6',
+														background: 'var(--surface-2)',
 														'border-radius': '999px',
 														'margin-top': '0.35rem',
 														overflow: 'hidden',
@@ -140,7 +140,7 @@ export default function Dashboard() {
 							</div>
 							<p
 								style={{
-									color: '#6b7280',
+									color: 'var(--muted)',
 									'font-size': '0.75rem',
 									'margin-top': '0.75rem',
 								}}
@@ -153,8 +153,8 @@ export default function Dashboard() {
 						{/* Pools vs Target */}
 						<section
 							style={{
-								background: 'white',
-								border: '1px solid #e5e7eb',
+								background: 'var(--surface)',
+								border: '1px solid var(--border)',
 								'border-radius': '12px',
 								padding: '1.25rem',
 							}}
@@ -169,7 +169,7 @@ export default function Dashboard() {
 								Pools · Ziel vs. Ist
 							</h2>
 							<Show when={data().poolTotals.length === 0}>
-								<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+								<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 									Noch keine Pools angelegt. Lege einen Pool in „Pools“ an.
 								</p>
 							</Show>
@@ -189,7 +189,7 @@ export default function Dashboard() {
 										return (
 											<div
 												style={{
-													border: '1px solid #f3f4f6',
+													border: '1px solid var(--surface-2)',
 													'border-radius': '10px',
 													padding: '0.9rem',
 												}}
@@ -225,7 +225,7 @@ export default function Dashboard() {
 														<Show when={pt.pool.purpose}>
 															<div
 																style={{
-																	color: '#6b7280',
+																	color: 'var(--muted)',
 																	'font-size': '0.8rem',
 																}}
 															>
@@ -239,7 +239,7 @@ export default function Dashboard() {
 														</div>
 														<div
 															style={{
-																color: '#6b7280',
+																color: 'var(--muted)',
 																'font-size': '0.75rem',
 															}}
 														>
@@ -253,7 +253,7 @@ export default function Dashboard() {
 														gap: '1rem',
 														'margin-top': '0.5rem',
 														'font-size': '0.75rem',
-														color: '#6b7280',
+														color: 'var(--muted)',
 														'flex-wrap': 'wrap',
 													}}
 												>
@@ -290,7 +290,9 @@ export default function Dashboard() {
 													<span
 														style={{
 															'margin-left': 'auto',
-															color: ok ? '#16a34a' : '#d97706',
+															color: ok
+																? 'var(--success)'
+																: 'var(--warning)',
 															'font-weight': '600',
 														}}
 													>
@@ -300,7 +302,7 @@ export default function Dashboard() {
 												<div
 													style={{
 														height: '6px',
-														background: '#f3f4f6',
+														background: 'var(--surface-2)',
 														'border-radius': '999px',
 														'margin-top': '0.6rem',
 														position: 'relative',
@@ -311,7 +313,9 @@ export default function Dashboard() {
 															width: `${Math.min(100, pct * 2)}%`,
 															// pct bar scaled: 50% = full width. Better: pct relative to 100
 															height: '100%',
-															background: ok ? '#22c55e' : '#f59e0b',
+															background: ok
+																? 'var(--success-bright)'
+																: 'var(--warning-bright)',
 															'border-radius': '999px',
 														}}
 													/>
@@ -323,7 +327,7 @@ export default function Dashboard() {
 																top: '-2px',
 																width: '2px',
 																height: '10px',
-																background: '#111827',
+																background: 'var(--primary)',
 																'border-radius': '1px',
 															}}
 															title={`Ziel ${targetPct}%`}
@@ -347,8 +351,8 @@ export default function Dashboard() {
 						>
 							<section
 								style={{
-									background: 'white',
-									border: '1px solid #e5e7eb',
+									background: 'var(--surface)',
+									border: '1px solid var(--border)',
 									'border-radius': '12px',
 									padding: '1.25rem',
 								}}
@@ -363,7 +367,7 @@ export default function Dashboard() {
 									Nächste 90 Tage · Cashflow
 								</h2>
 								<Show when={data().upcomingEvents.length === 0}>
-									<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+									<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 										Keine Ereignisse im Zeitraum.
 									</p>
 								</Show>
@@ -388,7 +392,7 @@ export default function Dashboard() {
 														</div>
 														<div
 															style={{
-																color: '#6b7280',
+																color: 'var(--muted)',
 																'font-size': '0.75rem',
 															}}
 														>
@@ -404,8 +408,8 @@ export default function Dashboard() {
 															'font-weight': '600',
 															color:
 																ev.direction === 'inflow'
-																	? '#16a34a'
-																	: '#dc2626',
+																	? 'var(--success)'
+																	: 'var(--danger)',
 															'white-space': 'nowrap',
 														}}
 													>
@@ -421,8 +425,8 @@ export default function Dashboard() {
 
 							<section
 								style={{
-									background: 'white',
-									border: '1px solid #e5e7eb',
+									background: 'var(--surface)',
+									border: '1px solid var(--border)',
 									'border-radius': '12px',
 									padding: '1.25rem',
 								}}
@@ -437,7 +441,7 @@ export default function Dashboard() {
 									Verfügbar ab · Unlocks
 								</h2>
 								<Show when={data().unlocks.length === 0}>
-									<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+									<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 										Nichts gesperrt. Festgeld/Allocations mit Datum erscheinen
 										hier.
 									</p>
@@ -458,7 +462,7 @@ export default function Dashboard() {
 													</div>
 													<div
 														style={{
-															color: '#6b7280',
+															color: 'var(--muted)',
 															'font-size': '0.75rem',
 														}}
 													>

@@ -124,8 +124,8 @@ export default function Pools() {
 				<form
 					onSubmit={submit}
 					style={{
-						background: 'white',
-						border: '1px solid #e5e7eb',
+						background: 'var(--surface)',
+						border: '1px solid var(--border)',
 						'border-radius': '12px',
 						padding: '1rem',
 						display: 'grid',
@@ -257,7 +257,7 @@ export default function Pools() {
 						</label>
 					</div>
 					<Show when={error()}>
-						<p style={{ color: '#ef4444', 'font-size': '0.875rem' }}>{error()}</p>
+						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
 					</Show>
 					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
@@ -275,8 +275,8 @@ export default function Pools() {
 					{(p) => (
 						<div
 							style={{
-								background: 'white',
-								border: '1px solid #e5e7eb',
+								background: 'var(--surface)',
+								border: '1px solid var(--border)',
 								'border-radius': '12px',
 								padding: '1rem',
 							}}
@@ -306,7 +306,12 @@ export default function Pools() {
 									/>
 									<span style={{ 'font-weight': '600' }}>{p.name}</span>
 									<Show when={p.purpose}>
-										<span style={{ color: '#6b7280', 'font-size': '0.85rem' }}>
+										<span
+											style={{
+												color: 'var(--muted)',
+												'font-size': '0.85rem',
+											}}
+										>
 											· {p.purpose}
 										</span>
 									</Show>
@@ -334,7 +339,7 @@ export default function Pools() {
 							</div>
 							<div
 								style={{
-									color: '#6b7280',
+									color: 'var(--muted)',
 									'font-size': '0.8rem',
 									'margin-top': '0.5rem',
 									display: 'flex',
@@ -357,7 +362,7 @@ export default function Pools() {
 					)}
 				</For>
 				<Show when={(pools() ?? []).length === 0 && !pools.loading}>
-					<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 						Keine Pools. Erstelle z. B. „Notgroschen“, „Invest“, „Urlaub“.
 					</p>
 				</Show>
@@ -372,8 +377,10 @@ const labelStyle: Record<string, string> = {
 	'font-size': '0.875rem',
 }
 const inputStyle: Record<string, string> = {
-	border: '1px solid #d1d5db',
+	border: '1px solid var(--border-strong)',
 	'border-radius': '8px',
 	padding: '0.5rem 0.6rem',
 	'font-size': '0.875rem',
+	background: 'var(--input-bg)',
+	color: 'var(--text)',
 }

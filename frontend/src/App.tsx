@@ -1,23 +1,30 @@
-import { createSignal, type JSX, Match, Switch } from 'solid-js'
+import { IconMoon, IconSun } from '@tabler/icons-solidjs'
+import { createSignal, type JSX, Match, onCleanup, onMount, Switch } from 'solid-js'
 import Accounts from './components/Accounts'
 import Allocations from './components/Allocations'
 import Dashboard from './components/Dashboard'
 import Events from './components/Events'
 import Pools from './components/Pools'
+import { initThemeListener, theme, toggleTheme } from './lib/theme'
 
 type View = 'dashboard' | 'accounts' | 'pools' | 'allocations' | 'events'
 
 export default function App(): JSX.Element {
 	const [view, setView] = createSignal<View>('dashboard')
 
+	onMount(() => {
+		const dispose = initThemeListener()
+		onCleanup(dispose)
+	})
+
 	const navItem = (id: View, label: string) => (
 		<button
 			type="button"
 			onClick={() => setView(id)}
 			style={{
-				background: view() === id ? '#111827' : 'transparent',
-				color: view() === id ? 'white' : '#374151',
-				border: view() === id ? '1px solid #111827' : '1px solid #e5e7eb',
+				background: view() === id ? 'var(--primary)' : 'transparent',
+				color: view() === id ? 'var(--primary-text)' : 'var(--text-secondary)',
+				border: view() === id ? '1px solid var(--primary)' : '1px solid var(--border)',
 				'border-radius': '999px',
 				padding: '0.4rem 0.85rem',
 				'font-size': '0.875rem',
@@ -33,8 +40,8 @@ export default function App(): JSX.Element {
 		<div
 			style={{
 				'min-height': '100vh',
-				background: '#f9fafb',
-				color: '#111827',
+				background: 'var(--bg)',
+				color: 'var(--text)',
 				'font-family': 'ui-sans-system, -apple-system, Segoe UI, Roboto, Helvetica, Arial',
 			}}
 		>
@@ -42,9 +49,9 @@ export default function App(): JSX.Element {
 				style={{
 					position: 'sticky',
 					top: '0',
-					background: 'white',
-					border: '1px solid #e5e7eb',
-					'border-bottom': '1px solid #e5e7eb',
+					background: 'var(--surface)',
+					border: '1px solid var(--border)',
+					'border-bottom': '1px solid var(--border)',
 					'z-index': '10',
 				}}
 			>
@@ -66,8 +73,8 @@ export default function App(): JSX.Element {
 								width: '32px',
 								height: '32px',
 								'border-radius': '8px',
-								background: '#111827',
-								color: 'white',
+								background: 'var(--primary)',
+								color: 'var(--primary-text)',
 								display: 'grid',
 								'place-items': 'center',
 								'font-weight': '700',
@@ -80,18 +87,40 @@ export default function App(): JSX.Element {
 							<div style={{ 'font-weight': '700', 'letter-spacing': '-0.02em' }}>
 								Hausmeister
 							</div>
-							<div style={{ color: '#6b7280', 'font-size': '0.75rem' }}>
+							<div style={{ color: 'var(--muted)', 'font-size': '0.75rem' }}>
 								Finanzen · minimal & klar · EUR
 							</div>
 						</div>
 					</div>
-					<nav style={{ display: 'flex', gap: '0.5rem', 'flex-wrap': 'wrap' }}>
-						{navItem('dashboard', 'Dashboard')}
-						{navItem('accounts', 'Konten')}
-						{navItem('pools', 'Pools')}
-						{navItem('allocations', 'Zuweisungen')}
-						{navItem('events', 'Zeitstrahl')}
-					</nav>
+					<div
+						style={{
+							display: 'flex',
+							gap: '0.75rem',
+							'align-items': 'center',
+							'flex-wrap': 'wrap',
+						}}
+					>
+						<nav style={{ display: 'flex', gap: '0.5rem', 'flex-wrap': 'wrap' }}>
+							{navItem('dashboard', 'Dashboard')}
+							{navItem('accounts', 'Konten')}
+							{navItem('pools', 'Pools')}
+							{navItem('allocations', 'Zuweisungen')}
+							{navItem('events', 'Zeitstrahl')}
+						</nav>
+						<button
+							type="button"
+							onClick={toggleTheme}
+							class="btn-icon"
+							aria-label={
+								theme() === 'dark'
+									? 'Zu hellem Modus wechseln'
+									: 'Zu dunklem Modus wechseln'
+							}
+							title={theme() === 'dark' ? 'Hellmodus' : 'Dunkelmodus'}
+						>
+							{theme() === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+						</button>
+					</div>
 				</div>
 			</header>
 
@@ -118,7 +147,7 @@ export default function App(): JSX.Element {
 			<footer
 				style={{
 					'text-align': 'center',
-					color: '#9ca3af',
+					color: 'var(--faint)',
 					'font-size': '0.75rem',
 					padding: '1.5rem',
 				}}

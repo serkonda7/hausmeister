@@ -5,14 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- <link rel="icon" href=""> -->
     <!-- <title></title> -->
+    <meta name="color-scheme" content="light dark">
+    <style>
+    html[data-theme="light"] body {
+      background: #f9fafb;
+      color: #111827;
+    }
+    html[data-theme="dark"] body {
+      background: #0f1115;
+      color: #e5e7eb;
+    }
+    </style>
     <script>
     // Set the theme before first paint to avoid a flash of the wrong theme
-    const storedTheme = localStorage.getItem('theme')
-    const initialTheme =
-      (storedTheme ?? window.matchMedia('(prefers-color-scheme: dark)').matches)
-        ? 'dark'
-        : 'light'
-    document.documentElement.dataset.theme = initialTheme
+    try {
+      const stored = localStorage.getItem('theme')
+      const initialTheme =
+        stored === 'dark' || stored === 'light'
+          ? stored
+          : window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light'
+      document.documentElement.dataset.theme = initialTheme
+      document.documentElement.style.colorScheme = initialTheme
+    } catch {
+      // ignore
+    }
     </script>
   </head>
 

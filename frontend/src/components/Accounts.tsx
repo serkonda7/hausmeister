@@ -108,8 +108,8 @@ export default function Accounts() {
 				<form
 					onSubmit={submit}
 					style={{
-						background: 'white',
-						border: '1px solid #e5e7eb',
+						background: 'var(--surface)',
+						border: '1px solid var(--border)',
 						'border-radius': '12px',
 						padding: '1rem',
 						display: 'grid',
@@ -207,7 +207,7 @@ export default function Accounts() {
 						/>
 					</label>
 					<Show when={error()}>
-						<p style={{ color: '#ef4444', 'font-size': '0.875rem' }}>{error()}</p>
+						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
 					</Show>
 					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
@@ -221,7 +221,7 @@ export default function Accounts() {
 			</Show>
 
 			<Show when={accounts.loading}>
-				<p style={{ color: '#6b7280' }}>Laden…</p>
+				<p style={{ color: 'var(--muted)' }}>Laden…</p>
 			</Show>
 
 			<div style={{ display: 'grid', gap: '0.75rem' }}>
@@ -229,8 +229,8 @@ export default function Accounts() {
 					{(a) => (
 						<div
 							style={{
-								background: 'white',
-								border: '1px solid #e5e7eb',
+								background: 'var(--surface)',
+								border: '1px solid var(--border)',
 								'border-radius': '12px',
 								padding: '1rem',
 								display: 'flex',
@@ -242,11 +242,11 @@ export default function Accounts() {
 							<div>
 								<div style={{ 'font-weight': '600' }}>
 									{a.name}{' '}
-									<span style={{ color: '#6b7280', 'font-weight': '400' }}>
+									<span style={{ color: 'var(--muted)', 'font-weight': '400' }}>
 										· {accountTypeLabels[a.type]}
 									</span>
 								</div>
-								<div style={{ color: '#6b7280', 'font-size': '0.8rem' }}>
+								<div style={{ color: 'var(--muted)', 'font-size': '0.8rem' }}>
 									{a.institution ?? '—'} · {liquidityLabels[a.liquidityTier]}
 									<Show when={a.unlockAt}> · ab {a.unlockAt}</Show>
 								</div>
@@ -280,7 +280,7 @@ export default function Accounts() {
 					)}
 				</For>
 				<Show when={(accounts() ?? []).length === 0 && !accounts.loading}>
-					<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 						Keine Konten. Lege dein erstes Konto an.
 					</p>
 				</Show>
@@ -290,8 +290,10 @@ export default function Accounts() {
 }
 
 const inputStyle: Record<string, string> = {
-	border: '1px solid #d1d5db',
+	border: '1px solid var(--border-strong)',
 	'border-radius': '8px',
 	padding: '0.5rem 0.6rem',
 	'font-size': '0.875rem',
+	background: 'var(--input-bg)',
+	color: 'var(--text)',
 }

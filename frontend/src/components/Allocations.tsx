@@ -115,7 +115,7 @@ export default function Allocations() {
 				</button>
 			</div>
 			<Show when={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}>
-				<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+				<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 					Erst Konten und Pools anlegen, dann Zuweisungen verbinden.
 				</p>
 			</Show>
@@ -124,8 +124,8 @@ export default function Allocations() {
 				<form
 					onSubmit={submit}
 					style={{
-						background: 'white',
-						border: '1px solid #e5e7eb',
+						background: 'var(--surface)',
+						border: '1px solid var(--border)',
 						'border-radius': '12px',
 						padding: '1rem',
 						display: 'grid',
@@ -210,7 +210,7 @@ export default function Allocations() {
 						</label>
 					</div>
 					<Show when={error()}>
-						<p style={{ color: '#ef4444', 'font-size': '0.875rem' }}>{error()}</p>
+						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
 					</Show>
 					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
@@ -228,8 +228,8 @@ export default function Allocations() {
 					{(a) => (
 						<div
 							style={{
-								background: 'white',
-								border: '1px solid #e5e7eb',
+								background: 'var(--surface)',
+								border: '1px solid var(--border)',
 								'border-radius': '12px',
 								padding: '0.9rem',
 								display: 'flex',
@@ -241,11 +241,11 @@ export default function Allocations() {
 							<div>
 								<div style={{ 'font-weight': '600', 'font-size': '0.9rem' }}>
 									{poolName(a.poolId)}{' '}
-									<span style={{ color: '#6b7280', 'font-weight': '400' }}>
+									<span style={{ color: 'var(--muted)', 'font-weight': '400' }}>
 										→ {accountName(a.accountId)}
 									</span>
 								</div>
-								<div style={{ color: '#6b7280', 'font-size': '0.75rem' }}>
+								<div style={{ color: 'var(--muted)', 'font-size': '0.75rem' }}>
 									{a.liquidityOverride
 										? `Override: ${liquidityLabels[a.liquidityOverride]}`
 										: 'Konto-Default'}{' '}
@@ -281,7 +281,7 @@ export default function Allocations() {
 					)}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
-					<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 						Keine Zuweisungen. Verteile Kontoguthaben auf Pools.
 					</p>
 				</Show>
@@ -296,8 +296,10 @@ const labelStyle: Record<string, string> = {
 	'font-size': '0.875rem',
 }
 const inputStyle: Record<string, string> = {
-	border: '1px solid #d1d5db',
+	border: '1px solid var(--border-strong)',
 	'border-radius': '8px',
 	padding: '0.5rem 0.6rem',
 	'font-size': '0.875rem',
+	background: 'var(--input-bg)',
+	color: 'var(--text)',
 }

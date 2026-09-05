@@ -127,8 +127,8 @@ export default function Events() {
 				<form
 					onSubmit={submit}
 					style={{
-						background: 'white',
-						border: '1px solid #e5e7eb',
+						background: 'var(--surface)',
+						border: '1px solid var(--border)',
 						'border-radius': '12px',
 						padding: '1rem',
 						display: 'grid',
@@ -283,7 +283,7 @@ export default function Events() {
 						/>
 					</label>
 					<Show when={error()}>
-						<p style={{ color: '#ef4444', 'font-size': '0.875rem' }}>{error()}</p>
+						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
 					</Show>
 					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
@@ -301,8 +301,8 @@ export default function Events() {
 					{(ev) => (
 						<div
 							style={{
-								background: 'white',
-								border: '1px solid #e5e7eb',
+								background: 'var(--surface)',
+								border: '1px solid var(--border)',
 								'border-radius': '12px',
 								padding: '0.9rem',
 								display: 'flex',
@@ -315,7 +315,7 @@ export default function Events() {
 								<div style={{ 'font-weight': '600', 'font-size': '0.9rem' }}>
 									{ev.title}
 								</div>
-								<div style={{ color: '#6b7280', 'font-size': '0.75rem' }}>
+								<div style={{ color: 'var(--muted)', 'font-size': '0.75rem' }}>
 									{formatDateISO(ev.date)}{' '}
 									<Show when={ev.isRecurring}>· {ev.frequency} ↻</Show>{' '}
 									<Show when={ev.recurringUntil}>
@@ -331,7 +331,10 @@ export default function Events() {
 								<span
 									style={{
 										'font-weight': '700',
-										color: ev.direction === 'inflow' ? '#16a34a' : '#dc2626',
+										color:
+											ev.direction === 'inflow'
+												? 'var(--success)'
+												: 'var(--danger)',
 									}}
 								>
 									{ev.direction === 'inflow' ? '+' : '−'}
@@ -360,7 +363,7 @@ export default function Events() {
 					)}
 				</For>
 				<Show when={(events() ?? []).length === 0 && !events.loading}>
-					<p style={{ color: '#6b7280', 'font-size': '0.875rem' }}>
+					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
 						Keine Ereignisse. Lege z. B. Gehalt (monatlich Zufluss) oder Miete
 						(monatlich Abfluss) an.
 					</p>
@@ -376,8 +379,10 @@ const labelStyle: Record<string, string> = {
 	'font-size': '0.875rem',
 }
 const inputStyle: Record<string, string> = {
-	border: '1px solid #d1d5db',
+	border: '1px solid var(--border-strong)',
 	'border-radius': '8px',
 	padding: '0.5rem 0.6rem',
 	'font-size': '0.875rem',
+	background: 'var(--input-bg)',
+	color: 'var(--text)',
 }
