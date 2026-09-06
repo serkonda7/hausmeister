@@ -1,5 +1,6 @@
 import { IconMoon, IconSun } from '@tabler/icons-solidjs'
-import { createSignal, Dynamic, type JSX, For, onCleanup, onMount } from 'solid-js'
+import { createSignal, type JSX, For, onCleanup, onMount } from 'solid-js'
+import { Dynamic } from 'solid-js/web'
 import Accounts from './components/Accounts'
 import Allocations from './components/Allocations'
 import Dashboard from './components/Dashboard'
