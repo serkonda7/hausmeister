@@ -1,7 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Allocation, api } from '../lib/api'
-import { formatEUR, liquidityLabels } from '../lib/format'
 import { patchForm } from '../lib/form'
+import { formatEUR, liquidityLabels } from '../lib/format'
 import CrudRow from './CrudRow'
 import EmptyState from './EmptyState'
 
@@ -63,8 +63,7 @@ export default function Allocations() {
 			poolId: f.poolId,
 			accountId: f.accountId,
 			amountCents,
-			liquidityOverride: (f.liquidityOverride ||
-				null) as Allocation['liquidityOverride'],
+			liquidityOverride: (f.liquidityOverride || null) as Allocation['liquidityOverride'],
 			unlockAt: f.unlockAt || null,
 		}
 		try {
@@ -154,9 +153,7 @@ export default function Allocations() {
 								type="number"
 								step="0.01"
 								value={form().amount}
-								onInput={(e) =>
-									patchForm(setForm, 'amount', e.currentTarget.value)
-								}
+								onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -229,9 +226,7 @@ export default function Allocations() {
 					)}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
-					<EmptyState>
-						Keine Zuweisungen. Verteile Kontoguthaben auf Pools.
-					</EmptyState>
+					<EmptyState>Keine Zuweisungen. Verteile Kontoguthaben auf Pools.</EmptyState>
 				</Show>
 			</div>
 		</div>

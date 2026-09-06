@@ -1,7 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
-import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
 import { patchForm } from '../lib/form'
+import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
 import CrudRow from './CrudRow'
 import EmptyState from './EmptyState'
 
@@ -66,20 +66,14 @@ export default function Pools() {
 		const payload: Omit<Pool, 'id' | 'createdAt'> = {
 			name: f.name,
 			purpose: f.purpose || null,
-			targetMinCents: f.targetMin
-				? Math.round(Number.parseFloat(f.targetMin) * 100)
-				: null,
-			targetMaxCents: f.targetMax
-				? Math.round(Number.parseFloat(f.targetMax) * 100)
-				: null,
+			targetMinCents: f.targetMin ? Math.round(Number.parseFloat(f.targetMin) * 100) : null,
+			targetMaxCents: f.targetMax ? Math.round(Number.parseFloat(f.targetMax) * 100) : null,
 			targetPercent: f.targetPercent ? Number.parseInt(f.targetPercent, 10) : null,
 			expectedReturnBps: f.expectedReturn
 				? Math.round(Number.parseFloat(f.expectedReturn) * 100)
 				: null,
 			riskLevel: f.riskLevel ? Number.parseInt(f.riskLevel, 10) : null,
-			volatilityBps: f.volatility
-				? Math.round(Number.parseFloat(f.volatility) * 100)
-				: null,
+			volatilityBps: f.volatility ? Math.round(Number.parseFloat(f.volatility) * 100) : null,
 			horizonMonths: f.horizonMonths ? Number.parseInt(f.horizonMonths, 10) : null,
 			color: f.color || null,
 		}
@@ -234,9 +228,7 @@ export default function Pools() {
 							<input
 								type="color"
 								value={form().color}
-								onInput={(e) =>
-									patchForm(setForm, 'color', e.currentTarget.value)
-								}
+								onInput={(e) => patchForm(setForm, 'color', e.currentTarget.value)}
 								class="input"
 							/>
 						</label>
@@ -271,7 +263,10 @@ export default function Pools() {
 									</Show>
 								</div>
 								<div class="card-actions">
-									<CrudRow onEdit={() => openEdit(p)} onDelete={() => remove(p.id)} />
+									<CrudRow
+										onEdit={() => openEdit(p)}
+										onDelete={() => remove(p.id)}
+									/>
 								</div>
 							</div>
 							<div class="muted text-sm meta-row">

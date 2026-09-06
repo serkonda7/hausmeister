@@ -1,5 +1,5 @@
-import { createResource, For, Show, onCleanup, onMount } from 'solid-js'
-import { type LiquidityTier, type Summary, api } from '../lib/api'
+import { createResource, For, onCleanup, onMount, Show } from 'solid-js'
+import { api, type LiquidityTier, type Summary } from '../lib/api'
 import {
 	formatDateISO,
 	formatEUR,
@@ -82,7 +82,8 @@ export default function Dashboard() {
 															style={{
 																width: `${share}%`,
 																background:
-																	liquidityColors[tier] ?? '#9ca3af',
+																	liquidityColors[tier] ??
+																	'#9ca3af',
 															}}
 														/>
 													</div>
@@ -115,7 +116,8 @@ export default function Dashboard() {
 																	class="dot dot--sm"
 																	style={{
 																		background:
-																			pt.pool.color ?? '#9ca3af',
+																			pt.pool.color ??
+																			'#9ca3af',
 																	}}
 																/>
 																{pt.pool.name}
@@ -154,11 +156,14 @@ export default function Dashboard() {
 														</span>
 														<span>
 															Rendite:{' '}
-															{formatPercent(pt.pool.expectedReturnBps)}{' '}
+															{formatPercent(
+																pt.pool.expectedReturnBps,
+															)}{' '}
 															p.a.
 														</span>
 														<span>
-															Risiko: {formatRiskLevel(pt.pool.riskLevel)}
+															Risiko:{' '}
+															{formatRiskLevel(pt.pool.riskLevel)}
 														</span>
 														<span>
 															Horizont:{' '}
@@ -208,7 +213,9 @@ export default function Dashboard() {
 
 							<div class="dashboard-grid">
 								<section class="dashboard-card">
-									<h2 class="dashboard-section-title">Nächste 90 Tage · Cashflow</h2>
+									<h2 class="dashboard-section-title">
+										Nächste 90 Tage · Cashflow
+									</h2>
 									<Show when={d.upcomingEvents.length === 0}>
 										<EmptyState>Keine Ereignisse im Zeitraum.</EmptyState>
 									</Show>
@@ -231,7 +238,8 @@ export default function Dashboard() {
 														<div
 															class="row-amount"
 															classList={{
-																'amount--in': ev.direction === 'inflow',
+																'amount--in':
+																	ev.direction === 'inflow',
 																'amount--out':
 																	ev.direction !== 'inflow',
 															}}

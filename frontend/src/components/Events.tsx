@@ -1,7 +1,7 @@
 import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
-import { type FinanceEvent, api } from '../lib/api'
-import { formatDateISO, formatEUR } from '../lib/format'
+import { api, type FinanceEvent } from '../lib/api'
 import { patchForm } from '../lib/form'
+import { formatDateISO, formatEUR } from '../lib/format'
 import CrudRow from './CrudRow'
 import EmptyState from './EmptyState'
 
@@ -128,9 +128,7 @@ export default function Events() {
 							Titel{' '}
 							<input
 								value={form().title}
-								onInput={(e) =>
-									patchForm(setForm, 'title', e.currentTarget.value)
-								}
+								onInput={(e) => patchForm(setForm, 'title', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -141,9 +139,7 @@ export default function Events() {
 								type="number"
 								step="0.01"
 								value={form().amount}
-								onInput={(e) =>
-									patchForm(setForm, 'amount', e.currentTarget.value)
-								}
+								onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -209,7 +205,7 @@ export default function Events() {
 									type="date"
 									value={form().recurringUntil}
 									onInput={(e) =>
-										patchForm(setForm, 'recurringUntil', e.currentTarget.value,)
+										patchForm(setForm, 'recurringUntil', e.currentTarget.value)
 									}
 									class="input"
 								/>

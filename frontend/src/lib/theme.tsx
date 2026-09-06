@@ -10,9 +10,7 @@ function isTheme(value: unknown): value is Theme {
 const safeStorage = {
 	get(key: string): string | null {
 		try {
-			return typeof localStorage === 'undefined'
-				? null
-				: localStorage.getItem(key)
+			return typeof localStorage === 'undefined' ? null : localStorage.getItem(key)
 		} catch {
 			return null
 		}
@@ -35,10 +33,7 @@ function prefersDark(): boolean {
 }
 
 function getInitialTheme(): Theme {
-	const attr =
-		typeof document === 'undefined'
-			? null
-			: document.documentElement.dataset.theme
+	const attr = typeof document === 'undefined' ? null : document.documentElement.dataset.theme
 	const stored = safeStorage.get('theme')
 	return (
 		(isTheme(attr) ? attr : null) ??

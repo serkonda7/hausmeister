@@ -1,5 +1,5 @@
 import { IconMoon, IconSun } from '@tabler/icons-solidjs'
-import { createSignal, type JSX, For, onCleanup, onMount } from 'solid-js'
+import { createSignal, For, type JSX, onCleanup, onMount } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 import Accounts from './components/Accounts'
 import Allocations from './components/Allocations'
@@ -59,9 +59,7 @@ export default function App(): JSX.Element {
 							onClick={toggleTheme}
 							class="btn-icon"
 							aria-label={
-								isDark()
-									? 'Zu hellem Modus wechseln'
-									: 'Zu dunklem Modus wechseln'
+								isDark() ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln'
 							}
 							title={isDark() ? 'Hellmodus' : 'Dunkelmodus'}
 						>
@@ -72,6 +70,7 @@ export default function App(): JSX.Element {
 			</header>
 
 			<main class="app-main">
+				{/* biome-ignore lint/style/noNonNullAssertion: ids only come from VIEWS */}
 				<Dynamic component={VIEWS.find((v) => v.id === view())!.comp} />
 			</main>
 		</div>

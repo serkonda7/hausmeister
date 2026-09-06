@@ -1,7 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
-import { accountTypeLabels, formatEUR, liquidityLabels } from '../lib/format'
 import { patchForm } from '../lib/form'
+import { accountTypeLabels, formatEUR, liquidityLabels } from '../lib/format'
 import CrudRow from './CrudRow'
 import EmptyState from './EmptyState'
 
