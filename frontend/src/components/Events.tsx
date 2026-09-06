@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js'
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { type FinanceEvent, api } from '../lib/api'
 import { formatDateISO, formatEUR } from '../lib/format'
 import { patchForm } from '../lib/form'
@@ -9,6 +9,10 @@ export default function Events() {
 	const [events, { refetch }] = createResource(() => api.events.list())
 	const [accounts] = createResource(() => api.accounts.list())
 	const [pools] = createResource(() => api.pools.list())
+
+	const sortedEvents = createMemo(() =>
+		(events() ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)),
+	)
 
 	const [showForm, setShowForm] = createSignal(false)
 	const [editingId, setEditingId] = createSignal<string | null>(null)
@@ -265,7 +269,7 @@ export default function Events() {
 			</Show>
 
 			<div class="list list--tight">
-				<For each={(events() ?? []).slice().sort((a, b) => a.date.localeCompare(b.date))}>
+				<For each={sortedEvents()}>
 					{(ev) => (
 						<div class="card card--compact card-row">
 							<div>
