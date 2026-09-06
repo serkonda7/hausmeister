@@ -2,7 +2,6 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api } from '../lib/api'
 import { formatDateISO, formatEUR } from '../lib/format'
-import './Events.css'
 
 export default function Events() {
 	const [events, { refetch }] = createResource(() => api.events.list())
@@ -270,8 +269,8 @@ export default function Events() {
 					{(ev) => (
 						<div class="card card--compact card-row">
 							<div>
-								<div class="events-title">{ev.title}</div>
-								<div class="events-sub">
+								<div class="title">{ev.title}</div>
+								<div class="muted text-sm">
 									{formatDateISO(ev.date)}{' '}
 									<Show when={ev.isRecurring}>· {ev.frequency} ↻</Show>{' '}
 									<Show when={ev.recurringUntil}>
@@ -283,7 +282,8 @@ export default function Events() {
 							</div>
 							<div class="card-actions">
 								<span
-									class="events-amount"
+									class="strong--bold"
+									style={{ 'white-space': 'nowrap' }}
 									classList={{
 										'amount--in': ev.direction === 'inflow',
 										'amount--out': ev.direction !== 'inflow',

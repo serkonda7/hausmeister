@@ -2,7 +2,6 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { accountTypeLabels, formatEUR, liquidityLabels } from '../lib/format'
-import './Accounts.css'
 
 export default function Accounts() {
 	const [accounts, { refetch }] = createResource(() => api.accounts.list())
@@ -208,15 +207,17 @@ export default function Accounts() {
 							<div>
 								<div class="strong">
 									{a.name}{' '}
-									<span class="accounts-type">· {accountTypeLabels[a.type]}</span>
+									<span class="subtle">· {accountTypeLabels[a.type]}</span>
 								</div>
-								<div class="accounts-sub">
+								<div class="muted text-sm">
 									{a.institution ?? '—'} · {liquidityLabels[a.liquidityTier]}
 									<Show when={a.unlockAt}> · ab {a.unlockAt}</Show>
 								</div>
 							</div>
 							<div class="card-actions">
-								<div class="strong--bold nowrap">{formatEUR(a.balanceCents)}</div>
+								<div class="strong--bold" style={{ 'white-space': 'nowrap' }}>
+									{formatEUR(a.balanceCents)}
+								</div>
 								<button
 									type="button"
 									onClick={() => openEdit(a)}

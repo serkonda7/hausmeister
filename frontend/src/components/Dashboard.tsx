@@ -61,9 +61,9 @@ export default function Dashboard() {
 														{formatEUR(cents)} · {pct.toFixed(1)}%
 													</span>
 												</div>
-												<div class="liquidity-track">
+												<div class="bar-track">
 													<div
-														class="liquidity-fill"
+														class="bar-fill"
 														style={{
 															width: `${pct}%`,
 															background:
@@ -99,7 +99,7 @@ export default function Dashboard() {
 												pt.currentCents <= pt.targetMax) &&
 											(targetPct == null || Math.abs(pct - targetPct) < 5)
 										return (
-											<div class="pool-card">
+											<div class="surface-card surface-card--sm">
 												<div class="pool-head">
 													<div>
 														<div class="pool-name">
@@ -113,7 +113,7 @@ export default function Dashboard() {
 															{pt.pool.name}
 														</div>
 														<Show when={pt.pool.purpose}>
-															<div class="pool-purpose">
+															<div class="muted text-sm">
 																{pt.pool.purpose}
 															</div>
 														</Show>
@@ -161,19 +161,19 @@ export default function Dashboard() {
 													<span
 														class="pool-status"
 														classList={{
-															'pool-status--ok': ok,
-															'pool-status--warn': !ok,
+															'amount--in': ok,
+															'amount--warn': !ok,
 														}}
 													>
 														{ok ? '✓ im Ziel' : '⚠ abweichend'}
 													</span>
 												</div>
-												<div class="pool-bar">
+												<div class="bar-track bar-track--thin">
 													<div
-														class="pool-bar-fill"
+														class="bar-fill"
 														classList={{
-															'pool-bar-fill--ok': ok,
-															'pool-bar-fill--warn': !ok,
+															'bar-fill--ok': ok,
+															'bar-fill--warn': !ok,
 														}}
 														style={{
 															width: `${Math.min(100, pct * 2)}%`,
@@ -209,9 +209,9 @@ export default function Dashboard() {
 												(ev as { projectedDate?: string }).projectedDate ??
 												ev.date
 											return (
-												<div class="timeline-row">
+												<div class="row-between">
 													<div>
-														<div class="timeline-title">{ev.title}</div>
+														<div class="row-title">{ev.title}</div>
 														<div class="pool-sub">
 															{formatDateISO(d)}
 															<Show when={ev.isRecurring}>
@@ -221,7 +221,7 @@ export default function Dashboard() {
 														</div>
 													</div>
 													<div
-														class="timeline-amount"
+														class="row-amount"
 														classList={{
 															'amount--in': ev.direction === 'inflow',
 															'amount--out':
@@ -248,14 +248,14 @@ export default function Dashboard() {
 								<div class="list list--tight">
 									<For each={data().unlocks}>
 										{(u) => (
-											<div class="unlock-row">
+											<div class="row-between">
 												<div>
-													<div class="timeline-title">{u.name}</div>
+													<div class="row-title">{u.name}</div>
 													<div class="pool-sub">
 														{formatDateISO(u.unlockAt)}
 													</div>
 												</div>
-												<div class="unlock-amount">
+												<div class="row-amount">
 													{formatEUR(u.amountCents)}
 												</div>
 											</div>

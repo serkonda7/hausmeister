@@ -2,7 +2,6 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api } from '../lib/api'
 import { formatEUR, liquidityLabels } from '../lib/format'
-import './Allocations.css'
 
 export default function Allocations() {
 	const [allocations, { refetch }] = createResource(() => api.allocations.list())
@@ -205,13 +204,11 @@ export default function Allocations() {
 					{(a) => (
 						<div class="card card--compact card-row">
 							<div>
-								<div class="allocations-title">
+								<div class="title">
 									{poolName(a.poolId)}{' '}
-									<span class="allocations-route">
-										→ {accountName(a.accountId)}
-									</span>
+									<span class="subtle">→ {accountName(a.accountId)}</span>
 								</div>
-								<div class="allocations-sub">
+								<div class="muted text-sm">
 									{a.liquidityOverride
 										? `Abweichend: ${liquidityLabels[a.liquidityOverride]}`
 										: 'Standard vom Konto'}{' '}

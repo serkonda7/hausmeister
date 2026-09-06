@@ -2,7 +2,6 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
 import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
-import './Pools.css'
 
 export default function Pools() {
 	const [pools, { refetch }] = createResource(() => api.pools.list())
@@ -259,14 +258,14 @@ export default function Pools() {
 					{(p) => (
 						<div class="card">
 							<div class="card-row">
-								<div class="pools-head">
+								<div class="inline-row">
 									<span
 										class="dot"
 										style={{ background: p.color ?? '#9ca3af' }}
 									/>
 									<span class="strong">{p.name}</span>
 									<Show when={p.purpose}>
-										<span class="pools-purpose">· {p.purpose}</span>
+										<span class="muted text-sm">· {p.purpose}</span>
 									</Show>
 								</div>
 								<div class="card-actions">
@@ -290,7 +289,7 @@ export default function Pools() {
 									</button>
 								</div>
 							</div>
-							<div class="pools-meta">
+							<div class="muted text-sm meta-row">
 								<span>
 									Ziel: {p.targetPercent != null ? `${p.targetPercent}%` : '—'}{' '}
 									{p.targetMinCents != null || p.targetMaxCents != null
