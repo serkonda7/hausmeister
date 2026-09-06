@@ -1,5 +1,5 @@
 import { IconMoon, IconSun } from '@tabler/icons-solidjs'
-import { createSignal, type JSX, Match, onCleanup, onMount, Switch } from 'solid-js'
+import { createSignal, Dynamic, type JSX, For, onCleanup, onMount } from 'solid-js'
 import Accounts from './components/Accounts'
 import Allocations from './components/Allocations'
 import Dashboard from './components/Dashboard'
@@ -8,7 +8,15 @@ import Pools from './components/Pools'
 import './App.css'
 import { initThemeListener, theme, toggleTheme } from './lib/theme'
 
-type View = 'dashboard' | 'accounts' | 'pools' | 'allocations' | 'events'
+const VIEWS = [
+	{ id: 'dashboard', label: 'Dashboard', comp: Dashboard },
+	{ id: 'accounts', label: 'Konten', comp: Accounts },
+	{ id: 'pools', label: 'Pools', comp: Pools },
+	{ id: 'allocations', label: 'Zuweisungen', comp: Allocations },
+	{ id: 'events', label: 'Zeitstrahl', comp: Events },
+] as const
+
+type View = (typeof VIEWS)[number]['id']
 
 export default function App(): JSX.Element {
 	const [view, setView] = createSignal<View>('dashboard')
@@ -18,16 +26,7 @@ export default function App(): JSX.Element {
 		onCleanup(dispose)
 	})
 
-	const navItem = (id: View, label: string) => (
-		<button
-			type="button"
-			onClick={() => setView(id)}
-			class="nav-item"
-			classList={{ 'nav-item--active': view() === id }}
-		>
-			{label}
-		</button>
-	)
+	const isDark = () => theme() === 'dark'
 
 	return (
 		<div class="app">
@@ -41,47 +40,38 @@ export default function App(): JSX.Element {
 					</div>
 					<div class="header-actions">
 						<nav class="nav">
-							{navItem('dashboard', 'Dashboard')}
-							{navItem('accounts', 'Konten')}
-							{navItem('pools', 'Pools')}
-							{navItem('allocations', 'Zuweisungen')}
-							{navItem('events', 'Zeitstrahl')}
+							<For each={VIEWS}>
+								{(v) => (
+									<button
+										type="button"
+										onClick={() => setView(v.id)}
+										class="nav-item"
+										classList={{ 'nav-item--active': view() === v.id }}
+									>
+										{v.label}
+									</button>
+								)}
+							</For>
 						</nav>
 						<button
 							type="button"
 							onClick={toggleTheme}
 							class="btn-icon"
 							aria-label={
-								theme() === 'dark'
+								isDark()
 									? 'Zu hellem Modus wechseln'
 									: 'Zu dunklem Modus wechseln'
 							}
-							title={theme() === 'dark' ? 'Hellmodus' : 'Dunkelmodus'}
+							title={isDark() ? 'Hellmodus' : 'Dunkelmodus'}
 						>
-							{theme() === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+							{isDark() ? <IconSun size={18} /> : <IconMoon size={18} />}
 						</button>
 					</div>
 				</div>
 			</header>
 
 			<main class="app-main">
-				<Switch>
-					<Match when={view() === 'dashboard'}>
-						<Dashboard />
-					</Match>
-					<Match when={view() === 'accounts'}>
-						<Accounts />
-					</Match>
-					<Match when={view() === 'pools'}>
-						<Pools />
-					</Match>
-					<Match when={view() === 'allocations'}>
-						<Allocations />
-					</Match>
-					<Match when={view() === 'events'}>
-						<Events />
-					</Match>
-				</Switch>
+				<Dynamic component={VIEWS.find((v) => v.id === view())!.comp} />
 			</main>
 		</div>
 	)
