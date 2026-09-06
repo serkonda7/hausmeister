@@ -2,6 +2,7 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { accountTypeLabels, formatEUR, liquidityLabels } from '../lib/format'
+import './Accounts.css'
 
 export default function Accounts() {
 	const [accounts, { refetch }] = createResource(() => api.accounts.list())
@@ -88,75 +89,51 @@ export default function Accounts() {
 	}
 
 	return (
-		<div style={{ display: 'grid', gap: '1rem' }}>
-			<div
-				style={{
-					display: 'flex',
-					'justify-content': 'space-between',
-					'align-items': 'center',
-				}}
-			>
-				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Konten
-				</h2>
+		<div class="page">
+			<div class="page-header">
+				<h2 class="page-title">Konten</h2>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Konto
 				</button>
 			</div>
 
 			<Show when={showForm()}>
-				<form
-					onSubmit={submit}
-					style={{
-						background: 'var(--surface)',
-						border: '1px solid var(--border)',
-						'border-radius': '12px',
-						padding: '1rem',
-						display: 'grid',
-						gap: '0.75rem',
-					}}
-				>
-					<div
-						style={{
-							display: 'grid',
-							'grid-template-columns': '1fr 1fr',
-							gap: '0.75rem',
-						}}
-					>
-						<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
+				<form onSubmit={submit} class="form-card">
+					<div class="form-grid">
+						<label class="field">
 							Name{' '}
 							<input
 								value={form().name}
 								onInput={(e) => setForm({ ...form(), name: e.currentTarget.value })}
 								required
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
+						<label class="field">
 							Typ
 							<select
 								value={form().type}
 								onChange={(e) =>
 									setForm({ ...form(), type: e.currentTarget.value as never })
 								}
-								style={inputStyle}
+								class="input"
 							>
 								<For each={Object.entries(accountTypeLabels)}>
 									{([k, v]) => <option value={k}>{v}</option>}
 								</For>
 							</select>
 						</label>
-						<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
+						<label class="field">
 							Institut{' '}
 							<input
 								value={form().institution}
 								onInput={(e) =>
 									setForm({ ...form(), institution: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
+						<label class="field">
 							Verfügbarkeit
 							<select
 								value={form().liquidityTier}
@@ -166,14 +143,14 @@ export default function Accounts() {
 										liquidityTier: e.currentTarget.value as never,
 									})
 								}
-								style={inputStyle}
+								class="input"
 							>
 								<For each={Object.entries(liquidityLabels)}>
 									{([k, v]) => <option value={k}>{v}</option>}
 								</For>
 							</select>
 						</label>
-						<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
+						<label class="field">
 							Saldo (€){' '}
 							<input
 								type="number"
@@ -183,10 +160,10 @@ export default function Accounts() {
 									setForm({ ...form(), balance: e.currentTarget.value })
 								}
 								required
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
+						<label class="field">
 							Verfügbar ab{' '}
 							<input
 								type="date"
@@ -194,22 +171,22 @@ export default function Accounts() {
 								onInput={(e) =>
 									setForm({ ...form(), unlockAt: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
 					</div>
-					<label style={{ display: 'grid', gap: '0.25rem', 'font-size': '0.875rem' }}>
+					<label class="field">
 						Notizen{' '}
 						<input
 							value={form().notes}
 							onInput={(e) => setForm({ ...form(), notes: e.currentTarget.value })}
-							style={inputStyle}
+							class="input"
 						/>
 					</label>
 					<Show when={error()}>
-						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
+						<p class="form-error">{error()}</p>
 					</Show>
-					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
+					<div class="form-actions">
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
 							Abbrechen
 						</button>
@@ -221,42 +198,25 @@ export default function Accounts() {
 			</Show>
 
 			<Show when={accounts.loading}>
-				<p style={{ color: 'var(--muted)' }}>Laden…</p>
+				<p class="muted">Laden…</p>
 			</Show>
 
-			<div style={{ display: 'grid', gap: '0.75rem' }}>
+			<div class="list">
 				<For each={accounts() ?? []}>
 					{(a) => (
-						<div
-							style={{
-								background: 'var(--surface)',
-								border: '1px solid var(--border)',
-								'border-radius': '12px',
-								padding: '1rem',
-								display: 'flex',
-								'justify-content': 'space-between',
-								'align-items': 'center',
-								gap: '1rem',
-							}}
-						>
+						<div class="card card-row">
 							<div>
-								<div style={{ 'font-weight': '600' }}>
+								<div class="strong">
 									{a.name}{' '}
-									<span style={{ color: 'var(--muted)', 'font-weight': '400' }}>
-										· {accountTypeLabels[a.type]}
-									</span>
+									<span class="accounts-type">· {accountTypeLabels[a.type]}</span>
 								</div>
-								<div style={{ color: 'var(--muted)', 'font-size': '0.8rem' }}>
+								<div class="accounts-sub">
 									{a.institution ?? '—'} · {liquidityLabels[a.liquidityTier]}
 									<Show when={a.unlockAt}> · ab {a.unlockAt}</Show>
 								</div>
 							</div>
-							<div
-								style={{ display: 'flex', gap: '0.5rem', 'align-items': 'center' }}
-							>
-								<div style={{ 'font-weight': '700', 'white-space': 'nowrap' }}>
-									{formatEUR(a.balanceCents)}
-								</div>
+							<div class="card-actions">
+								<div class="strong--bold nowrap">{formatEUR(a.balanceCents)}</div>
 								<button
 									type="button"
 									onClick={() => openEdit(a)}
@@ -280,20 +240,9 @@ export default function Accounts() {
 					)}
 				</For>
 				<Show when={(accounts() ?? []).length === 0 && !accounts.loading}>
-					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
-						Keine Konten. Lege dein erstes Konto an.
-					</p>
+					<p class="muted text-sm">Keine Konten. Lege dein erstes Konto an.</p>
 				</Show>
 			</div>
 		</div>
 	)
-}
-
-const inputStyle: Record<string, string> = {
-	border: '1px solid var(--border-strong)',
-	'border-radius': '8px',
-	padding: '0.5rem 0.6rem',
-	'font-size': '0.875rem',
-	background: 'var(--input-bg)',
-	color: 'var(--text)',
 }

@@ -2,6 +2,7 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api } from '../lib/api'
 import { formatDateISO, formatEUR } from '../lib/format'
+import './Events.css'
 
 export default function Events() {
 	const [events, { refetch }] = createResource(() => api.events.list())
@@ -107,42 +108,18 @@ export default function Events() {
 	}
 
 	return (
-		<div style={{ display: 'grid', gap: '1rem' }}>
-			<div
-				style={{
-					display: 'flex',
-					'justify-content': 'space-between',
-					'align-items': 'center',
-				}}
-			>
-				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Zeitstrahl
-				</h2>
+		<div class="page">
+			<div class="page-header">
+				<h2 class="page-title">Zeitstrahl</h2>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Ereignis
 				</button>
 			</div>
 
 			<Show when={showForm()}>
-				<form
-					onSubmit={submit}
-					style={{
-						background: 'var(--surface)',
-						border: '1px solid var(--border)',
-						'border-radius': '12px',
-						padding: '1rem',
-						display: 'grid',
-						gap: '0.75rem',
-					}}
-				>
-					<div
-						style={{
-							display: 'grid',
-							'grid-template-columns': '1fr 1fr',
-							gap: '0.75rem',
-						}}
-					>
-						<label style={labelStyle}>
+				<form onSubmit={submit} class="form-card">
+					<div class="form-grid">
+						<label class="field">
 							Titel{' '}
 							<input
 								value={form().title}
@@ -150,10 +127,10 @@ export default function Events() {
 									setForm({ ...form(), title: e.currentTarget.value })
 								}
 								required
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Betrag (€){' '}
 							<input
 								type="number"
@@ -163,10 +140,10 @@ export default function Events() {
 									setForm({ ...form(), amount: e.currentTarget.value })
 								}
 								required
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Richtung
 							<select
 								value={form().direction}
@@ -176,31 +153,23 @@ export default function Events() {
 										direction: e.currentTarget.value as never,
 									})
 								}
-								style={inputStyle}
+								class="input"
 							>
 								<option value="inflow">Zufluss (+)</option>
 								<option value="outflow">Abfluss (−)</option>
 							</select>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Datum{' '}
 							<input
 								type="date"
 								value={form().date}
 								onInput={(e) => setForm({ ...form(), date: e.currentTarget.value })}
 								required
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label
-							style={{
-								...labelStyle,
-								display: 'flex',
-								'align-items': 'center',
-								gap: '0.5rem',
-								'padding-top': '1.2rem',
-							}}
-						>
+						<label class="field field--checkbox">
 							<input
 								type="checkbox"
 								checked={form().isRecurring}
@@ -211,14 +180,14 @@ export default function Events() {
 							Wiederkehrend
 						</label>
 						<Show when={form().isRecurring}>
-							<label style={labelStyle}>
+							<label class="field">
 								Frequenz
 								<select
 									value={form().frequency}
 									onChange={(e) =>
 										setForm({ ...form(), frequency: e.currentTarget.value })
 									}
-									style={inputStyle}
+									class="input"
 								>
 									<option value="">— wählen</option>
 									<option value="weekly">Wöchentlich</option>
@@ -228,7 +197,7 @@ export default function Events() {
 									<option value="yearly">Jährlich</option>
 								</select>
 							</label>
-							<label style={labelStyle}>
+							<label class="field">
 								Bis (Datum){' '}
 								<input
 									type="date"
@@ -239,18 +208,18 @@ export default function Events() {
 											recurringUntil: e.currentTarget.value,
 										})
 									}
-									style={inputStyle}
+									class="input"
 								/>
 							</label>
 						</Show>
-						<label style={labelStyle}>
+						<label class="field">
 							Pool (optional)
 							<select
 								value={form().poolId}
 								onChange={(e) =>
 									setForm({ ...form(), poolId: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							>
 								<option value="">— kein Pool</option>
 								<For each={pools() ?? []}>
@@ -258,14 +227,14 @@ export default function Events() {
 								</For>
 							</select>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Konto (optional)
 							<select
 								value={form().accountId}
 								onChange={(e) =>
 									setForm({ ...form(), accountId: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							>
 								<option value="">— kein Konto</option>
 								<For each={accounts() ?? []}>
@@ -274,18 +243,18 @@ export default function Events() {
 							</select>
 						</label>
 					</div>
-					<label style={labelStyle}>
+					<label class="field">
 						Notizen{' '}
 						<input
 							value={form().notes}
 							onInput={(e) => setForm({ ...form(), notes: e.currentTarget.value })}
-							style={inputStyle}
+							class="input"
 						/>
 					</label>
 					<Show when={error()}>
-						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
+						<p class="form-error">{error()}</p>
 					</Show>
-					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
+					<div class="form-actions">
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
 							Abbrechen
 						</button>
@@ -296,26 +265,13 @@ export default function Events() {
 				</form>
 			</Show>
 
-			<div style={{ display: 'grid', gap: '0.6rem' }}>
+			<div class="list list--tight">
 				<For each={(events() ?? []).slice().sort((a, b) => a.date.localeCompare(b.date))}>
 					{(ev) => (
-						<div
-							style={{
-								background: 'var(--surface)',
-								border: '1px solid var(--border)',
-								'border-radius': '12px',
-								padding: '0.9rem',
-								display: 'flex',
-								'justify-content': 'space-between',
-								'align-items': 'center',
-								gap: '1rem',
-							}}
-						>
+						<div class="card card--compact card-row">
 							<div>
-								<div style={{ 'font-weight': '600', 'font-size': '0.9rem' }}>
-									{ev.title}
-								</div>
-								<div style={{ color: 'var(--muted)', 'font-size': '0.75rem' }}>
+								<div class="events-title">{ev.title}</div>
+								<div class="events-sub">
 									{formatDateISO(ev.date)}{' '}
 									<Show when={ev.isRecurring}>· {ev.frequency} ↻</Show>{' '}
 									<Show when={ev.recurringUntil}>
@@ -325,16 +281,12 @@ export default function Events() {
 									</Show>
 								</div>
 							</div>
-							<div
-								style={{ display: 'flex', gap: '0.5rem', 'align-items': 'center' }}
-							>
+							<div class="card-actions">
 								<span
-									style={{
-										'font-weight': '700',
-										color:
-											ev.direction === 'inflow'
-												? 'var(--success)'
-												: 'var(--danger)',
+									class="events-amount"
+									classList={{
+										'amount--in': ev.direction === 'inflow',
+										'amount--out': ev.direction !== 'inflow',
 									}}
 								>
 									{ev.direction === 'inflow' ? '+' : '−'}
@@ -363,7 +315,7 @@ export default function Events() {
 					)}
 				</For>
 				<Show when={(events() ?? []).length === 0 && !events.loading}>
-					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
+					<p class="muted text-sm">
 						Keine Ereignisse. Lege z. B. Gehalt (monatlich Zufluss) oder Miete
 						(monatlich Abfluss) an.
 					</p>
@@ -371,18 +323,4 @@ export default function Events() {
 			</div>
 		</div>
 	)
-}
-
-const labelStyle: Record<string, string> = {
-	display: 'grid',
-	gap: '0.25rem',
-	'font-size': '0.875rem',
-}
-const inputStyle: Record<string, string> = {
-	border: '1px solid var(--border-strong)',
-	'border-radius': '8px',
-	padding: '0.5rem 0.6rem',
-	'font-size': '0.875rem',
-	background: 'var(--input-bg)',
-	color: 'var(--text)',
 }

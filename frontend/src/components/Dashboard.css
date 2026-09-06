@@ -1,0 +1,168 @@
+.dashboard-card {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	padding: 1.25rem;
+}
+
+.dashboard-eyebrow {
+	color: var(--muted);
+	font-size: 0.875rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.dashboard-total {
+	font-size: 2rem;
+	font-weight: 700;
+	margin-top: 0.25rem;
+}
+
+.dashboard-sub {
+	color: var(--muted);
+	font-size: 0.875rem;
+	margin-top: 0.25rem;
+}
+
+.dashboard-section-title {
+	margin: 0 0 1rem;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.dashboard-grid {
+	display: grid;
+	gap: 1.25rem;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.liquidity-label-row {
+	display: flex;
+	justify-content: space-between;
+	font-size: 0.875rem;
+}
+
+.liquidity-track {
+	height: 8px;
+	background: var(--surface-2);
+	border-radius: 999px;
+	margin-top: 0.35rem;
+	overflow: hidden;
+}
+
+.liquidity-fill {
+	height: 100%;
+	border-radius: 999px;
+	transition: width 0.3s;
+}
+
+.pool-card {
+	border: 1px solid var(--surface-2);
+	border-radius: 10px;
+	padding: 0.9rem;
+}
+
+.pool-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.pool-name {
+	font-weight: 600;
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.pool-purpose {
+	color: var(--muted);
+	font-size: 0.8rem;
+}
+
+.pool-amount {
+	font-weight: 600;
+}
+
+.pool-amounts {
+	text-align: right;
+}
+
+.pool-sub {
+	color: var(--muted);
+	font-size: 0.75rem;
+}
+
+.pool-tags {
+	display: flex;
+	gap: 1rem;
+	margin-top: 0.5rem;
+	font-size: 0.75rem;
+	color: var(--muted);
+	flex-wrap: wrap;
+}
+
+.pool-status {
+	margin-left: auto;
+	font-weight: 600;
+}
+
+.pool-status--ok {
+	color: var(--success);
+}
+
+.pool-status--warn {
+	color: var(--warning);
+}
+
+.pool-bar {
+	height: 6px;
+	background: var(--surface-2);
+	border-radius: 999px;
+	margin-top: 0.6rem;
+	position: relative;
+}
+
+.pool-bar-fill {
+	height: 100%;
+	border-radius: 999px;
+}
+
+.pool-bar-fill--ok {
+	background: var(--success-bright);
+}
+
+.pool-bar-fill--warn {
+	background: var(--warning-bright);
+}
+
+.pool-target {
+	position: absolute;
+	top: -2px;
+	width: 2px;
+	height: 10px;
+	background: var(--primary);
+	border-radius: 1px;
+}
+
+.timeline-row,
+.unlock-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.875rem;
+}
+
+.timeline-title,
+.unlock-name {
+	font-weight: 500;
+}
+
+.timeline-amount {
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.unlock-amount {
+	font-weight: 600;
+}

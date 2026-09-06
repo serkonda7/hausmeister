@@ -1,0 +1,19 @@
+.pools-head {
+	display: flex;
+	gap: 0.6rem;
+	align-items: center;
+}
+
+.pools-purpose {
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+.pools-meta {
+	color: var(--muted);
+	font-size: 0.8rem;
+	margin-top: 0.5rem;
+	display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+}

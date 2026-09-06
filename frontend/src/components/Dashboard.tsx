@@ -8,6 +8,7 @@ import {
 	liquidityColors,
 	liquidityLabels,
 } from '../lib/format'
+import './Dashboard.css'
 
 export default function Dashboard() {
 	const [summary, { refetch }] = createResource(() => api.summary())
@@ -19,73 +20,28 @@ export default function Dashboard() {
 	})
 
 	return (
-		<div style={{ display: 'grid', gap: '1.25rem' }}>
+		<div class="page page--spacious">
 			<Show when={summary.loading}>
-				<p style={{ color: 'var(--muted)' }}>Laden…</p>
+				<p class="muted">Laden…</p>
 			</Show>
 			<Show when={summary.error}>
-				<p style={{ color: 'var(--error)' }}>Fehler: {(summary.error as Error).message}</p>
+				<p class="form-error">Fehler: {(summary.error as Error).message}</p>
 			</Show>
 			<Show when={summary()}>
 				{(data) => (
 					<>
-						<section
-							style={{
-								background: 'var(--surface)',
-								border: '1px solid var(--border)',
-								'border-radius': '12px',
-								padding: '1.25rem',
-							}}
-						>
-							<div
-								style={{
-									color: 'var(--muted)',
-									'font-size': '0.875rem',
-									'text-transform': 'uppercase',
-									'letter-spacing': '0.05em',
-								}}
-							>
-								Gesamtvermögen
-							</div>
-							<div
-								style={{
-									'font-size': '2rem',
-									'font-weight': '700',
-									'margin-top': '0.25rem',
-								}}
-							>
-								{formatEUR(data().totalCents)}
-							</div>
-							<div
-								style={{
-									color: 'var(--muted)',
-									'font-size': '0.875rem',
-									'margin-top': '0.25rem',
-								}}
-							>
+						<section class="dashboard-card">
+							<div class="dashboard-eyebrow">Gesamtvermögen</div>
+							<div class="dashboard-total">{formatEUR(data().totalCents)}</div>
+							<div class="dashboard-sub">
 								{data().counts.accounts} Konten · {data().counts.pools} Pools ·{' '}
 								{data().counts.allocations} Zuweisungen
 							</div>
 						</section>
 
-						<section
-							style={{
-								background: 'var(--surface)',
-								border: '1px solid var(--border)',
-								'border-radius': '12px',
-								padding: '1.25rem',
-							}}
-						>
-							<h2
-								style={{
-									margin: '0 0 1rem',
-									'font-size': '1rem',
-									'font-weight': '600',
-								}}
-							>
-								Verfügbarkeit
-							</h2>
-							<div style={{ display: 'grid', gap: '0.75rem' }}>
+						<section class="dashboard-card">
+							<h2 class="dashboard-section-title">Verfügbarkeit</h2>
+							<div class="list">
 								<For
 									each={
 										Object.entries(data().liquidityMap) as Array<
@@ -99,35 +55,19 @@ export default function Dashboard() {
 											: 0
 										return (
 											<div>
-												<div
-													style={{
-														display: 'flex',
-														'justify-content': 'space-between',
-														'font-size': '0.875rem',
-													}}
-												>
+												<div class="liquidity-label-row">
 													<span>{liquidityLabels[tier] ?? tier}</span>
-													<span style={{ color: 'var(--muted)' }}>
+													<span class="muted">
 														{formatEUR(cents)} · {pct.toFixed(1)}%
 													</span>
 												</div>
-												<div
-													style={{
-														height: '8px',
-														background: 'var(--surface-2)',
-														'border-radius': '999px',
-														'margin-top': '0.35rem',
-														overflow: 'hidden',
-													}}
-												>
+												<div class="liquidity-track">
 													<div
+														class="liquidity-fill"
 														style={{
 															width: `${pct}%`,
-															height: '100%',
 															background:
 																liquidityColors[tier] ?? '#9ca3af',
-															'border-radius': '999px',
-															transition: 'width 0.3s',
 														}}
 													/>
 												</div>
@@ -138,29 +78,14 @@ export default function Dashboard() {
 							</div>
 						</section>
 
-						<section
-							style={{
-								background: 'var(--surface)',
-								border: '1px solid var(--border)',
-								'border-radius': '12px',
-								padding: '1.25rem',
-							}}
-						>
-							<h2
-								style={{
-									margin: '0 0 1rem',
-									'font-size': '1rem',
-									'font-weight': '600',
-								}}
-							>
-								Pools · Ziel vs. Ist
-							</h2>
+						<section class="dashboard-card">
+							<h2 class="dashboard-section-title">Pools · Ziel vs. Ist</h2>
 							<Show when={data().poolTotals.length === 0}>
-								<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
+								<p class="muted text-sm">
 									Noch keine Pools angelegt. Lege einen Pool in „Pools“ an.
 								</p>
 							</Show>
-							<div style={{ display: 'grid', gap: '1rem' }}>
+							<div class="list">
 								<For each={data().poolTotals}>
 									{(pt) => {
 										const pct = data().totalCents
@@ -174,35 +99,13 @@ export default function Dashboard() {
 												pt.currentCents <= pt.targetMax) &&
 											(targetPct == null || Math.abs(pct - targetPct) < 5)
 										return (
-											<div
-												style={{
-													border: '1px solid var(--surface-2)',
-													'border-radius': '10px',
-													padding: '0.9rem',
-												}}
-											>
-												<div
-													style={{
-														display: 'flex',
-														'justify-content': 'space-between',
-														'align-items': 'center',
-													}}
-												>
+											<div class="pool-card">
+												<div class="pool-head">
 													<div>
-														<div
-															style={{
-																'font-weight': '600',
-																display: 'flex',
-																gap: '0.5rem',
-																'align-items': 'center',
-															}}
-														>
+														<div class="pool-name">
 															<span
+																class="dot dot--sm"
 																style={{
-																	display: 'inline-block',
-																	width: '10px',
-																	height: '10px',
-																	'border-radius': '999px',
 																	background:
 																		pt.pool.color ?? '#9ca3af',
 																}}
@@ -210,40 +113,21 @@ export default function Dashboard() {
 															{pt.pool.name}
 														</div>
 														<Show when={pt.pool.purpose}>
-															<div
-																style={{
-																	color: 'var(--muted)',
-																	'font-size': '0.8rem',
-																}}
-															>
+															<div class="pool-purpose">
 																{pt.pool.purpose}
 															</div>
 														</Show>
 													</div>
-													<div style={{ 'text-align': 'right' }}>
-														<div style={{ 'font-weight': '600' }}>
+													<div class="pool-amounts">
+														<div class="pool-amount">
 															{formatEUR(pt.currentCents)}
 														</div>
-														<div
-															style={{
-																color: 'var(--muted)',
-																'font-size': '0.75rem',
-															}}
-														>
+														<div class="pool-sub">
 															{pct.toFixed(1)}% des Gesamt
 														</div>
 													</div>
 												</div>
-												<div
-													style={{
-														display: 'flex',
-														gap: '1rem',
-														'margin-top': '0.5rem',
-														'font-size': '0.75rem',
-														color: 'var(--muted)',
-														'flex-wrap': 'wrap',
-													}}
-												>
+												<div class="pool-tags">
 													<span>
 														Ziel:{' '}
 														{targetPct != null
@@ -275,46 +159,31 @@ export default function Dashboard() {
 															: '—'}
 													</span>
 													<span
-														style={{
-															'margin-left': 'auto',
-															color: ok
-																? 'var(--success)'
-																: 'var(--warning)',
-															'font-weight': '600',
+														class="pool-status"
+														classList={{
+															'pool-status--ok': ok,
+															'pool-status--warn': !ok,
 														}}
 													>
 														{ok ? '✓ im Ziel' : '⚠ abweichend'}
 													</span>
 												</div>
-												<div
-													style={{
-														height: '6px',
-														background: 'var(--surface-2)',
-														'border-radius': '999px',
-														'margin-top': '0.6rem',
-														position: 'relative',
-													}}
-												>
+												<div class="pool-bar">
 													<div
+														class="pool-bar-fill"
+														classList={{
+															'pool-bar-fill--ok': ok,
+															'pool-bar-fill--warn': !ok,
+														}}
 														style={{
 															width: `${Math.min(100, pct * 2)}%`,
-															height: '100%',
-															background: ok
-																? 'var(--success-bright)'
-																: 'var(--warning-bright)',
-															'border-radius': '999px',
 														}}
 													/>
 													<Show when={targetPct != null}>
 														<div
+															class="pool-target"
 															style={{
-																position: 'absolute',
 																left: `${Math.min(100, targetPct ?? 0)}%`,
-																top: '-2px',
-																width: '2px',
-																height: '10px',
-																background: 'var(--primary)',
-																'border-radius': '1px',
 															}}
 															title={`Ziel ${targetPct}%`}
 														/>
@@ -327,60 +196,23 @@ export default function Dashboard() {
 							</div>
 						</section>
 
-						<div
-							style={{
-								display: 'grid',
-								gap: '1.25rem',
-								'grid-template-columns': 'repeat(auto-fit, minmax(320px, 1fr))',
-							}}
-						>
-							<section
-								style={{
-									background: 'var(--surface)',
-									border: '1px solid var(--border)',
-									'border-radius': '12px',
-									padding: '1.25rem',
-								}}
-							>
-								<h2
-									style={{
-										margin: '0 0 1rem',
-										'font-size': '1rem',
-										'font-weight': '600',
-									}}
-								>
-									Nächste 90 Tage · Cashflow
-								</h2>
+						<div class="dashboard-grid">
+							<section class="dashboard-card">
+								<h2 class="dashboard-section-title">Nächste 90 Tage · Cashflow</h2>
 								<Show when={data().upcomingEvents.length === 0}>
-									<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
-										Keine Ereignisse im Zeitraum.
-									</p>
+									<p class="muted text-sm">Keine Ereignisse im Zeitraum.</p>
 								</Show>
-								<div style={{ display: 'grid', gap: '0.6rem' }}>
+								<div class="list list--tight">
 									<For each={data().upcomingEvents}>
 										{(ev) => {
 											const d =
 												(ev as { projectedDate?: string }).projectedDate ??
 												ev.date
 											return (
-												<div
-													style={{
-														display: 'flex',
-														'justify-content': 'space-between',
-														'align-items': 'center',
-														'font-size': '0.875rem',
-													}}
-												>
+												<div class="timeline-row">
 													<div>
-														<div style={{ 'font-weight': '500' }}>
-															{ev.title}
-														</div>
-														<div
-															style={{
-																color: 'var(--muted)',
-																'font-size': '0.75rem',
-															}}
-														>
+														<div class="timeline-title">{ev.title}</div>
+														<div class="pool-sub">
 															{formatDateISO(d)}
 															<Show when={ev.isRecurring}>
 																{' '}
@@ -389,13 +221,11 @@ export default function Dashboard() {
 														</div>
 													</div>
 													<div
-														style={{
-															'font-weight': '600',
-															color:
-																ev.direction === 'inflow'
-																	? 'var(--success)'
-																	: 'var(--danger)',
-															'white-space': 'nowrap',
+														class="timeline-amount"
+														classList={{
+															'amount--in': ev.direction === 'inflow',
+															'amount--out':
+																ev.direction !== 'inflow',
 														}}
 													>
 														{ev.direction === 'inflow' ? '+' : '−'}
@@ -408,52 +238,24 @@ export default function Dashboard() {
 								</div>
 							</section>
 
-							<section
-								style={{
-									background: 'var(--surface)',
-									border: '1px solid var(--border)',
-									'border-radius': '12px',
-									padding: '1.25rem',
-								}}
-							>
-								<h2
-									style={{
-										margin: '0 0 1rem',
-										'font-size': '1rem',
-										'font-weight': '600',
-									}}
-								>
-									Verfügbar ab
-								</h2>
+							<section class="dashboard-card">
+								<h2 class="dashboard-section-title">Verfügbar ab</h2>
 								<Show when={data().unlocks.length === 0}>
-									<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
+									<p class="muted text-sm">
 										Nichts gesperrt in Festgeld / Zuweisungen.
 									</p>
 								</Show>
-								<div style={{ display: 'grid', gap: '0.6rem' }}>
+								<div class="list list--tight">
 									<For each={data().unlocks}>
 										{(u) => (
-											<div
-												style={{
-													display: 'flex',
-													'justify-content': 'space-between',
-													'font-size': '0.875rem',
-												}}
-											>
+											<div class="unlock-row">
 												<div>
-													<div style={{ 'font-weight': '500' }}>
-														{u.name}
-													</div>
-													<div
-														style={{
-															color: 'var(--muted)',
-															'font-size': '0.75rem',
-														}}
-													>
+													<div class="timeline-title">{u.name}</div>
+													<div class="pool-sub">
 														{formatDateISO(u.unlockAt)}
 													</div>
 												</div>
-												<div style={{ 'font-weight': '600' }}>
+												<div class="unlock-amount">
 													{formatEUR(u.amountCents)}
 												</div>
 											</div>

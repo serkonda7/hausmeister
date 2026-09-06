@@ -2,6 +2,7 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
 import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
+import './Pools.css'
 
 export default function Pools() {
 	const [pools, { refetch }] = createResource(() => api.pools.list())
@@ -104,118 +105,95 @@ export default function Pools() {
 	}
 
 	return (
-		<div style={{ display: 'grid', gap: '1rem' }}>
-			<div
-				style={{
-					display: 'flex',
-					'justify-content': 'space-between',
-					'align-items': 'center',
-				}}
-			>
-				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Pools
-				</h2>
+		<div class="page">
+			<div class="page-header">
+				<h2 class="page-title">Pools</h2>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Pool
 				</button>
 			</div>
 
 			<Show when={showForm()}>
-				<form
-					onSubmit={submit}
-					style={{
-						background: 'var(--surface)',
-						border: '1px solid var(--border)',
-						'border-radius': '12px',
-						padding: '1rem',
-						display: 'grid',
-						gap: '0.75rem',
-					}}
-				>
-					<div
-						style={{
-							display: 'grid',
-							'grid-template-columns': '1fr 1fr',
-							gap: '0.75rem',
-						}}
-					>
-						<label style={labelStyle}>
+				<form onSubmit={submit} class="form-card">
+					<div class="form-grid">
+						<label class="field">
 							Name{' '}
 							<input
 								value={form().name}
 								onInput={(e) => setForm({ ...form(), name: e.currentTarget.value })}
 								required
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Zweck
 							<input
 								value={form().purpose}
 								onInput={(e) =>
 									setForm({ ...form(), purpose: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 								placeholder="z.B. Notgroschen, Altersvorsorge"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Ziel Min (€){' '}
 							<input
 								type="number"
-								step="0.01"
+								step="1"
 								value={form().targetMin}
 								onInput={(e) =>
 									setForm({ ...form(), targetMin: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Ziel Max (€){' '}
 							<input
 								type="number"
-								step="0.01"
+								step="1"
 								value={form().targetMax}
 								onInput={(e) =>
 									setForm({ ...form(), targetMax: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Ziel %{' '}
 							<input
 								type="number"
 								min="0"
 								max="100"
+								step="1"
 								value={form().targetPercent}
 								onInput={(e) =>
 									setForm({ ...form(), targetPercent: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Erwartete Rendite % p.a.{' '}
 							<input
 								type="number"
-								step="0.01"
+								step="0.1"
 								value={form().expectedReturn}
 								onInput={(e) =>
 									setForm({ ...form(), expectedReturn: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Risiko{' '}
 							<select
 								value={form().riskLevel}
 								onChange={(e) =>
 									setForm({ ...form(), riskLevel: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							>
 								<option value="">—</option>
 								<For each={[1, 2, 3, 4, 5]}>
@@ -227,19 +205,19 @@ export default function Pools() {
 								</For>
 							</select>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Volatilität %{' '}
 							<input
 								type="number"
-								step="0.01"
+								step="0.1"
 								value={form().volatility}
 								onInput={(e) =>
 									setForm({ ...form(), volatility: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Horizont (Monate){' '}
 							<input
 								type="number"
@@ -247,10 +225,10 @@ export default function Pools() {
 								onInput={(e) =>
 									setForm({ ...form(), horizonMonths: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Farbe{' '}
 							<input
 								type="color"
@@ -258,14 +236,14 @@ export default function Pools() {
 								onInput={(e) =>
 									setForm({ ...form(), color: e.currentTarget.value })
 								}
-								style={{ ...inputStyle, padding: '0.15rem' }}
+								class="input"
 							/>
 						</label>
 					</div>
 					<Show when={error()}>
-						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
+						<p class="form-error">{error()}</p>
 					</Show>
-					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
+					<div class="form-actions">
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
 							Abbrechen
 						</button>
@@ -276,53 +254,22 @@ export default function Pools() {
 				</form>
 			</Show>
 
-			<div style={{ display: 'grid', gap: '0.75rem' }}>
+			<div class="list">
 				<For each={pools() ?? []}>
 					{(p) => (
-						<div
-							style={{
-								background: 'var(--surface)',
-								border: '1px solid var(--border)',
-								'border-radius': '12px',
-								padding: '1rem',
-							}}
-						>
-							<div
-								style={{
-									display: 'flex',
-									'justify-content': 'space-between',
-									'align-items': 'center',
-								}}
-							>
-								<div
-									style={{
-										display: 'flex',
-										gap: '0.6rem',
-										'align-items': 'center',
-									}}
-								>
+						<div class="card">
+							<div class="card-row">
+								<div class="pools-head">
 									<span
-										style={{
-											width: '12px',
-											height: '12px',
-											'border-radius': '999px',
-											background: p.color ?? '#9ca3af',
-											display: 'inline-block',
-										}}
+										class="dot"
+										style={{ background: p.color ?? '#9ca3af' }}
 									/>
-									<span style={{ 'font-weight': '600' }}>{p.name}</span>
+									<span class="strong">{p.name}</span>
 									<Show when={p.purpose}>
-										<span
-											style={{
-												color: 'var(--muted)',
-												'font-size': '0.85rem',
-											}}
-										>
-											· {p.purpose}
-										</span>
+										<span class="pools-purpose">· {p.purpose}</span>
 									</Show>
 								</div>
-								<div style={{ display: 'flex', gap: '0.5rem' }}>
+								<div class="card-actions">
 									<button
 										type="button"
 										onClick={() => openEdit(p)}
@@ -343,16 +290,7 @@ export default function Pools() {
 									</button>
 								</div>
 							</div>
-							<div
-								style={{
-									color: 'var(--muted)',
-									'font-size': '0.8rem',
-									'margin-top': '0.5rem',
-									display: 'flex',
-									gap: '1rem',
-									'flex-wrap': 'wrap',
-								}}
-							>
+							<div class="pools-meta">
 								<span>
 									Ziel: {p.targetPercent != null ? `${p.targetPercent}%` : '—'}{' '}
 									{p.targetMinCents != null || p.targetMaxCents != null
@@ -362,31 +300,20 @@ export default function Pools() {
 								<span>Rendite: {formatPercent(p.expectedReturnBps)}</span>
 								<span>Risiko: {formatRiskLevel(p.riskLevel)}</span>
 								<span>Volatilität: {formatPercent(p.volatilityBps)}</span>
-								<span>Horizont: {p.horizonMonths != null ? `${p.horizonMonths} Monate` : '—'}</span>
+								<span>
+									Horizont:{' '}
+									{p.horizonMonths != null ? `${p.horizonMonths} Monate` : '—'}
+								</span>
 							</div>
 						</div>
 					)}
 				</For>
 				<Show when={(pools() ?? []).length === 0 && !pools.loading}>
-					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
+					<p class="muted text-sm">
 						Keine Pools. Erstelle z. B. „Notgroschen“, „Invest“, „Urlaub“.
 					</p>
 				</Show>
 			</div>
 		</div>
 	)
-}
-
-const labelStyle: Record<string, string> = {
-	display: 'grid',
-	gap: '0.25rem',
-	'font-size': '0.875rem',
-}
-const inputStyle: Record<string, string> = {
-	border: '1px solid var(--border-strong)',
-	'border-radius': '8px',
-	padding: '0.5rem 0.6rem',
-	'font-size': '0.875rem',
-	background: 'var(--input-bg)',
-	color: 'var(--text)',
 }

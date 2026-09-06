@@ -1,0 +1,9 @@
+.accounts-sub {
+	color: var(--muted);
+	font-size: 0.8rem;
+}
+
+.accounts-type {
+	color: var(--muted);
+	font-weight: 400;
+}

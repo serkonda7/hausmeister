@@ -1,0 +1,13 @@
+.events-title {
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.events-sub {
+	color: var(--muted);
+	font-size: 0.75rem;
+}
+
+.events-amount {
+	font-weight: 700;
+}

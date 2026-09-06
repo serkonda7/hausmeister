@@ -2,6 +2,7 @@ import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api } from '../lib/api'
 import { formatEUR, liquidityLabels } from '../lib/format'
+import './Allocations.css'
 
 export default function Allocations() {
 	const [allocations, { refetch }] = createResource(() => api.allocations.list())
@@ -94,17 +95,9 @@ export default function Allocations() {
 	}
 
 	return (
-		<div style={{ display: 'grid', gap: '1rem' }}>
-			<div
-				style={{
-					display: 'flex',
-					'justify-content': 'space-between',
-					'align-items': 'center',
-				}}
-			>
-				<h2 style={{ margin: 0, 'font-size': '1.125rem', 'font-weight': '600' }}>
-					Zuweisungen
-				</h2>
+		<div class="page">
+			<div class="page-header">
+				<h2 class="page-title">Zuweisungen</h2>
 				<button
 					type="button"
 					onClick={openCreate}
@@ -115,31 +108,15 @@ export default function Allocations() {
 				</button>
 			</div>
 			<Show when={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}>
-				<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
+				<p class="muted text-sm">
 					Erst Konten und Pools anlegen, dann Zuweisungen verbinden.
 				</p>
 			</Show>
 
 			<Show when={showForm()}>
-				<form
-					onSubmit={submit}
-					style={{
-						background: 'var(--surface)',
-						border: '1px solid var(--border)',
-						'border-radius': '12px',
-						padding: '1rem',
-						display: 'grid',
-						gap: '0.75rem',
-					}}
-				>
-					<div
-						style={{
-							display: 'grid',
-							'grid-template-columns': '1fr 1fr',
-							gap: '0.75rem',
-						}}
-					>
-						<label style={labelStyle}>
+				<form onSubmit={submit} class="form-card">
+					<div class="form-grid">
+						<label class="field">
 							Pool
 							<select
 								value={form().poolId}
@@ -147,14 +124,14 @@ export default function Allocations() {
 									setForm({ ...form(), poolId: e.currentTarget.value })
 								}
 								required
-								style={inputStyle}
+								class="input"
 							>
 								<For each={pools() ?? []}>
 									{(p) => <option value={p.id}>{p.name}</option>}
 								</For>
 							</select>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Konto
 							<select
 								value={form().accountId}
@@ -162,14 +139,14 @@ export default function Allocations() {
 									setForm({ ...form(), accountId: e.currentTarget.value })
 								}
 								required
-								style={inputStyle}
+								class="input"
 							>
 								<For each={accounts() ?? []}>
 									{(a) => <option value={a.id}>{a.name}</option>}
 								</For>
 							</select>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Betrag (€){' '}
 							<input
 								type="number"
@@ -179,17 +156,17 @@ export default function Allocations() {
 									setForm({ ...form(), amount: e.currentTarget.value })
 								}
 								required
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Verfügbarkeit
 							<select
 								value={form().liquidityOverride}
 								onChange={(e) =>
 									setForm({ ...form(), liquidityOverride: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							>
 								<option value="">— Standard vom Konto</option>
 								<For each={Object.entries(liquidityLabels)}>
@@ -197,7 +174,7 @@ export default function Allocations() {
 								</For>
 							</select>
 						</label>
-						<label style={labelStyle}>
+						<label class="field">
 							Verfügbar ab
 							<input
 								type="date"
@@ -205,14 +182,14 @@ export default function Allocations() {
 								onInput={(e) =>
 									setForm({ ...form(), unlockAt: e.currentTarget.value })
 								}
-								style={inputStyle}
+								class="input"
 							/>
 						</label>
 					</div>
 					<Show when={error()}>
-						<p style={{ color: 'var(--error)', 'font-size': '0.875rem' }}>{error()}</p>
+						<p class="form-error">{error()}</p>
 					</Show>
-					<div style={{ display: 'flex', gap: '0.5rem', 'justify-content': 'flex-end' }}>
+					<div class="form-actions">
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
 							Abbrechen
 						</button>
@@ -223,41 +200,26 @@ export default function Allocations() {
 				</form>
 			</Show>
 
-			<div style={{ display: 'grid', gap: '0.6rem' }}>
+			<div class="list list--tight">
 				<For each={allocations() ?? []}>
 					{(a) => (
-						<div
-							style={{
-								background: 'var(--surface)',
-								border: '1px solid var(--border)',
-								'border-radius': '12px',
-								padding: '0.9rem',
-								display: 'flex',
-								'justify-content': 'space-between',
-								'align-items': 'center',
-								gap: '1rem',
-							}}
-						>
+						<div class="card card--compact card-row">
 							<div>
-								<div style={{ 'font-weight': '600', 'font-size': '0.9rem' }}>
+								<div class="allocations-title">
 									{poolName(a.poolId)}{' '}
-									<span style={{ color: 'var(--muted)', 'font-weight': '400' }}>
+									<span class="allocations-route">
 										→ {accountName(a.accountId)}
 									</span>
 								</div>
-								<div style={{ color: 'var(--muted)', 'font-size': '0.75rem' }}>
+								<div class="allocations-sub">
 									{a.liquidityOverride
 										? `Abweichend: ${liquidityLabels[a.liquidityOverride]}`
 										: 'Standard vom Konto'}{' '}
 									<Show when={a.unlockAt}>· ab {a.unlockAt}</Show>
 								</div>
 							</div>
-							<div
-								style={{ display: 'flex', gap: '0.5rem', 'align-items': 'center' }}
-							>
-								<span style={{ 'font-weight': '700' }}>
-									{formatEUR(a.amountCents)}
-								</span>
+							<div class="card-actions">
+								<span class="strong--bold">{formatEUR(a.amountCents)}</span>
 								<button
 									type="button"
 									onClick={() => openEdit(a.id)}
@@ -281,25 +243,11 @@ export default function Allocations() {
 					)}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
-					<p style={{ color: 'var(--muted)', 'font-size': '0.875rem' }}>
+					<p class="muted text-sm">
 						Keine Zuweisungen. Verteile Kontoguthaben auf Pools.
 					</p>
 				</Show>
 			</div>
 		</div>
 	)
-}
-
-const labelStyle: Record<string, string> = {
-	display: 'grid',
-	gap: '0.25rem',
-	'font-size': '0.875rem',
-}
-const inputStyle: Record<string, string> = {
-	border: '1px solid var(--border-strong)',
-	'border-radius': '8px',
-	padding: '0.5rem 0.6rem',
-	'font-size': '0.875rem',
-	background: 'var(--input-bg)',
-	color: 'var(--text)',
 }
