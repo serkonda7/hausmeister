@@ -1,7 +1,9 @@
-import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
-import { api } from '../lib/api'
+import { type Allocation, api } from '../lib/api'
 import { formatEUR, liquidityLabels } from '../lib/format'
+import { patchForm } from '../lib/form'
+import CrudRow from './CrudRow'
+import EmptyState from './EmptyState'
 
 export default function Allocations() {
 	const [allocations, { refetch }] = createResource(() => api.allocations.list())
@@ -57,19 +59,20 @@ export default function Allocations() {
 			setError('Pool, Konto und Betrag erforderlich')
 			return
 		}
-		const payload = {
+		const payload: Omit<Allocation, 'id' | 'createdAt'> = {
 			poolId: f.poolId,
 			accountId: f.accountId,
 			amountCents,
-			liquidityOverride: f.liquidityOverride || undefined,
-			unlockAt: f.unlockAt || undefined,
+			liquidityOverride: (f.liquidityOverride ||
+				null) as Allocation['liquidityOverride'],
+			unlockAt: f.unlockAt || null,
 		}
 		try {
 			const eid = editingId()
 			if (eid) {
-				await api.allocations.update(eid, payload as never)
+				await api.allocations.update(eid, payload)
 			} else {
-				await api.allocations.create(payload as never)
+				await api.allocations.create(payload)
 			}
 			setShowForm(false)
 			await refetch()
@@ -120,7 +123,7 @@ export default function Allocations() {
 							<select
 								value={form().poolId}
 								onChange={(e) =>
-									setForm({ ...form(), poolId: e.currentTarget.value })
+									patchForm(setForm, 'poolId', e.currentTarget.value)
 								}
 								required
 								class="input"
@@ -135,7 +138,7 @@ export default function Allocations() {
 							<select
 								value={form().accountId}
 								onChange={(e) =>
-									setForm({ ...form(), accountId: e.currentTarget.value })
+									patchForm(setForm, 'accountId', e.currentTarget.value)
 								}
 								required
 								class="input"
@@ -152,7 +155,7 @@ export default function Allocations() {
 								step="0.01"
 								value={form().amount}
 								onInput={(e) =>
-									setForm({ ...form(), amount: e.currentTarget.value })
+									patchForm(setForm, 'amount', e.currentTarget.value)
 								}
 								required
 								class="input"
@@ -163,7 +166,7 @@ export default function Allocations() {
 							<select
 								value={form().liquidityOverride}
 								onChange={(e) =>
-									setForm({ ...form(), liquidityOverride: e.currentTarget.value })
+									patchForm(setForm, 'liquidityOverride', e.currentTarget.value)
 								}
 								class="input"
 							>
@@ -179,7 +182,7 @@ export default function Allocations() {
 								type="date"
 								value={form().unlockAt}
 								onInput={(e) =>
-									setForm({ ...form(), unlockAt: e.currentTarget.value })
+									patchForm(setForm, 'unlockAt', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -217,32 +220,18 @@ export default function Allocations() {
 							</div>
 							<div class="card-actions">
 								<span class="strong--bold">{formatEUR(a.amountCents)}</span>
-								<button
-									type="button"
-									onClick={() => openEdit(a.id)}
-									class="btn-icon"
-									aria-label="Bearbeiten"
-									title="Bearbeiten"
-								>
-									<IconPencil size={18} />
-								</button>
-								<button
-									type="button"
-									onClick={() => remove(a.id)}
-									class="btn-icon btn-icon--danger"
-									aria-label="Löschen"
-									title="Löschen"
-								>
-									<IconTrash size={18} />
-								</button>
+								<CrudRow
+									onEdit={() => openEdit(a.id)}
+									onDelete={() => remove(a.id)}
+								/>
 							</div>
 						</div>
 					)}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
-					<p class="muted text-sm">
+					<EmptyState>
 						Keine Zuweisungen. Verteile Kontoguthaben auf Pools.
-					</p>
+					</EmptyState>
 				</Show>
 			</div>
 		</div>

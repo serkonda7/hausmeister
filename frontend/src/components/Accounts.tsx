@@ -1,7 +1,9 @@
-import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { accountTypeLabels, formatEUR, liquidityLabels } from '../lib/format'
+import { patchForm } from '../lib/form'
+import CrudRow from './CrudRow'
+import EmptyState from './EmptyState'
 
 export default function Accounts() {
 	const [accounts, { refetch }] = createResource(() => api.accounts.list())
@@ -56,21 +58,21 @@ export default function Accounts() {
 			setError('Ungültiger Betrag')
 			return
 		}
-		const payload = {
+		const payload: Omit<Account, 'id' | 'createdAt'> = {
 			name: f.name,
 			type: f.type,
-			institution: f.institution || undefined,
+			institution: f.institution || null,
 			liquidityTier: f.liquidityTier,
 			balanceCents,
-			unlockAt: f.unlockAt || undefined,
-			notes: f.notes || undefined,
+			unlockAt: f.unlockAt || null,
+			notes: f.notes || null,
 		}
 		try {
 			const current = editing()
 			if (current) {
 				await api.accounts.update(current.id, payload)
 			} else {
-				await api.accounts.create(payload as never)
+				await api.accounts.create(payload)
 			}
 			setShowForm(false)
 			await refetch()
@@ -103,7 +105,7 @@ export default function Accounts() {
 							Name{' '}
 							<input
 								value={form().name}
-								onInput={(e) => setForm({ ...form(), name: e.currentTarget.value })}
+								onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -113,7 +115,11 @@ export default function Accounts() {
 							<select
 								value={form().type}
 								onChange={(e) =>
-									setForm({ ...form(), type: e.currentTarget.value as never })
+									patchForm(
+										setForm,
+										'type',
+										e.currentTarget.value as Account['type'],
+									)
 								}
 								class="input"
 							>
@@ -127,7 +133,7 @@ export default function Accounts() {
 							<input
 								value={form().institution}
 								onInput={(e) =>
-									setForm({ ...form(), institution: e.currentTarget.value })
+									patchForm(setForm, 'institution', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -137,10 +143,11 @@ export default function Accounts() {
 							<select
 								value={form().liquidityTier}
 								onChange={(e) =>
-									setForm({
-										...form(),
-										liquidityTier: e.currentTarget.value as never,
-									})
+									patchForm(
+										setForm,
+										'liquidityTier',
+										e.currentTarget.value as Account['liquidityTier'],
+									)
 								}
 								class="input"
 							>
@@ -156,7 +163,7 @@ export default function Accounts() {
 								step="0.01"
 								value={form().balance}
 								onInput={(e) =>
-									setForm({ ...form(), balance: e.currentTarget.value })
+									patchForm(setForm, 'balance', e.currentTarget.value)
 								}
 								required
 								class="input"
@@ -168,7 +175,7 @@ export default function Accounts() {
 								type="date"
 								value={form().unlockAt}
 								onInput={(e) =>
-									setForm({ ...form(), unlockAt: e.currentTarget.value })
+									patchForm(setForm, 'unlockAt', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -178,7 +185,7 @@ export default function Accounts() {
 						Notizen{' '}
 						<input
 							value={form().notes}
-							onInput={(e) => setForm({ ...form(), notes: e.currentTarget.value })}
+							onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
 							class="input"
 						/>
 					</label>
@@ -218,30 +225,13 @@ export default function Accounts() {
 								<div class="strong--bold" style={{ 'white-space': 'nowrap' }}>
 									{formatEUR(a.balanceCents)}
 								</div>
-								<button
-									type="button"
-									onClick={() => openEdit(a)}
-									class="btn-icon"
-									aria-label="Bearbeiten"
-									title="Bearbeiten"
-								>
-									<IconPencil size={18} />
-								</button>
-								<button
-									type="button"
-									onClick={() => remove(a.id)}
-									class="btn-icon btn-icon--danger"
-									aria-label="Löschen"
-									title="Löschen"
-								>
-									<IconTrash size={18} />
-								</button>
+								<CrudRow onEdit={() => openEdit(a)} onDelete={() => remove(a.id)} />
 							</div>
 						</div>
 					)}
 				</For>
 				<Show when={(accounts() ?? []).length === 0 && !accounts.loading}>
-					<p class="muted text-sm">Keine Konten. Lege dein erstes Konto an.</p>
+					<EmptyState>Keine Konten. Lege dein erstes Konto an.</EmptyState>
 				</Show>
 			</div>
 		</div>
