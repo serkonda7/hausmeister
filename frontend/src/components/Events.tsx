@@ -1,8 +1,9 @@
 import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { api, type FinanceEvent } from '../lib/api'
 import { patchForm } from '../lib/form'
-import { formatDateISO, formatEUR } from '../lib/format'
+import { formatDateISO, formatEUR, todayISO } from '../lib/format'
 import CrudRow from './CrudRow'
+import DateInput from './DateInput'
 import EmptyState from './EmptyState'
 
 export default function Events() {
@@ -21,7 +22,7 @@ export default function Events() {
 		title: '',
 		amount: '',
 		direction: 'outflow' as 'inflow' | 'outflow',
-		date: new Date().toISOString().slice(0, 10),
+		date: todayISO(),
 		isRecurring: false,
 		frequency: '' as string,
 		recurringUntil: '',
@@ -36,7 +37,7 @@ export default function Events() {
 			title: '',
 			amount: '',
 			direction: 'outflow',
-			date: new Date().toISOString().slice(0, 10),
+			date: todayISO(),
 			isRecurring: false,
 			frequency: '',
 			recurringUntil: '',
@@ -161,14 +162,13 @@ export default function Events() {
 								<option value="outflow">Outflow (−)</option>
 							</select>
 						</label>
-						<label class="field">
+						<label class="field" for="ev-date">
 							Date{' '}
-							<input
-								type="date"
+							<DateInput
+								id="ev-date"
 								value={form().date}
-								onInput={(e) => patchForm(setForm, 'date', e.currentTarget.value)}
+								onInput={(v) => patchForm(setForm, 'date', v)}
 								required
-								class="input"
 							/>
 						</label>
 						<label class="field field--checkbox">
@@ -199,15 +199,12 @@ export default function Events() {
 									<option value="yearly">Yearly</option>
 								</select>
 							</label>
-							<label class="field">
+							<label class="field" for="ev-recurring-until">
 								Until (date){' '}
-								<input
-									type="date"
+								<DateInput
+									id="ev-recurring-until"
 									value={form().recurringUntil}
-									onInput={(e) =>
-										patchForm(setForm, 'recurringUntil', e.currentTarget.value)
-									}
-									class="input"
+									onInput={(v) => patchForm(setForm, 'recurringUntil', v)}
 								/>
 							</label>
 						</Show>

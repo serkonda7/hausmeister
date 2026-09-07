@@ -1,15 +1,16 @@
 import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Category, type Transaction } from '../lib/api'
 import { patchForm } from '../lib/form'
-import { formatDateISO, formatEUR } from '../lib/format'
+import { formatDateISO, formatEUR, todayISO } from '../lib/format'
 import CrudRow from './CrudRow'
+import DateInput from './DateInput'
 import EmptyState from './EmptyState'
 
 type Mode = 'transaction' | 'transfer'
 
 const EMPTY_TXN = {
 	accountId: '',
-	date: new Date().toISOString().slice(0, 10),
+	date: todayISO(),
 	payee: '',
 	categoryId: '',
 	amount: '',
@@ -21,7 +22,7 @@ const EMPTY_TRANSFER = {
 	fromAccountId: '',
 	toAccountId: '',
 	amount: '',
-	date: new Date().toISOString().slice(0, 10),
+	date: todayISO(),
 	payee: '',
 	categoryId: '',
 	notes: '',
@@ -391,14 +392,13 @@ export default function Transactions() {
 										</For>
 									</select>
 								</label>
-								<label class="field">
+								<label class="field" for="txn-date">
 									Date
-									<input
-										type="date"
+									<DateInput
+										id="txn-date"
 										value={form().date}
-										onInput={(e) => patchForm(setForm, 'date', e.currentTarget.value)}
+										onInput={(v) => patchForm(setForm, 'date', v)}
 										required
-										class="input"
 									/>
 								</label>
 								<label class="field">
@@ -520,16 +520,13 @@ export default function Transactions() {
 										class="input"
 									/>
 								</label>
-								<label class="field">
+								<label class="field" for="transfer-date">
 									Date
-									<input
-										type="date"
+									<DateInput
+										id="transfer-date"
 										value={transferForm().date}
-										onInput={(e) =>
-											setTransferForm((p) => ({ ...p, date: e.currentTarget.value }))
-										}
+										onInput={(v) => setTransferForm((p) => ({ ...p, date: v }))}
 										required
-										class="input"
 									/>
 								</label>
 								<label class="field">

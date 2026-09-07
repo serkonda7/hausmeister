@@ -3,6 +3,7 @@ import { type Allocation, api } from '../lib/api'
 import { patchForm } from '../lib/form'
 import { formatEUR, liquidityLabels } from '../lib/format'
 import CrudRow from './CrudRow'
+import DateInput from './DateInput'
 import EmptyState from './EmptyState'
 
 export default function Allocations() {
@@ -173,15 +174,12 @@ export default function Allocations() {
 								</For>
 							</select>
 						</label>
-						<label class="field">
+						<label class="field" for="allocation-unlock-at">
 							Available from
-							<input
-								type="date"
+							<DateInput
+								id="allocation-unlock-at"
 								value={form().unlockAt}
-								onInput={(e) =>
-									patchForm(setForm, 'unlockAt', e.currentTarget.value)
-								}
-								class="input"
+								onInput={(v) => patchForm(setForm, 'unlockAt', v)}
 							/>
 						</label>
 					</div>

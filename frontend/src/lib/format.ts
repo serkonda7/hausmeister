@@ -22,6 +22,14 @@ export function formatDateISO(dateStr: string): string {
 	}
 }
 
+/** Today's date as ISO `YYYY-MM-DD` in local time (no UTC shift). */
+export function todayISO(d = new Date()): string {
+	const y = d.getFullYear()
+	const m = String(d.getMonth() + 1).padStart(2, '0')
+	const day = String(d.getDate()).padStart(2, '0')
+	return `${y}-${m}-${day}`
+}
+
 export const liquidityLabels: Record<string, string> = {
 	instant: 'Instant',
 	days: 'Days',

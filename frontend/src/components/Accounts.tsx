@@ -1,8 +1,9 @@
-import { createResource, createSignal, For, Show } from 'solid-js'
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { patchForm } from '../lib/form'
 import { accountTypeDescriptions, accountTypeLabels, formatEUR } from '../lib/format'
 import CrudRow from './CrudRow'
+import DateInput from './DateInput'
 import EmptyState from './EmptyState'
 
 export default function Accounts() {
@@ -19,6 +20,17 @@ export default function Accounts() {
 		notes: '',
 	})
 	const [error, setError] = createSignal('')
+
+	const institutions = createMemo(() => {
+		const seen = new Set<string>()
+		for (const a of accounts() ?? []) {
+			const name = a.institution?.trim()
+			if (name) {
+				seen.add(name)
+			}
+		}
+		return [...seen].sort((x, y) => x.localeCompare(y))
+	})
 
 	function openCreate() {
 		setEditing(null)
@@ -65,7 +77,7 @@ export default function Accounts() {
 		const payload: Omit<Account, 'id' | 'createdAt'> = {
 			name: f.name,
 			type: f.type,
-			institution: f.institution || null,
+			institution: f.institution.trim() || null,
 			openingDate: f.openingDate || null,
 			openingBalanceCents,
 			iban: f.iban.trim() || null,
@@ -145,17 +157,20 @@ export default function Accounts() {
 									patchForm(setForm, 'institution', e.currentTarget.value)
 								}
 								class="input"
+								list="institution-options"
+								placeholder="Select or type a new institution"
+								autocomplete="off"
 							/>
+							<datalist id="institution-options">
+								<For each={institutions()}>{(name) => <option value={name} />}</For>
+							</datalist>
 						</label>
-						<label class="field">
+						<label class="field" for="account-opening-date">
 							Opening date{' '}
-							<input
-								type="date"
+							<DateInput
+								id="account-opening-date"
 								value={form().openingDate}
-								onInput={(e) =>
-									patchForm(setForm, 'openingDate', e.currentTarget.value)
-								}
-								class="input"
+								onInput={(v) => patchForm(setForm, 'openingDate', v)}
 							/>
 						</label>
 						<label class="field">
