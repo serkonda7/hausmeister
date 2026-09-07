@@ -3,16 +3,28 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { db } from './db/index'
-import { accounts, allocations, events, pools } from './db/schema'
+import {
+	accounts,
+	allocations,
+	categories,
+	events,
+	pools,
+	transactions,
+} from './db/schema'
 import {
 	accountCreateSchema,
 	accountUpdateSchema,
 	allocationCreateSchema,
 	allocationUpdateSchema,
+	categoryCreateSchema,
+	categoryUpdateSchema,
 	eventCreateSchema,
 	eventUpdateSchema,
 	poolCreateSchema,
 	poolUpdateSchema,
+	transactionCreateSchema,
+	transactionUpdateSchema,
+	transferCreateSchema,
 } from './validators'
 
 const app = new Hono()
@@ -29,7 +41,66 @@ function now() {
 // Health
 app.get('/health', (c) => c.json({ status: 'ok', time: now() }))
 
-// --- Helpers ---
+async function exists(table: object, rowId: string): Promise<boolean> {
+	const idCol = (table as { id: Parameters<typeof eq>[0] }).id
+	const row = await db
+		.select({ id: idCol as never })
+		.from(table as never)
+		.where(eq(idCol, rowId))
+		.limit(1)
+	return row.length > 0
+}
+
+function signedCents(amountCents: number, direction: 'inflow' | 'outflow'): number {
+	return direction === 'inflow' ? amountCents : -amountCents
+}
+
+type AccountRow = typeof accounts.$inferSelect
+type TransactionRow = typeof transactions.$inferSelect
+type AllocationRow = typeof allocations.$inferSelect
+
+function currentBalanceFor(
+	account: AccountRow,
+	txns: Pick<TransactionRow, 'accountId' | 'amountCents' | 'direction'>[],
+): number {
+	let balance = account.openingBalanceCents ?? 0
+	for (const t of txns) {
+		if (t.accountId === account.id) {
+			balance += signedCents(t.amountCents, t.direction)
+		}
+	}
+	return balance
+}
+
+function allocatedFor(
+	accountId: string,
+	allocs: Pick<AllocationRow, 'accountId' | 'amountCents'>[],
+): number {
+	return allocs.reduce((s, a) => (a.accountId === accountId ? s + a.amountCents : s), 0)
+}
+
+async function overAllocation(
+	accountId: string,
+	proposedTotalAllocated: number,
+): Promise<{ currentCents: number; allocatedCents: number } | null> {
+	const acc = await db.select().from(accounts).where(eq(accounts.id, accountId)).limit(1)
+	if (acc.length === 0) {
+		return null
+	}
+	const txns = await db
+		.select({
+			accountId: transactions.accountId,
+			amountCents: transactions.amountCents,
+			direction: transactions.direction,
+		})
+		.from(transactions)
+		.where(eq(transactions.accountId, accountId))
+	const current = currentBalanceFor(acc[0], txns)
+	if (proposedTotalAllocated > current) {
+		return { currentCents: current, allocatedCents: proposedTotalAllocated }
+	}
+	return null
+}
 
 // ============ ACCOUNTS ============
 app.get('/accounts', async (c) => {
@@ -98,8 +169,51 @@ app.put('/accounts/:id', vValidator('json', accountUpdateSchema), async (c) => {
 })
 
 app.delete('/accounts/:id', async (c) => {
-	await db.delete(accounts).where(eq(accounts.id, c.req.param('id')))
+	const accountId = c.req.param('id')
+	const linked = await db
+		.select({ id: transactions.id })
+		.from(transactions)
+		.where(eq(transactions.accountId, accountId))
+		.limit(1)
+	if (linked.length > 0) {
+		return c.json(
+			{ error: 'Account has transactions and cannot be deleted. Move or delete them first.' },
+			409,
+		)
+	}
+	await db.delete(accounts).where(eq(accounts.id, accountId))
 	return c.json({ ok: true })
+})
+
+// Current (live) balance: opening + signed transactions
+app.get('/accounts/:id/balance', async (c) => {
+	const accountId = c.req.param('id')
+	const found = await db.select().from(accounts).where(eq(accounts.id, accountId)).limit(1)
+	if (found.length === 0) {
+		return c.json({ error: 'Account not found' }, 404)
+	}
+	const txns = await db
+		.select({
+			accountId: transactions.accountId,
+			amountCents: transactions.amountCents,
+			direction: transactions.direction,
+		})
+		.from(transactions)
+		.where(eq(transactions.accountId, accountId))
+	const currentCents = currentBalanceFor(found[0], txns)
+	const allAllocs = await db
+		.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
+		.from(allocations)
+		.where(eq(allocations.accountId, accountId))
+	const allocatedCents = allocatedFor(accountId, allAllocs)
+	return c.json({
+		accountId,
+		openingCents: found[0].openingBalanceCents ?? 0,
+		currentCents,
+		allocatedCents,
+		unallocatedCents: currentCents - allocatedCents,
+		transactionCount: txns.length,
+	})
 })
 
 // ============ POOLS ============
@@ -200,6 +314,23 @@ app.get('/allocations', async (c) => {
 
 app.post('/allocations', vValidator('json', allocationCreateSchema), async (c) => {
 	const data = c.req.valid('json')
+	if (!(await exists(pools, data.poolId))) {
+		return c.json({ error: 'Pool not found' }, 404)
+	}
+	if (!(await exists(accounts, data.accountId))) {
+		return c.json({ error: 'Account not found' }, 404)
+	}
+	const existing = await db
+		.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
+		.from(allocations)
+		.where(eq(allocations.accountId, data.accountId))
+	const over = await overAllocation(
+		data.accountId,
+		allocatedFor(data.accountId, existing) + data.amountCents,
+	)
+	if (over) {
+		return c.json({ error: 'Allocation exceeds account balance', ...over }, 422)
+	}
 	const row = {
 		id: id(),
 		poolId: data.poolId,
@@ -233,6 +364,37 @@ app.put('/allocations/:id', vValidator('json', allocationUpdateSchema), async (c
 				: existing[0].liquidityOverride,
 		unlockAt: data.unlockAt !== undefined ? (data.unlockAt ?? null) : existing[0].unlockAt,
 	}
+	if (data.poolId !== undefined && !(await exists(pools, updated.poolId))) {
+		return c.json({ error: 'Pool not found' }, 404)
+	}
+	if (data.accountId !== undefined && !(await exists(accounts, updated.accountId))) {
+		return c.json({ error: 'Account not found' }, 404)
+	}
+	if (
+		data.amountCents !== undefined ||
+		data.accountId !== undefined ||
+		updated.accountId !== existing[0].accountId
+	) {
+		// Recompute allocation total for the (possibly new) account, excluding this row
+		const siblings = await db
+			.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
+			.from(allocations)
+			.where(eq(allocations.accountId, updated.accountId))
+		const siblingTotal = siblings
+			.filter((a) => a.accountId === updated.accountId)
+			.reduce((s, a) => s + a.amountCents, 0)
+		// siblings include this row's old amount only when account unchanged
+		const oldAmountInSiblings =
+			updated.accountId === existing[0].accountId ? existing[0].amountCents : 0
+		const over = await overAllocation(
+			updated.accountId,
+			siblingTotal - oldAmountInSiblings + updated.amountCents,
+		)
+		if (over) {
+			return c.json({ error: 'Allocation exceeds account balance', ...over }, 422)
+		}
+		// Moving to another account frees the old account — no check needed there.
+	}
 	await db
 		.update(allocations)
 		.set(updated)
@@ -253,6 +415,12 @@ app.get('/events', async (c) => {
 
 app.post('/events', vValidator('json', eventCreateSchema), async (c) => {
 	const data = c.req.valid('json')
+	if (data.poolId != null && !(await exists(pools, data.poolId))) {
+		return c.json({ error: 'Pool not found' }, 404)
+	}
+	if (data.accountId != null && !(await exists(accounts, data.accountId))) {
+		return c.json({ error: 'Account not found' }, 404)
+	}
 	const row = {
 		id: id(),
 		title: data.title,
@@ -296,6 +464,12 @@ app.put('/events/:id', vValidator('json', eventUpdateSchema), async (c) => {
 		accountId: data.accountId !== undefined ? (data.accountId ?? null) : existing[0].accountId,
 		notes: data.notes !== undefined ? (data.notes ?? null) : existing[0].notes,
 	}
+	if (updated.poolId != null && !(await exists(pools, updated.poolId))) {
+		return c.json({ error: 'Pool not found' }, 404)
+	}
+	if (updated.accountId != null && !(await exists(accounts, updated.accountId))) {
+		return c.json({ error: 'Account not found' }, 404)
+	}
 	await db
 		.update(events)
 		.set(updated)
@@ -308,14 +482,266 @@ app.delete('/events/:id', async (c) => {
 	return c.json({ ok: true })
 })
 
+// ============ CATEGORIES ============
+app.get('/categories', async (c) => {
+	const rows = await db.select().from(categories).orderBy(categories.name)
+	return c.json(rows)
+})
+
+app.post('/categories', vValidator('json', categoryCreateSchema), async (c) => {
+	const data = c.req.valid('json')
+	const row = {
+		id: id(),
+		name: data.name.trim(),
+		kind: data.kind ?? null,
+		color: data.color ?? null,
+		createdAt: now(),
+	}
+	try {
+		await db.insert(categories).values(row)
+	} catch {
+		return c.json({ error: 'Category name already exists' }, 409)
+	}
+	return c.json(row, 201)
+})
+
+app.put('/categories/:id', vValidator('json', categoryUpdateSchema), async (c) => {
+	const data = c.req.valid('json')
+	const existing = await db
+		.select()
+		.from(categories)
+		.where(eq(categories.id, c.req.param('id')))
+		.limit(1)
+	if (existing.length === 0) {
+		return c.json({ error: 'Category not found' }, 404)
+	}
+	const updated = {
+		name: data.name?.trim() ?? existing[0].name,
+		kind: data.kind !== undefined ? (data.kind ?? null) : existing[0].kind,
+		color: data.color !== undefined ? (data.color ?? null) : existing[0].color,
+	}
+	try {
+		await db.update(categories).set(updated).where(eq(categories.id, c.req.param('id')))
+	} catch {
+		return c.json({ error: 'Category name already exists' }, 409)
+	}
+	return c.json({ ...existing[0], ...updated })
+})
+
+app.delete('/categories/:id', async (c) => {
+	// transactions keep their history; category FK is SET NULL
+	await db.delete(categories).where(eq(categories.id, c.req.param('id')))
+	return c.json({ ok: true })
+})
+
+// ============ TRANSACTIONS (actuals ledger) ============
+app.get('/transactions', async (c) => {
+	const accountId = c.req.query('accountId')
+	const rows = accountId
+		? await db
+				.select()
+				.from(transactions)
+				.where(eq(transactions.accountId, accountId))
+				.orderBy(transactions.date)
+		: await db.select().from(transactions).orderBy(transactions.date)
+	return c.json(rows)
+})
+
+app.post('/transactions', vValidator('json', transactionCreateSchema), async (c) => {
+	const data = c.req.valid('json')
+	if (!(await exists(accounts, data.accountId))) {
+		return c.json({ error: 'Account not found' }, 404)
+	}
+	if (data.categoryId != null && !(await exists(categories, data.categoryId))) {
+		return c.json({ error: 'Category not found' }, 404)
+	}
+	// Outflows must not push allocated money into over-allocation:
+	// balance after a new outflow must still cover allocations.
+	if (data.direction === 'outflow') {
+		const acc = await db
+			.select()
+			.from(accounts)
+			.where(eq(accounts.id, data.accountId))
+			.limit(1)
+		const txns = await db
+			.select({
+				accountId: transactions.accountId,
+				amountCents: transactions.amountCents,
+				direction: transactions.direction,
+			})
+			.from(transactions)
+			.where(eq(transactions.accountId, data.accountId))
+		const allocs = await db
+			.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
+			.from(allocations)
+			.where(eq(allocations.accountId, data.accountId))
+		const current = currentBalanceFor(acc[0], txns) - data.amountCents
+		const allocated = allocatedFor(data.accountId, allocs)
+		if (allocated > current) {
+			return c.json(
+				{ error: 'Transaction would over-allocate account', currentCents: current, allocatedCents: allocated },
+				422,
+			)
+		}
+	}
+	const row = {
+		id: id(),
+		accountId: data.accountId,
+		date: data.date,
+		payee: data.payee ?? null,
+		categoryId: data.categoryId ?? null,
+		amountCents: data.amountCents,
+		direction: data.direction,
+		transferId: null,
+		notes: data.notes ?? null,
+		createdAt: now(),
+	}
+	await db.insert(transactions).values(row)
+	return c.json(row, 201)
+})
+
+app.put('/transactions/:id', vValidator('json', transactionUpdateSchema), async (c) => {
+	const data = c.req.valid('json')
+	const existing = await db
+		.select()
+		.from(transactions)
+		.where(eq(transactions.id, c.req.param('id')))
+		.limit(1)
+	if (existing.length === 0) {
+		return c.json({ error: 'Transaction not found' }, 404)
+	}
+	if (existing[0].transferId != null) {
+		return c.json({ error: 'Transfer legs must be edited via DELETE + POST /transfers' }, 409)
+	}
+	const updated = {
+		accountId: data.accountId ?? existing[0].accountId,
+		date: data.date ?? existing[0].date,
+		payee: data.payee !== undefined ? (data.payee ?? null) : existing[0].payee,
+		categoryId: data.categoryId !== undefined ? (data.categoryId ?? null) : existing[0].categoryId,
+		amountCents: data.amountCents ?? existing[0].amountCents,
+		direction: data.direction ?? existing[0].direction,
+		notes: data.notes !== undefined ? (data.notes ?? null) : existing[0].notes,
+	}
+	if (!(await exists(accounts, updated.accountId))) {
+		return c.json({ error: 'Account not found' }, 404)
+	}
+	if (updated.categoryId != null && !(await exists(categories, updated.categoryId))) {
+		return c.json({ error: 'Category not found' }, 404)
+	}
+	await db.update(transactions).set(updated).where(eq(transactions.id, c.req.param('id')))
+	return c.json({ ...existing[0], ...updated })
+})
+
+app.delete('/transactions/:id', async (c) => {
+	const existing = await db
+		.select()
+		.from(transactions)
+		.where(eq(transactions.id, c.req.param('id')))
+		.limit(1)
+	if (existing.length === 0) {
+		return c.json({ error: 'Transaction not found' }, 404)
+	}
+	if (existing[0].transferId != null) {
+		// Delete both legs atomically
+		await db.delete(transactions).where(eq(transactions.transferId, existing[0].transferId))
+		return c.json({ ok: true, deletedTransfer: true })
+	}
+	await db.delete(transactions).where(eq(transactions.id, c.req.param('id')))
+	return c.json({ ok: true })
+})
+
+// ============ TRANSFERS (atomic account → account) ============
+app.post('/transfers', vValidator('json', transferCreateSchema), async (c) => {
+	const data = c.req.valid('json')
+	if (data.fromAccountId === data.toAccountId) {
+		return c.json({ error: 'fromAccountId and toAccountId must differ' }, 422)
+	}
+	if (!(await exists(accounts, data.fromAccountId))) {
+		return c.json({ error: 'Source account not found' }, 404)
+	}
+	if (!(await exists(accounts, data.toAccountId))) {
+		return c.json({ error: 'Destination account not found' }, 404)
+	}
+	if (data.categoryId != null && !(await exists(categories, data.categoryId))) {
+		return c.json({ error: 'Category not found' }, 404)
+	}
+	// Source balance after outflow must still cover its allocations
+	const src = await db
+		.select()
+		.from(accounts)
+		.where(eq(accounts.id, data.fromAccountId))
+		.limit(1)
+	const srcTxns = await db
+		.select({
+			accountId: transactions.accountId,
+			amountCents: transactions.amountCents,
+			direction: transactions.direction,
+		})
+		.from(transactions)
+		.where(eq(transactions.accountId, data.fromAccountId))
+	const srcAllocs = await db
+		.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
+		.from(allocations)
+		.where(eq(allocations.accountId, data.fromAccountId))
+	const srcCurrent = currentBalanceFor(src[0], srcTxns) - data.amountCents
+	const srcAllocated = allocatedFor(data.fromAccountId, srcAllocs)
+	if (srcAllocated > srcCurrent) {
+		return c.json(
+			{ error: 'Transfer would over-allocate source account', currentCents: srcCurrent, allocatedCents: srcAllocated },
+			422,
+		)
+	}
+	const transferId = id()
+	const stamp = now()
+	const outLeg = {
+		id: id(),
+		accountId: data.fromAccountId,
+		date: data.date,
+		payee: data.payee ?? null,
+		categoryId: data.categoryId ?? null,
+		amountCents: data.amountCents,
+		direction: 'outflow' as const,
+		transferId,
+		notes: data.notes ?? null,
+		createdAt: stamp,
+	}
+	const inLeg = {
+		id: id(),
+		accountId: data.toAccountId,
+		date: data.date,
+		payee: data.payee ?? null,
+		categoryId: data.categoryId ?? null,
+		amountCents: data.amountCents,
+		direction: 'inflow' as const,
+		transferId,
+		notes: data.notes ?? null,
+		createdAt: stamp,
+	}
+	await db.insert(transactions).values([outLeg, inLeg])
+	return c.json({ transferId, legs: [outLeg, inLeg] }, 201)
+})
+
 // ============ SUMMARY / DASHBOARD ============
 app.get('/summary', async (c) => {
 	const allAccounts = await db.select().from(accounts)
 	const allPools = await db.select().from(pools)
 	const allAllocations = await db.select().from(allocations)
 	const allEvents = await db.select().from(events)
+	const allTransactions = await db
+		.select({
+			accountId: transactions.accountId,
+			amountCents: transactions.amountCents,
+			direction: transactions.direction,
+		})
+		.from(transactions)
+	const allCategories = await db.select({ id: categories.id }).from(categories)
 
-	const totalCents = allAccounts.reduce((s, a) => s + (a.openingBalanceCents ?? 0), 0)
+	// Live balances: opening + signed transactions (Phase 1 ledger)
+	const currentByAccount = new Map<string, number>()
+	for (const a of allAccounts) {
+		currentByAccount.set(a.id, currentBalanceFor(a, allTransactions))
+	}
+	const totalCents = [...currentByAccount.values()].reduce((s, v) => s + v, 0)
 
 	// Liquidity breakdown: effective tier per allocation override, else instant
 	// (accounts no longer carry availability). For unallocated money, use instant.
@@ -341,14 +767,28 @@ app.get('/summary', async (c) => {
 		const tier = al.liquidityOverride ?? 'instant'
 		liquidityMap[tier] = (liquidityMap[tier] ?? 0) + al.amountCents
 	}
-	// unallocated remainder (opening balance not yet distributed to pools)
+	// unallocated remainder (current balance not yet distributed to pools)
 	for (const acc of allAccounts) {
 		const allocated = allocatedByAccount.get(acc.id) ?? 0
-		const remainder = (acc.openingBalanceCents ?? 0) - allocated
+		const current = currentByAccount.get(acc.id) ?? 0
+		const remainder = current - allocated
 		if (remainder > 0) {
 			liquidityMap['instant'] = (liquidityMap['instant'] ?? 0) + remainder
 		}
 	}
+
+	const accountBalances = allAccounts.map((a) => {
+		const currentCents = currentByAccount.get(a.id) ?? 0
+		const allocatedCents = allocatedByAccount.get(a.id) ?? 0
+		return {
+			accountId: a.id,
+			name: a.name,
+			openingCents: a.openingBalanceCents ?? 0,
+			currentCents,
+			allocatedCents,
+			unallocatedCents: currentCents - allocatedCents,
+		}
+	})
 
 	// Pool breakdown
 	const poolTotals = allPools.map((p) => {
@@ -456,6 +896,7 @@ app.get('/summary', async (c) => {
 		totalCents,
 		liquidityMap,
 		poolTotals,
+		accountBalances,
 		upcomingEvents: upcoming.slice(0, 50),
 		unlocks,
 		counts: {
@@ -463,6 +904,8 @@ app.get('/summary', async (c) => {
 			pools: allPools.length,
 			allocations: allAllocations.length,
 			events: allEvents.length,
+			transactions: allTransactions.length,
+			categories: allCategories.length,
 		},
 	})
 })

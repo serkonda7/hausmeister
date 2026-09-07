@@ -77,6 +77,36 @@ export const events = sqliteTable('events', {
 	createdAt: text('created_at').notNull(),
 })
 
+// ---- Phase 1: ledger ----
+export const categoryKindEnum = ['income', 'expense'] as const
+export type CategoryKind = (typeof categoryKindEnum)[number]
+
+export const categories = sqliteTable('categories', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull().unique(),
+	kind: text('kind').$type<CategoryKind>(), // null = both
+	color: text('color'),
+	createdAt: text('created_at').notNull(),
+})
+
+export const transactions = sqliteTable('transactions', {
+	id: text('id').primaryKey(),
+	accountId: text('account_id')
+		.notNull()
+		.references(() => accounts.id, { onDelete: 'cascade' }),
+	date: text('date').notNull(), // ISO date (YYYY-MM-DD)
+	payee: text('payee'),
+	categoryId: text('category_id').references(() => categories.id, {
+		onDelete: 'set null',
+	}),
+	amountCents: integer('amount_cents').notNull(), // >= 0, see direction
+	direction: text('direction').notNull().$type<'inflow' | 'outflow'>(),
+	// paired account-transfer legs share a transferId; null = plain transaction
+	transferId: text('transfer_id'),
+	notes: text('notes'),
+	createdAt: text('created_at').notNull(),
+})
+
 export type Account = typeof accounts.$inferSelect
 export type NewAccount = typeof accounts.$inferInsert
 export type Pool = typeof pools.$inferSelect
@@ -85,3 +115,7 @@ export type Allocation = typeof allocations.$inferSelect
 export type NewAllocation = typeof allocations.$inferInsert
 export type FinanceEvent = typeof events.$inferSelect
 export type NewFinanceEvent = typeof events.$inferInsert
+export type Category = typeof categories.$inferSelect
+export type NewCategory = typeof categories.$inferInsert
+export type Transaction = typeof transactions.$inferSelect
+export type NewTransaction = typeof transactions.$inferInsert

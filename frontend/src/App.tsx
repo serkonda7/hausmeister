@@ -4,6 +4,7 @@ import {
 	IconDashboard,
 	IconExchange,
 	IconMoon,
+	IconReceipt,
 	IconSun,
 	IconWallet,
 } from '@tabler/icons-solidjs'
@@ -14,12 +15,14 @@ import Allocations from './components/Allocations'
 import Dashboard from './components/Dashboard'
 import Events from './components/Events'
 import Pools from './components/Pools'
+import Transactions from './components/Transactions'
 import './App.css'
 import { initThemeListener, theme, toggleTheme } from './lib/theme'
 
 const VIEWS = [
 	{ id: 'dashboard', label: 'Dashboard', comp: Dashboard, icon: IconDashboard },
 	{ id: 'accounts', label: 'Accounts', comp: Accounts, icon: IconWallet },
+	{ id: 'transactions', label: 'Transactions', comp: Transactions, icon: IconReceipt },
 	{ id: 'pools', label: 'Pools', comp: Pools, icon: IconCoins },
 	{ id: 'allocations', label: 'Allocations', comp: Allocations, icon: IconExchange },
 	{ id: 'events', label: 'Timeline', comp: Events, icon: IconCalendarEvent },

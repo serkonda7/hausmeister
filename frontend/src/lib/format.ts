@@ -13,7 +13,10 @@ export function formatPercent(bps: number | null | undefined): string {
 
 export function formatDateISO(dateStr: string): string {
 	try {
-		return new Date(dateStr).toLocaleDateString('en-US')
+		if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+			return dateStr.slice(0, 10)
+		}
+		return new Date(dateStr).toISOString().slice(0, 10)
 	} catch {
 		return dateStr
 	}

@@ -61,6 +61,39 @@ export interface FinanceEvent {
 	createdAt: string
 }
 
+// Phase 1: ledger
+export type CategoryKind = 'income' | 'expense'
+
+export interface Category {
+	id: string
+	name: string
+	kind: CategoryKind | null
+	color: string | null
+	createdAt: string
+}
+
+export interface Transaction {
+	id: string
+	accountId: string
+	date: string
+	payee: string | null
+	categoryId: string | null
+	amountCents: number
+	direction: 'inflow' | 'outflow'
+	transferId: string | null
+	notes: string | null
+	createdAt: string
+}
+
+export interface AccountBalance {
+	accountId: string
+	name: string
+	openingCents: number
+	currentCents: number
+	allocatedCents: number
+	unallocatedCents: number
+}
+
 export interface Summary {
 	totalCents: number
 	liquidityMap: Record<LiquidityTier, number>
@@ -81,7 +114,15 @@ export interface Summary {
 		unlockAt: string
 		amountCents: number
 	}>
-	counts: { accounts: number; pools: number; allocations: number; events: number }
+	accountBalances: AccountBalance[]
+	counts: {
+		accounts: number
+		pools: number
+		allocations: number
+		events: number
+		transactions: number
+		categories: number
+	}
 }
 
 async function req<T>(path: string, opts?: RequestInit): Promise<T> {
@@ -129,5 +170,37 @@ export const api = {
 		update: (id: string, d: Partial<Omit<FinanceEvent, 'id' | 'createdAt'>>) =>
 			req<FinanceEvent>(`/api/events/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
 		remove: (id: string) => req<{ ok: true }>(`/api/events/${id}`, { method: 'DELETE' }),
+	},
+	categories: {
+		list: () => req<Category[]>('/api/categories'),
+		create: (d: Omit<Category, 'id' | 'createdAt'>) =>
+			req<Category>('/api/categories', { method: 'POST', body: JSON.stringify(d) }),
+		update: (id: string, d: Partial<Omit<Category, 'id' | 'createdAt'>>) =>
+			req<Category>(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
+		remove: (id: string) => req<{ ok: true }>(`/api/categories/${id}`, { method: 'DELETE' }),
+	},
+	transactions: {
+		list: (accountId?: string) =>
+			req<Transaction[]>(accountId ? `/api/transactions?accountId=${accountId}` : '/api/transactions'),
+		create: (d: Omit<Transaction, 'id' | 'createdAt' | 'transferId'>) =>
+			req<Transaction>('/api/transactions', { method: 'POST', body: JSON.stringify(d) }),
+		update: (id: string, d: Partial<Omit<Transaction, 'id' | 'createdAt' | 'transferId'>>) =>
+			req<Transaction>(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
+		remove: (id: string) => req<{ ok: true }>(`/api/transactions/${id}`, { method: 'DELETE' }),
+	},
+	transfers: {
+		create: (d: {
+			fromAccountId: string
+			toAccountId: string
+			amountCents: number
+			date: string
+			payee?: string | null
+			categoryId?: string | null
+			notes?: string | null
+		}) => req<{ transferId: string; legs: Transaction[] }>('/api/transfers', { method: 'POST', body: JSON.stringify(d) }),
+	},
+	balances: {
+		account: (id: string) =>
+			req<AccountBalance & { transactionCount: number }>(`/api/accounts/${id}/balance`),
 	},
 }

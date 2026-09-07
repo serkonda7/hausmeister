@@ -68,3 +68,42 @@ export const eventCreateSchema = v.object({
 })
 
 export const eventUpdateSchema = v.partial(eventCreateSchema)
+
+// ---- Phase 1: ledger ----
+export const categoryKindSchema = v.picklist(['income', 'expense'])
+
+export const categoryCreateSchema = v.object({
+	name: v.pipe(v.string(), v.minLength(1), v.maxLength(100)),
+	kind: v.optional(v.nullable(categoryKindSchema)),
+	color: v.optional(v.nullable(v.string())),
+})
+
+export const categoryUpdateSchema = v.partial(categoryCreateSchema)
+
+const isoDateSchema = v.pipe(
+	v.string(),
+	v.minLength(1),
+	v.regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected ISO date YYYY-MM-DD'),
+)
+
+export const transactionCreateSchema = v.object({
+	accountId: v.pipe(v.string(), v.minLength(1)),
+	date: isoDateSchema,
+	payee: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(200)))),
+	categoryId: v.optional(v.nullable(v.pipe(v.string(), v.minLength(1)))),
+	amountCents: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	direction: v.picklist(['inflow', 'outflow']),
+	notes: v.optional(v.nullable(v.string())),
+})
+
+export const transactionUpdateSchema = v.partial(transactionCreateSchema)
+
+export const transferCreateSchema = v.object({
+	fromAccountId: v.pipe(v.string(), v.minLength(1)),
+	toAccountId: v.pipe(v.string(), v.minLength(1)),
+	amountCents: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	date: isoDateSchema,
+	payee: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(200)))),
+	categoryId: v.optional(v.nullable(v.pipe(v.string(), v.minLength(1)))),
+	notes: v.optional(v.nullable(v.string())),
+})

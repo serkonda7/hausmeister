@@ -57,6 +57,29 @@ sqlite.exec(`
     notes TEXT,
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    kind TEXT,
+    color TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS transactions (
+    id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    payee TEXT,
+    category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+    amount_cents INTEGER NOT NULL,
+    direction TEXT NOT NULL,
+    transfer_id TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_transactions_account_date
+    ON transactions(account_id, date);
+  CREATE INDEX IF NOT EXISTS idx_transactions_transfer
+    ON transactions(transfer_id);
 `)
 
 // Lightweight migration for pre-existing data.db files:
