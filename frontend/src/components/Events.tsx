@@ -1,13 +1,18 @@
-import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
-import { createResource, createSignal, For, Show } from 'solid-js'
-import { api } from '../lib/api'
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
+import { api, type FinanceEvent } from '../lib/api'
+import { patchForm } from '../lib/form'
 import { formatDateISO, formatEUR } from '../lib/format'
-import './Events.css'
+import CrudRow from './CrudRow'
+import EmptyState from './EmptyState'
 
 export default function Events() {
 	const [events, { refetch }] = createResource(() => api.events.list())
 	const [accounts] = createResource(() => api.accounts.list())
 	const [pools] = createResource(() => api.pools.list())
+
+	const sortedEvents = createMemo(() =>
+		(events() ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)),
+	)
 
 	const [showForm, setShowForm] = createSignal(false)
 	const [editingId, setEditingId] = createSignal<string | null>(null)
@@ -73,24 +78,24 @@ export default function Events() {
 			setError('Titel und Betrag erforderlich')
 			return
 		}
-		const payload: Record<string, unknown> = {
+		const payload: Omit<FinanceEvent, 'id' | 'createdAt'> = {
 			title: f.title,
 			amountCents,
 			direction: f.direction,
 			date: f.date,
 			isRecurring: f.isRecurring,
-			frequency: f.frequency || undefined,
-			recurringUntil: f.recurringUntil || undefined,
-			poolId: f.poolId || undefined,
-			accountId: f.accountId || undefined,
-			notes: f.notes || undefined,
+			frequency: (f.frequency || null) as FinanceEvent['frequency'],
+			recurringUntil: f.recurringUntil || null,
+			poolId: f.poolId || null,
+			accountId: f.accountId || null,
+			notes: f.notes || null,
 		}
 		try {
 			const eid = editingId()
 			if (eid) {
-				await api.events.update(eid, payload as never)
+				await api.events.update(eid, payload)
 			} else {
-				await api.events.create(payload as never)
+				await api.events.create(payload)
 			}
 			setShowForm(false)
 			await refetch()
@@ -123,9 +128,7 @@ export default function Events() {
 							Titel{' '}
 							<input
 								value={form().title}
-								onInput={(e) =>
-									setForm({ ...form(), title: e.currentTarget.value })
-								}
+								onInput={(e) => patchForm(setForm, 'title', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -136,9 +139,7 @@ export default function Events() {
 								type="number"
 								step="0.01"
 								value={form().amount}
-								onInput={(e) =>
-									setForm({ ...form(), amount: e.currentTarget.value })
-								}
+								onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -148,10 +149,11 @@ export default function Events() {
 							<select
 								value={form().direction}
 								onChange={(e) =>
-									setForm({
-										...form(),
-										direction: e.currentTarget.value as never,
-									})
+									patchForm(
+										setForm,
+										'direction',
+										e.currentTarget.value as FinanceEvent['direction'],
+									)
 								}
 								class="input"
 							>
@@ -164,7 +166,7 @@ export default function Events() {
 							<input
 								type="date"
 								value={form().date}
-								onInput={(e) => setForm({ ...form(), date: e.currentTarget.value })}
+								onInput={(e) => patchForm(setForm, 'date', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -174,7 +176,7 @@ export default function Events() {
 								type="checkbox"
 								checked={form().isRecurring}
 								onChange={(e) =>
-									setForm({ ...form(), isRecurring: e.currentTarget.checked })
+									patchForm(setForm, 'isRecurring', e.currentTarget.checked)
 								}
 							/>{' '}
 							Wiederkehrend
@@ -185,7 +187,7 @@ export default function Events() {
 								<select
 									value={form().frequency}
 									onChange={(e) =>
-										setForm({ ...form(), frequency: e.currentTarget.value })
+										patchForm(setForm, 'frequency', e.currentTarget.value)
 									}
 									class="input"
 								>
@@ -203,10 +205,7 @@ export default function Events() {
 									type="date"
 									value={form().recurringUntil}
 									onInput={(e) =>
-										setForm({
-											...form(),
-											recurringUntil: e.currentTarget.value,
-										})
+										patchForm(setForm, 'recurringUntil', e.currentTarget.value)
 									}
 									class="input"
 								/>
@@ -217,7 +216,7 @@ export default function Events() {
 							<select
 								value={form().poolId}
 								onChange={(e) =>
-									setForm({ ...form(), poolId: e.currentTarget.value })
+									patchForm(setForm, 'poolId', e.currentTarget.value)
 								}
 								class="input"
 							>
@@ -232,7 +231,7 @@ export default function Events() {
 							<select
 								value={form().accountId}
 								onChange={(e) =>
-									setForm({ ...form(), accountId: e.currentTarget.value })
+									patchForm(setForm, 'accountId', e.currentTarget.value)
 								}
 								class="input"
 							>
@@ -247,7 +246,7 @@ export default function Events() {
 						Notizen{' '}
 						<input
 							value={form().notes}
-							onInput={(e) => setForm({ ...form(), notes: e.currentTarget.value })}
+							onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
 							class="input"
 						/>
 					</label>
@@ -266,12 +265,12 @@ export default function Events() {
 			</Show>
 
 			<div class="list list--tight">
-				<For each={(events() ?? []).slice().sort((a, b) => a.date.localeCompare(b.date))}>
+				<For each={sortedEvents()}>
 					{(ev) => (
 						<div class="card card--compact card-row">
 							<div>
-								<div class="events-title">{ev.title}</div>
-								<div class="events-sub">
+								<div class="title">{ev.title}</div>
+								<div class="muted text-sm">
 									{formatDateISO(ev.date)}{' '}
 									<Show when={ev.isRecurring}>· {ev.frequency} ↻</Show>{' '}
 									<Show when={ev.recurringUntil}>
@@ -283,7 +282,8 @@ export default function Events() {
 							</div>
 							<div class="card-actions">
 								<span
-									class="events-amount"
+									class="strong--bold"
+									style={{ 'white-space': 'nowrap' }}
 									classList={{
 										'amount--in': ev.direction === 'inflow',
 										'amount--out': ev.direction !== 'inflow',
@@ -292,33 +292,19 @@ export default function Events() {
 									{ev.direction === 'inflow' ? '+' : '−'}
 									{formatEUR(ev.amountCents)}
 								</span>
-								<button
-									type="button"
-									onClick={() => openEdit(ev.id)}
-									class="btn-icon"
-									aria-label="Bearbeiten"
-									title="Bearbeiten"
-								>
-									<IconPencil size={18} />
-								</button>
-								<button
-									type="button"
-									onClick={() => remove(ev.id)}
-									class="btn-icon btn-icon--danger"
-									aria-label="Löschen"
-									title="Löschen"
-								>
-									<IconTrash size={18} />
-								</button>
+								<CrudRow
+									onEdit={() => openEdit(ev.id)}
+									onDelete={() => remove(ev.id)}
+								/>
 							</div>
 						</div>
 					)}
 				</For>
 				<Show when={(events() ?? []).length === 0 && !events.loading}>
-					<p class="muted text-sm">
+					<EmptyState>
 						Keine Ereignisse. Lege z. B. Gehalt (monatlich Zufluss) oder Miete
 						(monatlich Abfluss) an.
-					</p>
+					</EmptyState>
 				</Show>
 			</div>
 		</div>

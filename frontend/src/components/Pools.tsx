@@ -1,8 +1,9 @@
-import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
+import { patchForm } from '../lib/form'
 import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
-import './Pools.css'
+import CrudRow from './CrudRow'
+import EmptyState from './EmptyState'
 
 export default function Pools() {
 	const [pools, { refetch }] = createResource(() => api.pools.list())
@@ -62,32 +63,26 @@ export default function Pools() {
 		e.preventDefault()
 		setError('')
 		const f = form()
-		const payload: Record<string, unknown> = {
+		const payload: Omit<Pool, 'id' | 'createdAt'> = {
 			name: f.name,
-			purpose: f.purpose || undefined,
-			targetMinCents: f.targetMin
-				? Math.round(Number.parseFloat(f.targetMin) * 100)
-				: undefined,
-			targetMaxCents: f.targetMax
-				? Math.round(Number.parseFloat(f.targetMax) * 100)
-				: undefined,
-			targetPercent: f.targetPercent ? Number.parseInt(f.targetPercent, 10) : undefined,
+			purpose: f.purpose || null,
+			targetMinCents: f.targetMin ? Math.round(Number.parseFloat(f.targetMin) * 100) : null,
+			targetMaxCents: f.targetMax ? Math.round(Number.parseFloat(f.targetMax) * 100) : null,
+			targetPercent: f.targetPercent ? Number.parseInt(f.targetPercent, 10) : null,
 			expectedReturnBps: f.expectedReturn
 				? Math.round(Number.parseFloat(f.expectedReturn) * 100)
-				: undefined,
-			riskLevel: f.riskLevel ? Number.parseInt(f.riskLevel, 10) : undefined,
-			volatilityBps: f.volatility
-				? Math.round(Number.parseFloat(f.volatility) * 100)
-				: undefined,
-			horizonMonths: f.horizonMonths ? Number.parseInt(f.horizonMonths, 10) : undefined,
-			color: f.color || undefined,
+				: null,
+			riskLevel: f.riskLevel ? Number.parseInt(f.riskLevel, 10) : null,
+			volatilityBps: f.volatility ? Math.round(Number.parseFloat(f.volatility) * 100) : null,
+			horizonMonths: f.horizonMonths ? Number.parseInt(f.horizonMonths, 10) : null,
+			color: f.color || null,
 		}
 		try {
 			const current = editing()
 			if (current) {
-				await api.pools.update(current.id, payload as never)
+				await api.pools.update(current.id, payload)
 			} else {
-				await api.pools.create(payload as never)
+				await api.pools.create(payload)
 			}
 			setShowForm(false)
 			await refetch()
@@ -120,7 +115,7 @@ export default function Pools() {
 							Name{' '}
 							<input
 								value={form().name}
-								onInput={(e) => setForm({ ...form(), name: e.currentTarget.value })}
+								onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
 								required
 								class="input"
 							/>
@@ -130,7 +125,7 @@ export default function Pools() {
 							<input
 								value={form().purpose}
 								onInput={(e) =>
-									setForm({ ...form(), purpose: e.currentTarget.value })
+									patchForm(setForm, 'purpose', e.currentTarget.value)
 								}
 								class="input"
 								placeholder="z.B. Notgroschen, Altersvorsorge"
@@ -143,7 +138,7 @@ export default function Pools() {
 								step="1"
 								value={form().targetMin}
 								onInput={(e) =>
-									setForm({ ...form(), targetMin: e.currentTarget.value })
+									patchForm(setForm, 'targetMin', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -155,7 +150,7 @@ export default function Pools() {
 								step="1"
 								value={form().targetMax}
 								onInput={(e) =>
-									setForm({ ...form(), targetMax: e.currentTarget.value })
+									patchForm(setForm, 'targetMax', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -169,7 +164,7 @@ export default function Pools() {
 								step="1"
 								value={form().targetPercent}
 								onInput={(e) =>
-									setForm({ ...form(), targetPercent: e.currentTarget.value })
+									patchForm(setForm, 'targetPercent', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -181,7 +176,7 @@ export default function Pools() {
 								step="0.1"
 								value={form().expectedReturn}
 								onInput={(e) =>
-									setForm({ ...form(), expectedReturn: e.currentTarget.value })
+									patchForm(setForm, 'expectedReturn', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -191,7 +186,7 @@ export default function Pools() {
 							<select
 								value={form().riskLevel}
 								onChange={(e) =>
-									setForm({ ...form(), riskLevel: e.currentTarget.value })
+									patchForm(setForm, 'riskLevel', e.currentTarget.value)
 								}
 								class="input"
 							>
@@ -212,7 +207,7 @@ export default function Pools() {
 								step="0.1"
 								value={form().volatility}
 								onInput={(e) =>
-									setForm({ ...form(), volatility: e.currentTarget.value })
+									patchForm(setForm, 'volatility', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -223,7 +218,7 @@ export default function Pools() {
 								type="number"
 								value={form().horizonMonths}
 								onInput={(e) =>
-									setForm({ ...form(), horizonMonths: e.currentTarget.value })
+									patchForm(setForm, 'horizonMonths', e.currentTarget.value)
 								}
 								class="input"
 							/>
@@ -233,9 +228,7 @@ export default function Pools() {
 							<input
 								type="color"
 								value={form().color}
-								onInput={(e) =>
-									setForm({ ...form(), color: e.currentTarget.value })
-								}
+								onInput={(e) => patchForm(setForm, 'color', e.currentTarget.value)}
 								class="input"
 							/>
 						</label>
@@ -259,38 +252,24 @@ export default function Pools() {
 					{(p) => (
 						<div class="card">
 							<div class="card-row">
-								<div class="pools-head">
+								<div class="inline-row">
 									<span
 										class="dot"
 										style={{ background: p.color ?? '#9ca3af' }}
 									/>
 									<span class="strong">{p.name}</span>
 									<Show when={p.purpose}>
-										<span class="pools-purpose">· {p.purpose}</span>
+										<span class="muted text-sm">· {p.purpose}</span>
 									</Show>
 								</div>
 								<div class="card-actions">
-									<button
-										type="button"
-										onClick={() => openEdit(p)}
-										class="btn-icon"
-										aria-label="Bearbeiten"
-										title="Bearbeiten"
-									>
-										<IconPencil size={18} />
-									</button>
-									<button
-										type="button"
-										onClick={() => remove(p.id)}
-										class="btn-icon btn-icon--danger"
-										aria-label="Löschen"
-										title="Löschen"
-									>
-										<IconTrash size={18} />
-									</button>
+									<CrudRow
+										onEdit={() => openEdit(p)}
+										onDelete={() => remove(p.id)}
+									/>
 								</div>
 							</div>
-							<div class="pools-meta">
+							<div class="muted text-sm meta-row">
 								<span>
 									Ziel: {p.targetPercent != null ? `${p.targetPercent}%` : '—'}{' '}
 									{p.targetMinCents != null || p.targetMaxCents != null
@@ -309,9 +288,9 @@ export default function Pools() {
 					)}
 				</For>
 				<Show when={(pools() ?? []).length === 0 && !pools.loading}>
-					<p class="muted text-sm">
+					<EmptyState>
 						Keine Pools. Erstelle z. B. „Notgroschen“, „Invest“, „Urlaub“.
-					</p>
+					</EmptyState>
 				</Show>
 			</div>
 		</div>

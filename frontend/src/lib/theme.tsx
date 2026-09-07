@@ -2,27 +2,45 @@ import { createSignal } from 'solid-js'
 
 export type Theme = 'light' | 'dark'
 
-function getInitialTheme(): Theme {
-	if (typeof document !== 'undefined') {
-		const attr = document.documentElement.dataset.theme
-		if (attr === 'dark' || attr === 'light') {
-			return attr
+function isTheme(value: unknown): value is Theme {
+	return value === 'dark' || value === 'light'
+}
+
+/** localStorage access that never throws (private mode, SSR, …). */
+const safeStorage = {
+	get(key: string): string | null {
+		try {
+			return typeof localStorage === 'undefined' ? null : localStorage.getItem(key)
+		} catch {
+			return null
 		}
-	}
-	if (typeof localStorage !== 'undefined') {
-		const stored = localStorage.getItem('theme')
-		if (stored === 'dark' || stored === 'light') {
-			return stored
+	},
+	set(key: string, value: string): void {
+		try {
+			localStorage.setItem(key, value)
+		} catch {
+			// ignore (private mode etc.)
 		}
-	}
-	if (
+	},
+}
+
+function prefersDark(): boolean {
+	return (
 		typeof window !== 'undefined' &&
 		typeof window.matchMedia === 'function' &&
 		window.matchMedia('(prefers-color-scheme: dark)').matches
-	) {
-		return 'dark'
-	}
-	return 'light'
+	)
+}
+
+function getInitialTheme(): Theme {
+	const attr = typeof document === 'undefined' ? null : document.documentElement.dataset.theme
+	const stored = safeStorage.get('theme')
+	return (
+		(isTheme(attr) ? attr : null) ??
+		(isTheme(stored) ? stored : null) ??
+		(prefersDark() ? 'dark' : null) ??
+		'light'
+	)
 }
 
 const [theme, setThemeSignal] = createSignal<Theme>(getInitialTheme())
@@ -32,15 +50,13 @@ function applyTheme(next: Theme) {
 		document.documentElement.dataset.theme = next
 		document.documentElement.style.colorScheme = next
 	}
-	try {
-		localStorage.setItem('theme', next)
-	} catch {
-		// ignore (private mode etc.)
-	}
+	safeStorage.set('theme', next)
 }
 
-// Sync DOM on module load (index.html already sets data-theme pre-paint)
-applyTheme(theme())
+/** Sync the DOM with the current theme. Call once from index.tsx. */
+export function initTheme() {
+	applyTheme(theme())
+}
 
 export { theme }
 
@@ -60,12 +76,8 @@ export function initThemeListener() {
 	const mq = window.matchMedia('(prefers-color-scheme: dark)')
 	const handler = (e: MediaQueryListEvent) => {
 		// Only follow system when user has no explicit choice stored
-		try {
-			if (localStorage.getItem('theme') == null) {
-				setTheme(e.matches ? 'dark' : 'light')
-			}
-		} catch {
-			// ignore
+		if (safeStorage.get('theme') == null) {
+			setTheme(e.matches ? 'dark' : 'light')
 		}
 	}
 	mq.addEventListener('change', handler)

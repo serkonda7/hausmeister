@@ -1,5 +1,5 @@
-import { createEffect, createResource, For, Show } from 'solid-js'
-import { api } from '../lib/api'
+import { createResource, For, onCleanup, onMount, Show } from 'solid-js'
+import { api, type LiquidityTier, type Summary } from '../lib/api'
 import {
 	formatDateISO,
 	formatEUR,
@@ -9,14 +9,30 @@ import {
 	liquidityLabels,
 } from '../lib/format'
 import './Dashboard.css'
+import EmptyState from './EmptyState'
+
+function pct(cents: number, total: number): number {
+	return total ? (cents / total) * 100 : 0
+}
+
+type PoolTotal = Summary['poolTotals'][number]
+
+function isOnTarget(pt: PoolTotal, sharePct: number): boolean {
+	const targetPct = pt.targetPercent
+	return (
+		(pt.targetMin == null || pt.currentCents >= pt.targetMin) &&
+		(pt.targetMax == null || pt.currentCents <= pt.targetMax) &&
+		(targetPct == null || Math.abs(sharePct - targetPct) < 5)
+	)
+}
 
 export default function Dashboard() {
 	const [summary, { refetch }] = createResource(() => api.summary())
 
-	createEffect(() => {
+	onMount(() => {
 		const h = () => refetch()
 		window.addEventListener('focus', h)
-		return () => window.removeEventListener('focus', h)
+		onCleanup(() => window.removeEventListener('focus', h))
 	})
 
 	return (
@@ -28,208 +44,48 @@ export default function Dashboard() {
 				<p class="form-error">Fehler: {(summary.error as Error).message}</p>
 			</Show>
 			<Show when={summary()}>
-				{(data) => (
-					<>
-						<section class="dashboard-card">
-							<div class="dashboard-eyebrow">Gesamtvermögen</div>
-							<div class="dashboard-total">{formatEUR(data().totalCents)}</div>
-							<div class="dashboard-sub">
-								{data().counts.accounts} Konten · {data().counts.pools} Pools ·{' '}
-								{data().counts.allocations} Zuweisungen
-							</div>
-						</section>
-
-						<section class="dashboard-card">
-							<h2 class="dashboard-section-title">Verfügbarkeit</h2>
-							<div class="list">
-								<For
-									each={
-										Object.entries(data().liquidityMap) as Array<
-											[string, number]
-										>
-									}
-								>
-									{([tier, cents]) => {
-										const pct = data().totalCents
-											? (cents / data().totalCents) * 100
-											: 0
-										return (
-											<div>
-												<div class="liquidity-label-row">
-													<span>{liquidityLabels[tier] ?? tier}</span>
-													<span class="muted">
-														{formatEUR(cents)} · {pct.toFixed(1)}%
-													</span>
-												</div>
-												<div class="liquidity-track">
-													<div
-														class="liquidity-fill"
-														style={{
-															width: `${pct}%`,
-															background:
-																liquidityColors[tier] ?? '#9ca3af',
-														}}
-													/>
-												</div>
-											</div>
-										)
-									}}
-								</For>
-							</div>
-						</section>
-
-						<section class="dashboard-card">
-							<h2 class="dashboard-section-title">Pools · Ziel vs. Ist</h2>
-							<Show when={data().poolTotals.length === 0}>
-								<p class="muted text-sm">
-									Noch keine Pools angelegt. Lege einen Pool in „Pools“ an.
-								</p>
-							</Show>
-							<div class="list">
-								<For each={data().poolTotals}>
-									{(pt) => {
-										const pct = data().totalCents
-											? (pt.currentCents / data().totalCents) * 100
-											: 0
-										const targetPct = pt.targetPercent
-										const ok =
-											(pt.targetMin == null ||
-												pt.currentCents >= pt.targetMin) &&
-											(pt.targetMax == null ||
-												pt.currentCents <= pt.targetMax) &&
-											(targetPct == null || Math.abs(pct - targetPct) < 5)
-										return (
-											<div class="pool-card">
-												<div class="pool-head">
-													<div>
-														<div class="pool-name">
-															<span
-																class="dot dot--sm"
-																style={{
-																	background:
-																		pt.pool.color ?? '#9ca3af',
-																}}
-															/>
-															{pt.pool.name}
-														</div>
-														<Show when={pt.pool.purpose}>
-															<div class="pool-purpose">
-																{pt.pool.purpose}
-															</div>
-														</Show>
-													</div>
-													<div class="pool-amounts">
-														<div class="pool-amount">
-															{formatEUR(pt.currentCents)}
-														</div>
-														<div class="pool-sub">
-															{pct.toFixed(1)}% des Gesamt
-														</div>
-													</div>
-												</div>
-												<div class="pool-tags">
-													<span>
-														Ziel:{' '}
-														{targetPct != null
-															? `${targetPct}% (${formatEUR(pt.targetCents ?? 0)})`
-															: '—'}
-													</span>
-													<span>
-														Bereich:{' '}
-														{pt.targetMin != null
-															? formatEUR(pt.targetMin)
-															: '—'}{' '}
-														–{' '}
-														{pt.targetMax != null
-															? formatEUR(pt.targetMax)
-															: '—'}
-													</span>
-													<span>
-														Rendite:{' '}
-														{formatPercent(pt.pool.expectedReturnBps)}{' '}
-														p.a.
-													</span>
-													<span>
-														Risiko: {formatRiskLevel(pt.pool.riskLevel)}
-													</span>
-													<span>
-														Horizont:{' '}
-														{pt.pool.horizonMonths != null
-															? `${pt.pool.horizonMonths} Monate`
-															: '—'}
-													</span>
-													<span
-														class="pool-status"
-														classList={{
-															'pool-status--ok': ok,
-															'pool-status--warn': !ok,
-														}}
-													>
-														{ok ? '✓ im Ziel' : '⚠ abweichend'}
-													</span>
-												</div>
-												<div class="pool-bar">
-													<div
-														class="pool-bar-fill"
-														classList={{
-															'pool-bar-fill--ok': ok,
-															'pool-bar-fill--warn': !ok,
-														}}
-														style={{
-															width: `${Math.min(100, pct * 2)}%`,
-														}}
-													/>
-													<Show when={targetPct != null}>
-														<div
-															class="pool-target"
-															style={{
-																left: `${Math.min(100, targetPct ?? 0)}%`,
-															}}
-															title={`Ziel ${targetPct}%`}
-														/>
-													</Show>
-												</div>
-											</div>
-										)
-									}}
-								</For>
-							</div>
-						</section>
-
-						<div class="dashboard-grid">
+				{(get) => {
+					const d = get()
+					const total = d.totalCents
+					const counts = d.counts
+					const liquidityEntries = Object.entries(d.liquidityMap) as Array<
+						[LiquidityTier, number]
+					>
+					return (
+						<>
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Nächste 90 Tage · Cashflow</h2>
-								<Show when={data().upcomingEvents.length === 0}>
-									<p class="muted text-sm">Keine Ereignisse im Zeitraum.</p>
-								</Show>
-								<div class="list list--tight">
-									<For each={data().upcomingEvents}>
-										{(ev) => {
-											const d =
-												(ev as { projectedDate?: string }).projectedDate ??
-												ev.date
+								<div class="dashboard-eyebrow">Gesamtvermögen</div>
+								<div class="dashboard-total">{formatEUR(total)}</div>
+								<div class="dashboard-sub">
+									{counts.accounts} Konten · {counts.pools} Pools ·{' '}
+									{counts.allocations} Zuweisungen
+								</div>
+							</section>
+
+							<section class="dashboard-card">
+								<h2 class="dashboard-section-title">Verfügbarkeit</h2>
+								<div class="list">
+									<For each={liquidityEntries}>
+										{([tier, cents]) => {
+											const share = pct(cents, total)
 											return (
-												<div class="timeline-row">
-													<div>
-														<div class="timeline-title">{ev.title}</div>
-														<div class="pool-sub">
-															{formatDateISO(d)}
-															<Show when={ev.isRecurring}>
-																{' '}
-																· {ev.frequency} ↻
-															</Show>
-														</div>
+												<div>
+													<div class="liquidity-label-row">
+														<span>{liquidityLabels[tier] ?? tier}</span>
+														<span class="muted">
+															{formatEUR(cents)} · {share.toFixed(1)}%
+														</span>
 													</div>
-													<div
-														class="timeline-amount"
-														classList={{
-															'amount--in': ev.direction === 'inflow',
-															'amount--out':
-																ev.direction !== 'inflow',
-														}}
-													>
-														{ev.direction === 'inflow' ? '+' : '−'}
-														{formatEUR(ev.amountCents)}
+													<div class="bar-track">
+														<div
+															class="bar-fill"
+															style={{
+																width: `${share}%`,
+																background:
+																	liquidityColors[tier] ??
+																	'#9ca3af',
+															}}
+														/>
 													</div>
 												</div>
 											)
@@ -239,33 +95,194 @@ export default function Dashboard() {
 							</section>
 
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Verfügbar ab</h2>
-								<Show when={data().unlocks.length === 0}>
-									<p class="muted text-sm">
-										Nichts gesperrt in Festgeld / Zuweisungen.
-									</p>
+								<h2 class="dashboard-section-title">Pools · Ziel vs. Ist</h2>
+								<Show when={d.poolTotals.length === 0}>
+									<EmptyState>
+										Noch keine Pools angelegt. Lege einen Pool in „Pools“ an.
+									</EmptyState>
 								</Show>
-								<div class="list list--tight">
-									<For each={data().unlocks}>
-										{(u) => (
-											<div class="unlock-row">
-												<div>
-													<div class="timeline-title">{u.name}</div>
-													<div class="pool-sub">
-														{formatDateISO(u.unlockAt)}
+								<div class="list">
+									<For each={d.poolTotals}>
+										{(pt) => {
+											const share = pct(pt.currentCents, total)
+											const targetPct = pt.targetPercent
+											const ok = isOnTarget(pt, share)
+											return (
+												<div class="surface-card surface-card--sm">
+													<div class="pool-head">
+														<div>
+															<div class="pool-name">
+																<span
+																	class="dot dot--sm"
+																	style={{
+																		background:
+																			pt.pool.color ??
+																			'#9ca3af',
+																	}}
+																/>
+																{pt.pool.name}
+															</div>
+															<Show when={pt.pool.purpose}>
+																<div class="muted text-sm">
+																	{pt.pool.purpose}
+																</div>
+															</Show>
+														</div>
+														<div class="pool-amounts">
+															<div class="pool-amount">
+																{formatEUR(pt.currentCents)}
+															</div>
+															<div class="pool-sub">
+																{share.toFixed(1)}% des Gesamt
+															</div>
+														</div>
+													</div>
+													<div class="pool-tags">
+														<span>
+															Ziel:{' '}
+															{targetPct != null
+																? `${targetPct}% (${formatEUR(pt.targetCents ?? 0)})`
+																: '—'}
+														</span>
+														<span>
+															Bereich:{' '}
+															{pt.targetMin != null
+																? formatEUR(pt.targetMin)
+																: '—'}{' '}
+															–{' '}
+															{pt.targetMax != null
+																? formatEUR(pt.targetMax)
+																: '—'}
+														</span>
+														<span>
+															Rendite:{' '}
+															{formatPercent(
+																pt.pool.expectedReturnBps,
+															)}{' '}
+															p.a.
+														</span>
+														<span>
+															Risiko:{' '}
+															{formatRiskLevel(pt.pool.riskLevel)}
+														</span>
+														<span>
+															Horizont:{' '}
+															{pt.pool.horizonMonths != null
+																? `${pt.pool.horizonMonths} Monate`
+																: '—'}
+														</span>
+														<span
+															class="pool-status"
+															classList={{
+																'amount--in': ok,
+																'amount--warn': !ok,
+															}}
+														>
+															{ok ? '✓ im Ziel' : '⚠ abweichend'}
+														</span>
+													</div>
+													<div class="bar-track bar-track--thin">
+														<div
+															class="bar-fill"
+															classList={{
+																'bar-fill--ok': ok,
+																'bar-fill--warn': !ok,
+															}}
+															style={{
+																// Pool shares of the grand total are small;
+																// scale ×2 for visibility, capped at 100%.
+																width: `${Math.min(100, share * 2)}%`,
+															}}
+														/>
+														<Show when={targetPct != null}>
+															<div
+																class="pool-target"
+																style={{
+																	left: `${Math.min(100, targetPct ?? 0)}%`,
+																}}
+																title={`Ziel ${targetPct}%`}
+															/>
+														</Show>
 													</div>
 												</div>
-												<div class="unlock-amount">
-													{formatEUR(u.amountCents)}
-												</div>
-											</div>
-										)}
+											)
+										}}
 									</For>
 								</div>
 							</section>
-						</div>
-					</>
-				)}
+
+							<div class="dashboard-grid">
+								<section class="dashboard-card">
+									<h2 class="dashboard-section-title">
+										Nächste 90 Tage · Cashflow
+									</h2>
+									<Show when={d.upcomingEvents.length === 0}>
+										<EmptyState>Keine Ereignisse im Zeitraum.</EmptyState>
+									</Show>
+									<div class="list list--tight">
+										<For each={d.upcomingEvents}>
+											{(ev) => {
+												const date = ev.projectedDate ?? ev.date
+												return (
+													<div class="row-between">
+														<div>
+															<div class="row-title">{ev.title}</div>
+															<div class="pool-sub">
+																{formatDateISO(date)}
+																<Show when={ev.isRecurring}>
+																	{' '}
+																	· {ev.frequency} ↻
+																</Show>
+															</div>
+														</div>
+														<div
+															class="row-amount"
+															classList={{
+																'amount--in':
+																	ev.direction === 'inflow',
+																'amount--out':
+																	ev.direction !== 'inflow',
+															}}
+														>
+															{ev.direction === 'inflow' ? '+' : '−'}
+															{formatEUR(ev.amountCents)}
+														</div>
+													</div>
+												)
+											}}
+										</For>
+									</div>
+								</section>
+
+								<section class="dashboard-card">
+									<h2 class="dashboard-section-title">Verfügbar ab</h2>
+									<Show when={d.unlocks.length === 0}>
+										<EmptyState>
+											Nichts gesperrt in Festgeld / Zuweisungen.
+										</EmptyState>
+									</Show>
+									<div class="list list--tight">
+										<For each={d.unlocks}>
+											{(u) => (
+												<div class="row-between">
+													<div>
+														<div class="row-title">{u.name}</div>
+														<div class="pool-sub">
+															{formatDateISO(u.unlockAt)}
+														</div>
+													</div>
+													<div class="row-amount">
+														{formatEUR(u.amountCents)}
+													</div>
+												</div>
+											)}
+										</For>
+									</div>
+								</section>
+							</div>
+						</>
+					)
+				}}
 			</Show>
 		</div>
 	)

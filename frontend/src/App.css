@@ -2,21 +2,13 @@
 	min-height: 100vh;
 	background: var(--bg);
 	color: var(--text);
-	font-family:
-		ui-sans-system,
-		-apple-system,
-		Segoe UI,
-		Roboto,
-		Helvetica,
-		Arial,
-		sans-serif;
+	font-family: system-ui, sans-serif;
 }
 
 .app-header {
 	position: sticky;
 	top: 0;
 	background: var(--surface);
-	border: 1px solid var(--border);
 	border-bottom: 1px solid var(--border);
 	z-index: 10;
 }
