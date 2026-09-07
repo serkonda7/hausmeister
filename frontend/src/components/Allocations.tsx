@@ -56,7 +56,7 @@ export default function Allocations() {
 		const f = form()
 		const amountCents = Math.round(Number.parseFloat(f.amount || '0') * 100)
 		if (!f.poolId || !f.accountId || Number.isNaN(amountCents)) {
-			setError('Pool, Konto und Betrag erforderlich')
+			setError('Pool, account and amount are required')
 			return
 		}
 		const payload: Omit<Allocation, 'id' | 'createdAt'> = {
@@ -81,7 +81,7 @@ export default function Allocations() {
 	}
 
 	async function remove(id: string) {
-		if (!confirm('Zuweisung löschen?')) {
+		if (!confirm('Delete allocation?')) {
 			return
 		}
 		await api.allocations.remove(id)
@@ -98,19 +98,19 @@ export default function Allocations() {
 	return (
 		<div class="page">
 			<div class="page-header">
-				<h2 class="page-title">Zuweisungen</h2>
+				<h2 class="page-title">Allocations</h2>
 				<button
 					type="button"
 					onClick={openCreate}
 					class="btn-primary"
 					disabled={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}
 				>
-					+ Zuweisung
+					+ Allocation
 				</button>
 			</div>
 			<Show when={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}>
 				<p class="muted text-sm">
-					Erst Konten und Pools anlegen, dann Zuweisungen verbinden.
+					Create accounts and pools first, then link allocations.
 				</p>
 			</Show>
 
@@ -133,7 +133,7 @@ export default function Allocations() {
 							</select>
 						</label>
 						<label class="field">
-							Konto
+							Account
 							<select
 								value={form().accountId}
 								onChange={(e) =>
@@ -148,7 +148,7 @@ export default function Allocations() {
 							</select>
 						</label>
 						<label class="field">
-							Betrag (€){' '}
+							Amount (€){' '}
 							<input
 								type="number"
 								step="0.01"
@@ -159,7 +159,7 @@ export default function Allocations() {
 							/>
 						</label>
 						<label class="field">
-							Verfügbarkeit
+							Availability
 							<select
 								value={form().liquidityOverride}
 								onChange={(e) =>
@@ -167,14 +167,14 @@ export default function Allocations() {
 								}
 								class="input"
 							>
-								<option value="">— Standard vom Konto</option>
+								<option value="">— Default from account</option>
 								<For each={Object.entries(liquidityLabels)}>
 									{([k, v]) => <option value={k}>{v}</option>}
 								</For>
 							</select>
 						</label>
 						<label class="field">
-							Verfügbar ab
+							Available from
 							<input
 								type="date"
 								value={form().unlockAt}
@@ -190,10 +190,10 @@ export default function Allocations() {
 					</Show>
 					<div class="form-actions">
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
-							Abbrechen
+							Cancel
 						</button>
 						<button type="submit" class="btn-primary">
-							{editingId() ? 'Speichern' : 'Anlegen'}
+							{editingId() ? 'Save' : 'Create'}
 						</button>
 					</div>
 				</form>
@@ -210,9 +210,9 @@ export default function Allocations() {
 								</div>
 								<div class="muted text-sm">
 									{a.liquidityOverride
-										? `Abweichend: ${liquidityLabels[a.liquidityOverride]}`
-										: 'Standard vom Konto'}{' '}
-									<Show when={a.unlockAt}>· ab {a.unlockAt}</Show>
+										? `Override: ${liquidityLabels[a.liquidityOverride]}`
+										: 'Default from account'}{' '}
+									<Show when={a.unlockAt}>· from {a.unlockAt}</Show>
 								</div>
 							</div>
 							<div class="card-actions">
@@ -226,7 +226,7 @@ export default function Allocations() {
 					)}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
-					<EmptyState>Keine Zuweisungen. Verteile Kontoguthaben auf Pools.</EmptyState>
+					<EmptyState>No allocations. Distribute account balances across pools.</EmptyState>
 				</Show>
 			</div>
 		</div>

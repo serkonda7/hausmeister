@@ -19,10 +19,10 @@ import { initThemeListener, theme, toggleTheme } from './lib/theme'
 
 const VIEWS = [
 	{ id: 'dashboard', label: 'Dashboard', comp: Dashboard, icon: IconDashboard },
-	{ id: 'accounts', label: 'Konten', comp: Accounts, icon: IconWallet },
+	{ id: 'accounts', label: 'Accounts', comp: Accounts, icon: IconWallet },
 	{ id: 'pools', label: 'Pools', comp: Pools, icon: IconCoins },
-	{ id: 'allocations', label: 'Zuweisungen', comp: Allocations, icon: IconExchange },
-	{ id: 'events', label: 'Zeitstrahl', comp: Events, icon: IconCalendarEvent },
+	{ id: 'allocations', label: 'Allocations', comp: Allocations, icon: IconExchange },
+	{ id: 'events', label: 'Timeline', comp: Events, icon: IconCalendarEvent },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
@@ -46,7 +46,7 @@ export default function App(): JSX.Element {
 						<div class="brand-name">Hausmeister</div>
 					</div>
 				</div>
-				<nav class="nav" aria-label="Hauptnavigation">
+				<nav class="nav" aria-label="Main navigation">
 					<For each={VIEWS}>
 						{(v) => (
 							<button
@@ -68,9 +68,9 @@ export default function App(): JSX.Element {
 						onClick={toggleTheme}
 						class="btn-icon theme-toggle"
 						aria-label={
-							isDark() ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln'
+							isDark() ? 'Switch to light mode' : 'Switch to dark mode'
 						}
-						title={isDark() ? 'Hellmodus' : 'Dunkelmodus'}
+						title={isDark() ? 'Light mode' : 'Dark mode'}
 					>
 						{isDark() ? <IconSun size={18} /> : <IconMoon size={18} />}
 					</button>

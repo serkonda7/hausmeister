@@ -1,5 +1,5 @@
 export function formatEUR(cents: number): string {
-	return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(
 		cents / 100,
 	)
 }
@@ -13,18 +13,18 @@ export function formatPercent(bps: number | null | undefined): string {
 
 export function formatDateISO(dateStr: string): string {
 	try {
-		return new Date(dateStr).toLocaleDateString('de-DE')
+		return new Date(dateStr).toLocaleDateString('en-US')
 	} catch {
 		return dateStr
 	}
 }
 
 export const liquidityLabels: Record<string, string> = {
-	instant: 'Sofort',
-	days: 'Tage',
-	weeks: 'Wochen',
-	months: 'Monate',
-	locked: 'Gesperrt',
+	instant: 'Instant',
+	days: 'Days',
+	weeks: 'Weeks',
+	months: 'Months',
+	locked: 'Locked',
 }
 
 export const liquidityColors: Record<string, string> = {
@@ -36,22 +36,22 @@ export const liquidityColors: Record<string, string> = {
 }
 
 export const accountTypeLabels: Record<string, string> = {
-	checking: 'Giro',
-	savings: 'Sparen',
-	broker: 'Depot',
-	cash: 'Bargeld',
-	crypto: 'Krypto',
-	tagesgeld: 'Tagesgeld',
-	festgeld: 'Festgeld',
-	other: 'Sonstiges',
+	checking: 'Checking',
+	savings: 'Savings',
+	broker: 'Brokerage',
+	cash: 'Cash',
+	crypto: 'Crypto',
+	tagesgeld: 'Instant savings',
+	festgeld: 'Fixed-term deposit',
+	other: 'Other',
 }
 
 export const riskLevelLabels: Record<number, string> = {
-	1: 'Sehr niedrig',
-	2: 'Niedrig',
-	3: 'Mittel',
-	4: 'Hoch',
-	5: 'Sehr hoch',
+	1: 'Very low',
+	2: 'Low',
+	3: 'Medium',
+	4: 'High',
+	5: 'Very high',
 }
 
 export function formatRiskLevel(level: number | null | undefined): string {

@@ -55,7 +55,7 @@ export default function Accounts() {
 		const f = form()
 		const balanceCents = Math.round(Number.parseFloat(f.balance || '0') * 100)
 		if (Number.isNaN(balanceCents)) {
-			setError('Ungültiger Betrag')
+			setError('Invalid amount')
 			return
 		}
 		const payload: Omit<Account, 'id' | 'createdAt'> = {
@@ -82,7 +82,7 @@ export default function Accounts() {
 	}
 
 	async function remove(id: string) {
-		if (!confirm('Wirklich löschen?')) {
+		if (!confirm('Really delete?')) {
 			return
 		}
 		await api.accounts.remove(id)
@@ -92,9 +92,9 @@ export default function Accounts() {
 	return (
 		<div class="page">
 			<div class="page-header">
-				<h2 class="page-title">Konten</h2>
+				<h2 class="page-title">Accounts</h2>
 				<button type="button" onClick={openCreate} class="btn-primary">
-					+ Konto
+					+ Account
 				</button>
 			</div>
 
@@ -111,7 +111,7 @@ export default function Accounts() {
 							/>
 						</label>
 						<label class="field">
-							Typ
+							Type
 							<select
 								value={form().type}
 								onChange={(e) =>
@@ -129,7 +129,7 @@ export default function Accounts() {
 							</select>
 						</label>
 						<label class="field">
-							Institut{' '}
+							Institution{' '}
 							<input
 								value={form().institution}
 								onInput={(e) =>
@@ -139,7 +139,7 @@ export default function Accounts() {
 							/>
 						</label>
 						<label class="field">
-							Verfügbarkeit
+							Availability
 							<select
 								value={form().liquidityTier}
 								onChange={(e) =>
@@ -157,7 +157,7 @@ export default function Accounts() {
 							</select>
 						</label>
 						<label class="field">
-							Saldo (€){' '}
+							Balance (€){' '}
 							<input
 								type="number"
 								step="0.01"
@@ -170,7 +170,7 @@ export default function Accounts() {
 							/>
 						</label>
 						<label class="field">
-							Verfügbar ab{' '}
+							Available from{' '}
 							<input
 								type="date"
 								value={form().unlockAt}
@@ -182,7 +182,7 @@ export default function Accounts() {
 						</label>
 					</div>
 					<label class="field">
-						Notizen{' '}
+						Notes{' '}
 						<input
 							value={form().notes}
 							onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
@@ -194,17 +194,17 @@ export default function Accounts() {
 					</Show>
 					<div class="form-actions">
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
-							Abbrechen
+							Cancel
 						</button>
 						<button type="submit" class="btn-primary">
-							{editing() ? 'Speichern' : 'Anlegen'}
+							{editing() ? 'Save' : 'Create'}
 						</button>
 					</div>
 				</form>
 			</Show>
 
 			<Show when={accounts.loading}>
-				<p class="muted">Laden…</p>
+				<p class="muted">Loading…</p>
 			</Show>
 
 			<div class="list">
@@ -218,7 +218,7 @@ export default function Accounts() {
 								</div>
 								<div class="muted text-sm">
 									{a.institution ?? '—'} · {liquidityLabels[a.liquidityTier]}
-									<Show when={a.unlockAt}> · ab {a.unlockAt}</Show>
+									<Show when={a.unlockAt}> · from {a.unlockAt}</Show>
 								</div>
 							</div>
 							<div class="card-actions">
@@ -231,7 +231,7 @@ export default function Accounts() {
 					)}
 				</For>
 				<Show when={(accounts() ?? []).length === 0 && !accounts.loading}>
-					<EmptyState>Keine Konten. Lege dein erstes Konto an.</EmptyState>
+					<EmptyState>No accounts. Create your first account.</EmptyState>
 				</Show>
 			</div>
 		</div>

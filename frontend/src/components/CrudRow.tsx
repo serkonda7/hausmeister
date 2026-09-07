@@ -15,8 +15,8 @@ export default function CrudRow(props: CrudRowProps): JSX.Element {
 				type="button"
 				onClick={props.onEdit}
 				class="btn-icon"
-				aria-label={props.editLabel ?? 'Bearbeiten'}
-				title={props.editLabel ?? 'Bearbeiten'}
+				aria-label={props.editLabel ?? 'Edit'}
+				title={props.editLabel ?? 'Edit'}
 			>
 				<IconPencil size={18} />
 			</button>
@@ -24,8 +24,8 @@ export default function CrudRow(props: CrudRowProps): JSX.Element {
 				type="button"
 				onClick={props.onDelete}
 				class="btn-icon btn-icon--danger"
-				aria-label={props.deleteLabel ?? 'Löschen'}
-				title={props.deleteLabel ?? 'Löschen'}
+				aria-label={props.deleteLabel ?? 'Delete'}
+				title={props.deleteLabel ?? 'Delete'}
 			>
 				<IconTrash size={18} />
 			</button>

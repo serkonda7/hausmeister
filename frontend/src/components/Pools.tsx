@@ -92,7 +92,7 @@ export default function Pools() {
 	}
 
 	async function remove(id: string) {
-		if (!confirm('Pool löschen? Zuweisungen bleiben erhalten.')) {
+		if (!confirm('Delete pool? Allocations will be kept.')) {
 			return
 		}
 		await api.pools.remove(id)
@@ -121,18 +121,18 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Zweck
+							Purpose
 							<input
 								value={form().purpose}
 								onInput={(e) =>
 									patchForm(setForm, 'purpose', e.currentTarget.value)
 								}
 								class="input"
-								placeholder="z.B. Notgroschen, Altersvorsorge"
+								placeholder="e.g. Emergency fund, Retirement"
 							/>
 						</label>
 						<label class="field">
-							Ziel Min (€){' '}
+							Target min (€){' '}
 							<input
 								type="number"
 								step="1"
@@ -144,7 +144,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Ziel Max (€){' '}
+							Target max (€){' '}
 							<input
 								type="number"
 								step="1"
@@ -156,7 +156,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Ziel %{' '}
+							Target %{' '}
 							<input
 								type="number"
 								min="0"
@@ -170,7 +170,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Erwartete Rendite % p.a.{' '}
+							Expected return % p.a.{' '}
 							<input
 								type="number"
 								step="0.1"
@@ -182,7 +182,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Risiko{' '}
+							Risk{' '}
 							<select
 								value={form().riskLevel}
 								onChange={(e) =>
@@ -201,7 +201,7 @@ export default function Pools() {
 							</select>
 						</label>
 						<label class="field">
-							Volatilität %{' '}
+							Volatility %{' '}
 							<input
 								type="number"
 								step="0.1"
@@ -213,7 +213,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Horizont (Monate){' '}
+							Horizon (months){' '}
 							<input
 								type="number"
 								value={form().horizonMonths}
@@ -224,7 +224,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Farbe{' '}
+							Color{' '}
 							<input
 								type="color"
 								value={form().color}
@@ -238,10 +238,10 @@ export default function Pools() {
 					</Show>
 					<div class="form-actions">
 						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
-							Abbrechen
+							Cancel
 						</button>
 						<button type="submit" class="btn-primary">
-							{editing() ? 'Speichern' : 'Anlegen'}
+							{editing() ? 'Save' : 'Create'}
 						</button>
 					</div>
 				</form>
@@ -271,17 +271,17 @@ export default function Pools() {
 							</div>
 							<div class="muted text-sm meta-row">
 								<span>
-									Ziel: {p.targetPercent != null ? `${p.targetPercent}%` : '—'}{' '}
+									Target: {p.targetPercent != null ? `${p.targetPercent}%` : '—'}{' '}
 									{p.targetMinCents != null || p.targetMaxCents != null
 										? `(${p.targetMinCents != null ? formatEUR(p.targetMinCents) : '—'} – ${p.targetMaxCents != null ? formatEUR(p.targetMaxCents) : '—'})`
 										: ''}
 								</span>
-								<span>Rendite: {formatPercent(p.expectedReturnBps)}</span>
-								<span>Risiko: {formatRiskLevel(p.riskLevel)}</span>
-								<span>Volatilität: {formatPercent(p.volatilityBps)}</span>
+								<span>Return: {formatPercent(p.expectedReturnBps)}</span>
+								<span>Risk: {formatRiskLevel(p.riskLevel)}</span>
+								<span>Volatility: {formatPercent(p.volatilityBps)}</span>
 								<span>
-									Horizont:{' '}
-									{p.horizonMonths != null ? `${p.horizonMonths} Monate` : '—'}
+									Horizon:{' '}
+									{p.horizonMonths != null ? `${p.horizonMonths} months` : '—'}
 								</span>
 							</div>
 						</div>
@@ -289,7 +289,7 @@ export default function Pools() {
 				</For>
 				<Show when={(pools() ?? []).length === 0 && !pools.loading}>
 					<EmptyState>
-						Keine Pools. Erstelle z. B. „Notgroschen“, „Invest“, „Urlaub“.
+						No pools. Create e.g. “Emergency fund”, “Invest”, “Vacation”.
 					</EmptyState>
 				</Show>
 			</div>

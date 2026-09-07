@@ -38,10 +38,10 @@ export default function Dashboard() {
 	return (
 		<div class="page page--spacious">
 			<Show when={summary.loading}>
-				<p class="muted">Laden…</p>
+				<p class="muted">Loading…</p>
 			</Show>
 			<Show when={summary.error}>
-				<p class="form-error">Fehler: {(summary.error as Error).message}</p>
+				<p class="form-error">Error: {(summary.error as Error).message}</p>
 			</Show>
 			<Show when={summary()}>
 				{(get) => {
@@ -54,16 +54,16 @@ export default function Dashboard() {
 					return (
 						<>
 							<section class="dashboard-card">
-								<div class="dashboard-eyebrow">Gesamtvermögen</div>
+								<div class="dashboard-eyebrow">Total assets</div>
 								<div class="dashboard-total">{formatEUR(total)}</div>
 								<div class="dashboard-sub">
-									{counts.accounts} Konten · {counts.pools} Pools ·{' '}
-									{counts.allocations} Zuweisungen
+									{counts.accounts} accounts · {counts.pools} pools ·{' '}
+									{counts.allocations} allocations
 								</div>
 							</section>
 
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Verfügbarkeit</h2>
+								<h2 class="dashboard-section-title">Liquidity</h2>
 								<div class="list">
 									<For each={liquidityEntries}>
 										{([tier, cents]) => {
@@ -95,10 +95,10 @@ export default function Dashboard() {
 							</section>
 
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Pools · Ziel vs. Ist</h2>
+								<h2 class="dashboard-section-title">Pools · Target vs. actual</h2>
 								<Show when={d.poolTotals.length === 0}>
 									<EmptyState>
-										Noch keine Pools angelegt. Lege einen Pool in „Pools“ an.
+										No pools yet. Create a pool under “Pools”.
 									</EmptyState>
 								</Show>
 								<div class="list">
@@ -133,19 +133,19 @@ export default function Dashboard() {
 																{formatEUR(pt.currentCents)}
 															</div>
 															<div class="pool-sub">
-																{share.toFixed(1)}% des Gesamt
+																{share.toFixed(1)}% of total
 															</div>
 														</div>
 													</div>
 													<div class="pool-tags">
 														<span>
-															Ziel:{' '}
+															Target:{' '}
 															{targetPct != null
 																? `${targetPct}% (${formatEUR(pt.targetCents ?? 0)})`
 																: '—'}
 														</span>
 														<span>
-															Bereich:{' '}
+															Range:{' '}
 															{pt.targetMin != null
 																? formatEUR(pt.targetMin)
 																: '—'}{' '}
@@ -155,20 +155,20 @@ export default function Dashboard() {
 																: '—'}
 														</span>
 														<span>
-															Rendite:{' '}
+															Return:{' '}
 															{formatPercent(
 																pt.pool.expectedReturnBps,
 															)}{' '}
 															p.a.
 														</span>
 														<span>
-															Risiko:{' '}
+															Risk:{' '}
 															{formatRiskLevel(pt.pool.riskLevel)}
 														</span>
 														<span>
-															Horizont:{' '}
+															Horizon:{' '}
 															{pt.pool.horizonMonths != null
-																? `${pt.pool.horizonMonths} Monate`
+																? `${pt.pool.horizonMonths} months`
 																: '—'}
 														</span>
 														<span
@@ -178,7 +178,7 @@ export default function Dashboard() {
 																'amount--warn': !ok,
 															}}
 														>
-															{ok ? '✓ im Ziel' : '⚠ abweichend'}
+															{ok ? '✓ on target' : '⚠ off target'}
 														</span>
 													</div>
 													<div class="bar-track bar-track--thin">
@@ -200,7 +200,7 @@ export default function Dashboard() {
 																style={{
 																	left: `${Math.min(100, targetPct ?? 0)}%`,
 																}}
-																title={`Ziel ${targetPct}%`}
+																title={`Target ${targetPct}%`}
 															/>
 														</Show>
 													</div>
@@ -214,10 +214,10 @@ export default function Dashboard() {
 							<div class="dashboard-grid">
 								<section class="dashboard-card">
 									<h2 class="dashboard-section-title">
-										Nächste 90 Tage · Cashflow
+										Next 90 days · Cash flow
 									</h2>
 									<Show when={d.upcomingEvents.length === 0}>
-										<EmptyState>Keine Ereignisse im Zeitraum.</EmptyState>
+										<EmptyState>No events in this period.</EmptyState>
 									</Show>
 									<div class="list list--tight">
 										<For each={d.upcomingEvents}>
@@ -255,10 +255,10 @@ export default function Dashboard() {
 								</section>
 
 								<section class="dashboard-card">
-									<h2 class="dashboard-section-title">Verfügbar ab</h2>
+									<h2 class="dashboard-section-title">Available from</h2>
 									<Show when={d.unlocks.length === 0}>
 										<EmptyState>
-											Nichts gesperrt in Festgeld / Zuweisungen.
+											Nothing locked in fixed-term deposits / allocations.
 										</EmptyState>
 									</Show>
 									<div class="list list--tight">
