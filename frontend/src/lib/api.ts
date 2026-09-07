@@ -6,7 +6,6 @@ export type AccountType =
 	| 'broker'
 	| 'cash'
 	| 'crypto'
-	| 'tagesgeld'
 	| 'festgeld'
 	| 'other'
 
@@ -15,9 +14,9 @@ export interface Account {
 	name: string
 	type: AccountType
 	institution: string | null
-	liquidityTier: LiquidityTier
-	balanceCents: number
-	unlockAt: string | null
+	openingDate: string | null
+	openingBalanceCents: number | null
+	iban: string | null
 	notes: string | null
 	createdAt: string
 }

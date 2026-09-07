@@ -10,7 +10,6 @@ export const accountTypeEnum = [
 	'broker',
 	'cash',
 	'crypto',
-	'tagesgeld',
 	'festgeld',
 	'other',
 ] as const
@@ -23,9 +22,9 @@ export const accounts = sqliteTable('accounts', {
 	name: text('name').notNull(),
 	type: text('type').notNull().$type<AccountType>(),
 	institution: text('institution'),
-	liquidityTier: text('liquidity_tier').notNull().$type<LiquidityTier>().default('instant'),
-	balanceCents: integer('balance_cents').notNull().default(0),
-	unlockAt: text('unlock_at'), // ISO date string, when locked funds become available
+	openingDate: text('opening_date'), // ISO date (YYYY-MM-DD)
+	openingBalanceCents: integer('opening_balance_cents'),
+	iban: text('iban'),
 	notes: text('notes'),
 	createdAt: text('created_at').notNull(),
 })

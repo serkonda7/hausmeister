@@ -14,9 +14,9 @@ sqlite.exec(`
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     institution TEXT,
-    liquidity_tier TEXT NOT NULL DEFAULT 'instant',
-    balance_cents INTEGER NOT NULL DEFAULT 0,
-    unlock_at TEXT,
+    opening_date TEXT,
+    opening_balance_cents INTEGER,
+    iban TEXT,
     notes TEXT,
     created_at TEXT NOT NULL
   );
@@ -58,5 +58,20 @@ sqlite.exec(`
     created_at TEXT NOT NULL
   );
 `)
+
+// Lightweight migration for pre-existing data.db files:
+// ensure new account columns exist (legacy DBs have liquidity_tier/unlock_at,
+// which are now unused but left in place).
+function ensureColumn(table: string, column: string, ddl: string) {
+	const cols = sqlite.query(`PRAGMA table_info(${table})`).all() as Array<{
+		name: string
+	}>
+	if (!cols.some((c) => c.name === column)) {
+		sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`)
+	}
+}
+ensureColumn('accounts', 'opening_date', 'opening_date TEXT')
+ensureColumn('accounts', 'opening_balance_cents', 'opening_balance_cents INTEGER')
+ensureColumn('accounts', 'iban', 'iban TEXT')
 
 export type DB = typeof db

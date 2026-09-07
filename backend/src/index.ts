@@ -44,9 +44,9 @@ app.post('/accounts', vValidator('json', accountCreateSchema), async (c) => {
 		name: data.name,
 		type: data.type,
 		institution: data.institution ?? null,
-		liquidityTier: data.liquidityTier,
-		balanceCents: data.balanceCents,
-		unlockAt: data.unlockAt ?? null,
+		openingDate: data.openingDate ?? null,
+		openingBalanceCents: data.openingBalanceCents ?? null,
+		iban: data.iban ?? null,
 		notes: data.notes ?? null,
 		createdAt: now(),
 	}
@@ -81,9 +81,13 @@ app.put('/accounts/:id', vValidator('json', accountUpdateSchema), async (c) => {
 		type: data.type ?? existing[0].type,
 		institution:
 			data.institution !== undefined ? (data.institution ?? null) : existing[0].institution,
-		liquidityTier: data.liquidityTier ?? existing[0].liquidityTier,
-		balanceCents: data.balanceCents ?? existing[0].balanceCents,
-		unlockAt: data.unlockAt !== undefined ? (data.unlockAt ?? null) : existing[0].unlockAt,
+		openingDate:
+			data.openingDate !== undefined ? (data.openingDate ?? null) : existing[0].openingDate,
+		openingBalanceCents:
+			data.openingBalanceCents !== undefined
+				? (data.openingBalanceCents ?? null)
+				: existing[0].openingBalanceCents,
+		iban: data.iban !== undefined ? (data.iban ?? null) : existing[0].iban,
 		notes: data.notes !== undefined ? (data.notes ?? null) : existing[0].notes,
 	}
 	await db
@@ -311,10 +315,10 @@ app.get('/summary', async (c) => {
 	const allAllocations = await db.select().from(allocations)
 	const allEvents = await db.select().from(events)
 
-	const totalCents = allAccounts.reduce((s, a) => s + a.balanceCents, 0)
+	const totalCents = allAccounts.reduce((s, a) => s + (a.openingBalanceCents ?? 0), 0)
 
-	// Liquidity breakdown: effective tier per allocation override else account tier
-	// For unallocated money, use account tier.
+	// Liquidity breakdown: effective tier per allocation override, else instant
+	// (accounts no longer carry availability). For unallocated money, use instant.
 	const liquidityMap: Record<string, number> = {
 		instant: 0,
 		days: 0,
@@ -334,17 +338,15 @@ app.get('/summary', async (c) => {
 	const accountById = new Map(allAccounts.map((a) => [a.id, a]))
 
 	for (const al of allAllocations) {
-		const acc = accountById.get(al.accountId)
-		const tier = al.liquidityOverride ?? acc?.liquidityTier ?? 'instant'
+		const tier = al.liquidityOverride ?? 'instant'
 		liquidityMap[tier] = (liquidityMap[tier] ?? 0) + al.amountCents
 	}
-	// unallocated remainder
+	// unallocated remainder (opening balance not yet distributed to pools)
 	for (const acc of allAccounts) {
 		const allocated = allocatedByAccount.get(acc.id) ?? 0
-		const remainder = acc.balanceCents - allocated
+		const remainder = (acc.openingBalanceCents ?? 0) - allocated
 		if (remainder > 0) {
-			const tier = acc.liquidityTier
-			liquidityMap[tier] = (liquidityMap[tier] ?? 0) + remainder
+			liquidityMap['instant'] = (liquidityMap['instant'] ?? 0) + remainder
 		}
 	}
 
@@ -433,17 +435,8 @@ app.get('/summary', async (c) => {
 		return da.localeCompare(db)
 	})
 
-	// Locked / unlock timeline
+	// Locked / unlock timeline (allocation-level only; accounts carry no availability)
 	const unlocks = [
-		...allAccounts
-			.filter((a): a is typeof a & { unlockAt: string } => a.unlockAt !== null)
-			.map((a) => ({
-				type: 'account' as const,
-				id: a.id,
-				name: a.name,
-				unlockAt: a.unlockAt,
-				amountCents: a.balanceCents,
-			})),
 		...allAllocations
 			.filter((a): a is typeof a & { unlockAt: string } => a.unlockAt !== null)
 			.map((a) => {

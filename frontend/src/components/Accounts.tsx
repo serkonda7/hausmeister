@@ -1,7 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { patchForm } from '../lib/form'
-import { accountTypeLabels, formatEUR, liquidityLabels } from '../lib/format'
+import { accountTypeDescriptions, accountTypeLabels, formatEUR } from '../lib/format'
 import CrudRow from './CrudRow'
 import EmptyState from './EmptyState'
 
@@ -13,9 +13,9 @@ export default function Accounts() {
 		name: '',
 		type: 'checking' as Account['type'],
 		institution: '',
-		liquidityTier: 'instant' as Account['liquidityTier'],
-		balance: '',
-		unlockAt: '',
+		openingDate: '',
+		openingBalance: '',
+		iban: '',
 		notes: '',
 	})
 	const [error, setError] = createSignal('')
@@ -26,9 +26,9 @@ export default function Accounts() {
 			name: '',
 			type: 'checking',
 			institution: '',
-			liquidityTier: 'instant',
-			balance: '',
-			unlockAt: '',
+			openingDate: '',
+			openingBalance: '',
+			iban: '',
 			notes: '',
 		})
 		setError('')
@@ -40,9 +40,10 @@ export default function Accounts() {
 			name: a.name,
 			type: a.type,
 			institution: a.institution ?? '',
-			liquidityTier: a.liquidityTier,
-			balance: (a.balanceCents / 100).toString(),
-			unlockAt: a.unlockAt ?? '',
+			openingDate: a.openingDate ?? '',
+			openingBalance:
+				a.openingBalanceCents != null ? (a.openingBalanceCents / 100).toString() : '',
+			iban: a.iban ?? '',
 			notes: a.notes ?? '',
 		})
 		setError('')
@@ -53,18 +54,21 @@ export default function Accounts() {
 		e.preventDefault()
 		setError('')
 		const f = form()
-		const balanceCents = Math.round(Number.parseFloat(f.balance || '0') * 100)
-		if (Number.isNaN(balanceCents)) {
-			setError('Invalid amount')
+		const openingBalanceCents =
+			f.openingBalance.trim() === ''
+				? null
+				: Math.round(Number.parseFloat(f.openingBalance) * 100)
+		if (openingBalanceCents !== null && Number.isNaN(openingBalanceCents)) {
+			setError('Invalid opening balance')
 			return
 		}
 		const payload: Omit<Account, 'id' | 'createdAt'> = {
 			name: f.name,
 			type: f.type,
 			institution: f.institution || null,
-			liquidityTier: f.liquidityTier,
-			balanceCents,
-			unlockAt: f.unlockAt || null,
+			openingDate: f.openingDate || null,
+			openingBalanceCents,
+			iban: f.iban.trim() || null,
 			notes: f.notes || null,
 		}
 		try {
@@ -122,9 +126,14 @@ export default function Accounts() {
 									)
 								}
 								class="input"
+								title={accountTypeDescriptions[form().type] ?? ''}
 							>
 								<For each={Object.entries(accountTypeLabels)}>
-									{([k, v]) => <option value={k}>{v}</option>}
+									{([k, v]) => (
+										<option value={k} title={accountTypeDescriptions[k] ?? ''}>
+											{v}
+										</option>
+									)}
 								</For>
 							</select>
 						</label>
@@ -139,44 +148,33 @@ export default function Accounts() {
 							/>
 						</label>
 						<label class="field">
-							Availability
-							<select
-								value={form().liquidityTier}
-								onChange={(e) =>
-									patchForm(
-										setForm,
-										'liquidityTier',
-										e.currentTarget.value as Account['liquidityTier'],
-									)
-								}
-								class="input"
-							>
-								<For each={Object.entries(liquidityLabels)}>
-									{([k, v]) => <option value={k}>{v}</option>}
-								</For>
-							</select>
-						</label>
-						<label class="field">
-							Balance (€){' '}
+							Opening date{' '}
 							<input
-								type="number"
-								step="0.01"
-								value={form().balance}
+								type="date"
+								value={form().openingDate}
 								onInput={(e) =>
-									patchForm(setForm, 'balance', e.currentTarget.value)
+									patchForm(setForm, 'openingDate', e.currentTarget.value)
 								}
-								required
 								class="input"
 							/>
 						</label>
 						<label class="field">
-							Available from{' '}
+							Opening balance (€){' '}
 							<input
-								type="date"
-								value={form().unlockAt}
+								type="number"
+								step="0.01"
+								value={form().openingBalance}
 								onInput={(e) =>
-									patchForm(setForm, 'unlockAt', e.currentTarget.value)
+									patchForm(setForm, 'openingBalance', e.currentTarget.value)
 								}
+								class="input"
+							/>
+						</label>
+						<label class="field">
+							IBAN{' '}
+							<input
+								value={form().iban}
+								onInput={(e) => patchForm(setForm, 'iban', e.currentTarget.value)}
 								class="input"
 							/>
 						</label>
@@ -214,16 +212,24 @@ export default function Accounts() {
 							<div>
 								<div class="strong">
 									{a.name}{' '}
-									<span class="subtle">· {accountTypeLabels[a.type]}</span>
+									<span
+										class="subtle"
+										title={accountTypeDescriptions[a.type] ?? ''}
+									>
+										· {accountTypeLabels[a.type]}
+									</span>
 								</div>
 								<div class="muted text-sm">
-									{a.institution ?? '—'} · {liquidityLabels[a.liquidityTier]}
-									<Show when={a.unlockAt}> · from {a.unlockAt}</Show>
+									{a.institution ?? '—'}
+									<Show when={a.iban}> · {a.iban}</Show>
+									<Show when={a.openingDate}> · opened {a.openingDate}</Show>
 								</div>
 							</div>
 							<div class="card-actions">
 								<div class="strong--bold" style={{ 'white-space': 'nowrap' }}>
-									{formatEUR(a.balanceCents)}
+									{a.openingBalanceCents != null
+										? formatEUR(a.openingBalanceCents)
+										: '—'}
 								</div>
 								<CrudRow onEdit={() => openEdit(a)} onDelete={() => remove(a.id)} />
 							</div>

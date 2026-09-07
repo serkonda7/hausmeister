@@ -7,7 +7,6 @@ export const accountTypeSchema = v.picklist([
 	'broker',
 	'cash',
 	'crypto',
-	'tagesgeld',
 	'festgeld',
 	'other',
 ])
@@ -16,9 +15,11 @@ export const accountCreateSchema = v.object({
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(100)),
 	type: accountTypeSchema,
 	institution: v.optional(v.nullable(v.string())),
-	liquidityTier: liquidityTierSchema,
-	balanceCents: v.pipe(v.number(), v.integer(), v.minValue(0)),
-	unlockAt: v.optional(v.nullable(v.string())),
+	openingDate: v.optional(v.nullable(v.string())),
+	openingBalanceCents: v.optional(
+		v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0))),
+	),
+	iban: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(34)))),
 	notes: v.optional(v.nullable(v.string())),
 })
 

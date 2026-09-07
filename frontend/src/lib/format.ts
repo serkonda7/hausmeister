@@ -38,12 +38,21 @@ export const liquidityColors: Record<string, string> = {
 export const accountTypeLabels: Record<string, string> = {
 	checking: 'Checking',
 	savings: 'Savings',
-	broker: 'Brokerage',
+	broker: 'Broker',
 	cash: 'Cash',
 	crypto: 'Crypto',
-	tagesgeld: 'Instant savings',
 	festgeld: 'Fixed-term deposit',
 	other: 'Other',
+}
+
+export const accountTypeDescriptions: Record<string, string> = {
+	checking: 'Everyday account for income, bills and daily spending.',
+	savings: 'Long-term savings with modest interest and flexible access.',
+	broker: 'Securities account for stocks, ETFs and other investments.',
+	cash: 'Physical cash held outside of any bank account.',
+	crypto: 'Digital assets held in a wallet or on an exchange.',
+	festgeld: 'Fixed-term deposit with locked interest until maturity.',
+	other: 'Any other account that fits no category above.',
 }
 
 export const riskLevelLabels: Record<number, string> = {
