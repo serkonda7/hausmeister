@@ -17,6 +17,12 @@ export type AccountType = (typeof accountTypeEnum)[number]
 
 export const riskLevelEnum = [1, 2, 3, 4, 5] as const
 
+export const directionEnum = ['inflow', 'outflow'] as const
+export type Direction = (typeof directionEnum)[number]
+
+export const frequencyEnum = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const
+export type Frequency = (typeof frequencyEnum)[number]
+
 export const accounts = sqliteTable('accounts', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
@@ -64,12 +70,10 @@ export const events = sqliteTable('events', {
 	id: text('id').primaryKey(),
 	title: text('title').notNull(),
 	amountCents: integer('amount_cents').notNull(),
-	direction: text('direction').notNull().$type<'inflow' | 'outflow'>(),
+	direction: text('direction').notNull().$type<Direction>(),
 	date: text('date').notNull(), // ISO date (YYYY-MM-DD)
 	isRecurring: integer('is_recurring', { mode: 'boolean' }).notNull().default(false),
-	frequency: text('frequency').$type<
-		'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
-	>(),
+	frequency: text('frequency').$type<Frequency>(),
 	recurringUntil: text('recurring_until'),
 	poolId: text('pool_id').references(() => pools.id, { onDelete: 'set null' }),
 	accountId: text('account_id').references(() => accounts.id, { onDelete: 'set null' }),
@@ -100,7 +104,7 @@ export const transactions = sqliteTable('transactions', {
 		onDelete: 'set null',
 	}),
 	amountCents: integer('amount_cents').notNull(), // >= 0, see direction
-	direction: text('direction').notNull().$type<'inflow' | 'outflow'>(),
+	direction: text('direction').notNull().$type<Direction>(),
 	// paired account-transfer legs share a transferId; null = plain transaction
 	transferId: text('transfer_id'),
 	notes: text('notes'),

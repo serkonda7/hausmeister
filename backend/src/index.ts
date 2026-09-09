@@ -41,23 +41,36 @@ function now() {
 // Health
 app.get('/health', (c) => c.json({ status: 'ok', time: now() }))
 
-async function exists(table: object, rowId: string): Promise<boolean> {
+type AccountRow = typeof accounts.$inferSelect
+type PoolRow = typeof pools.$inferSelect
+type TransactionRow = typeof transactions.$inferSelect
+type AllocationRow = typeof allocations.$inferSelect
+type EventRow = typeof events.$inferSelect
+type CategoryRow = typeof categories.$inferSelect
+
+// 3a: nullable PATCH merge — `undefined` keeps existing, `null` clears.
+function mergePatch<T>(existing: T | null, incoming: T | null | undefined): T | null {
+	return incoming !== undefined ? (incoming ?? null) : existing
+}
+
+// 3c: find-by-id returning row-or-null (route returns 404 with existing message).
+async function findByIdOrNull<TRow>(table: object, rowId: string): Promise<TRow | null> {
 	const idCol = (table as { id: Parameters<typeof eq>[0] }).id
-	const row = await db
-		.select({ id: idCol as never })
+	const rows = await db
+		.select()
 		.from(table as never)
 		.where(eq(idCol, rowId))
 		.limit(1)
-	return row.length > 0
+	return (rows[0] as TRow | undefined) ?? null
+}
+
+async function exists(table: object, rowId: string): Promise<boolean> {
+	return (await findByIdOrNull(table, rowId)) !== null
 }
 
 function signedCents(amountCents: number, direction: 'inflow' | 'outflow'): number {
 	return direction === 'inflow' ? amountCents : -amountCents
 }
-
-type AccountRow = typeof accounts.$inferSelect
-type TransactionRow = typeof transactions.$inferSelect
-type AllocationRow = typeof allocations.$inferSelect
 
 function currentBalanceFor(
 	account: AccountRow,
@@ -79,12 +92,13 @@ function allocatedFor(
 	return allocs.reduce((s, a) => (a.accountId === accountId ? s + a.amountCents : s), 0)
 }
 
-async function overAllocation(
+// 3b: shared account state — single place for load-account+txns+allocs →
+// currentBalanceFor → allocatedFor. All over-allocation guards use this.
+async function getAccountState(
 	accountId: string,
-	proposedTotalAllocated: number,
-): Promise<{ currentCents: number; allocatedCents: number } | null> {
-	const acc = await db.select().from(accounts).where(eq(accounts.id, accountId)).limit(1)
-	if (acc.length === 0) {
+): Promise<{ account: AccountRow; current: number; allocated: number; transactionCount: number } | null> {
+	const account = await findByIdOrNull<AccountRow>(accounts, accountId)
+	if (!account) {
 		return null
 	}
 	const txns = await db
@@ -95,11 +109,71 @@ async function overAllocation(
 		})
 		.from(transactions)
 		.where(eq(transactions.accountId, accountId))
-	const current = currentBalanceFor(acc[0], txns)
-	if (proposedTotalAllocated > current) {
-		return { currentCents: current, allocatedCents: proposedTotalAllocated }
+	const allocs = await db
+		.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
+		.from(allocations)
+		.where(eq(allocations.accountId, accountId))
+	return {
+		account,
+		current: currentBalanceFor(account, txns),
+		allocated: allocatedFor(accountId, allocs),
+		transactionCount: txns.length,
+	}
+}
+
+async function overAllocation(
+	accountId: string,
+	proposedTotalAllocated: number,
+): Promise<{ currentCents: number; allocatedCents: number } | null> {
+	const state = await getAccountState(accountId)
+	if (!state) {
+		return null
+	}
+	if (proposedTotalAllocated > state.current) {
+		return { currentCents: state.current, allocatedCents: proposedTotalAllocated }
 	}
 	return null
+}
+
+// 3b: outflow guard — balance after a new outflow must still cover allocations.
+async function assertCovers(
+	accountId: string,
+	outflowCents: number,
+): Promise<{ currentCents: number; allocatedCents: number } | null> {
+	const state = await getAccountState(accountId)
+	if (!state) {
+		return null
+	}
+	const after = state.current - outflowCents
+	if (state.allocated > after) {
+		return { currentCents: after, allocatedCents: state.allocated }
+	}
+	return null
+}
+
+// 3d: frequency stepping — returns false for unknown freq.
+function advanceDate(d: Date, freq: string): boolean {
+	if (freq === 'weekly') {
+		d.setDate(d.getDate() + 7)
+		return true
+	}
+	if (freq === 'biweekly') {
+		d.setDate(d.getDate() + 14)
+		return true
+	}
+	if (freq === 'monthly') {
+		d.setMonth(d.getMonth() + 1)
+		return true
+	}
+	if (freq === 'quarterly') {
+		d.setMonth(d.getMonth() + 3)
+		return true
+	}
+	if (freq === 'yearly') {
+		d.setFullYear(d.getFullYear() + 1)
+		return true
+	}
+	return false
 }
 
 // ============ ACCOUNTS ============
@@ -126,46 +200,33 @@ app.post('/accounts', vValidator('json', accountCreateSchema), async (c) => {
 })
 
 app.get('/accounts/:id', async (c) => {
-	const row = await db
-		.select()
-		.from(accounts)
-		.where(eq(accounts.id, c.req.param('id')))
-		.limit(1)
-	if (row.length === 0) {
+	const row = await findByIdOrNull<AccountRow>(accounts, c.req.param('id'))
+	if (!row) {
 		return c.json({ error: 'Account not found' }, 404)
 	}
-	return c.json(row[0])
+	return c.json(row)
 })
 
 app.put('/accounts/:id', vValidator('json', accountUpdateSchema), async (c) => {
 	const data = c.req.valid('json')
-	const existing = await db
-		.select()
-		.from(accounts)
-		.where(eq(accounts.id, c.req.param('id')))
-		.limit(1)
-	if (existing.length === 0) {
+	const existing = await findByIdOrNull<AccountRow>(accounts, c.req.param('id'))
+	if (!existing) {
 		return c.json({ error: 'Account not found' }, 404)
 	}
 	const updated = {
-		name: data.name ?? existing[0].name,
-		type: data.type ?? existing[0].type,
-		institution:
-			data.institution !== undefined ? (data.institution ?? null) : existing[0].institution,
-		openingDate:
-			data.openingDate !== undefined ? (data.openingDate ?? null) : existing[0].openingDate,
-		openingBalanceCents:
-			data.openingBalanceCents !== undefined
-				? (data.openingBalanceCents ?? null)
-				: existing[0].openingBalanceCents,
-		iban: data.iban !== undefined ? (data.iban ?? null) : existing[0].iban,
-		notes: data.notes !== undefined ? (data.notes ?? null) : existing[0].notes,
+		name: data.name ?? existing.name,
+		type: data.type ?? existing.type,
+		institution: mergePatch(existing.institution, data.institution),
+		openingDate: mergePatch(existing.openingDate, data.openingDate),
+		openingBalanceCents: mergePatch(existing.openingBalanceCents, data.openingBalanceCents),
+		iban: mergePatch(existing.iban, data.iban),
+		notes: mergePatch(existing.notes, data.notes),
 	}
 	await db
 		.update(accounts)
 		.set(updated)
 		.where(eq(accounts.id, c.req.param('id')))
-	return c.json({ ...existing[0], ...updated })
+	return c.json({ ...existing, ...updated })
 })
 
 app.delete('/accounts/:id', async (c) => {
@@ -188,31 +249,17 @@ app.delete('/accounts/:id', async (c) => {
 // Current (live) balance: opening + signed transactions
 app.get('/accounts/:id/balance', async (c) => {
 	const accountId = c.req.param('id')
-	const found = await db.select().from(accounts).where(eq(accounts.id, accountId)).limit(1)
-	if (found.length === 0) {
+	const state = await getAccountState(accountId)
+	if (!state) {
 		return c.json({ error: 'Account not found' }, 404)
 	}
-	const txns = await db
-		.select({
-			accountId: transactions.accountId,
-			amountCents: transactions.amountCents,
-			direction: transactions.direction,
-		})
-		.from(transactions)
-		.where(eq(transactions.accountId, accountId))
-	const currentCents = currentBalanceFor(found[0], txns)
-	const allAllocs = await db
-		.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
-		.from(allocations)
-		.where(eq(allocations.accountId, accountId))
-	const allocatedCents = allocatedFor(accountId, allAllocs)
 	return c.json({
 		accountId,
-		openingCents: found[0].openingBalanceCents ?? 0,
-		currentCents,
-		allocatedCents,
-		unallocatedCents: currentCents - allocatedCents,
-		transactionCount: txns.length,
+		openingCents: state.account.openingBalanceCents ?? 0,
+		currentCents: state.current,
+		allocatedCents: state.allocated,
+		unallocatedCents: state.current - state.allocated,
+		transactionCount: state.transactionCount,
 	})
 })
 
@@ -243,62 +290,36 @@ app.post('/pools', vValidator('json', poolCreateSchema), async (c) => {
 })
 
 app.get('/pools/:id', async (c) => {
-	const row = await db
-		.select()
-		.from(pools)
-		.where(eq(pools.id, c.req.param('id')))
-		.limit(1)
-	if (row.length === 0) {
+	const row = await findByIdOrNull<PoolRow>(pools, c.req.param('id'))
+	if (!row) {
 		return c.json({ error: 'Pool not found' }, 404)
 	}
-	return c.json(row[0])
+	return c.json(row)
 })
 
 app.put('/pools/:id', vValidator('json', poolUpdateSchema), async (c) => {
 	const data = c.req.valid('json')
-	const existing = await db
-		.select()
-		.from(pools)
-		.where(eq(pools.id, c.req.param('id')))
-		.limit(1)
-	if (existing.length === 0) {
+	const existing = await findByIdOrNull<PoolRow>(pools, c.req.param('id'))
+	if (!existing) {
 		return c.json({ error: 'Pool not found' }, 404)
 	}
 	const updated = {
-		name: data.name ?? existing[0].name,
-		purpose: data.purpose !== undefined ? (data.purpose ?? null) : existing[0].purpose,
-		targetMinCents:
-			data.targetMinCents !== undefined
-				? (data.targetMinCents ?? null)
-				: existing[0].targetMinCents,
-		targetMaxCents:
-			data.targetMaxCents !== undefined
-				? (data.targetMaxCents ?? null)
-				: existing[0].targetMaxCents,
-		targetPercent:
-			data.targetPercent !== undefined
-				? (data.targetPercent ?? null)
-				: existing[0].targetPercent,
-		expectedReturnBps:
-			data.expectedReturnBps !== undefined
-				? (data.expectedReturnBps ?? null)
-				: existing[0].expectedReturnBps,
-		riskLevel: data.riskLevel !== undefined ? (data.riskLevel ?? null) : existing[0].riskLevel,
-		volatilityBps:
-			data.volatilityBps !== undefined
-				? (data.volatilityBps ?? null)
-				: existing[0].volatilityBps,
-		horizonMonths:
-			data.horizonMonths !== undefined
-				? (data.horizonMonths ?? null)
-				: existing[0].horizonMonths,
-		color: data.color !== undefined ? (data.color ?? null) : existing[0].color,
+		name: data.name ?? existing.name,
+		purpose: mergePatch(existing.purpose, data.purpose),
+		targetMinCents: mergePatch(existing.targetMinCents, data.targetMinCents),
+		targetMaxCents: mergePatch(existing.targetMaxCents, data.targetMaxCents),
+		targetPercent: mergePatch(existing.targetPercent, data.targetPercent),
+		expectedReturnBps: mergePatch(existing.expectedReturnBps, data.expectedReturnBps),
+		riskLevel: mergePatch(existing.riskLevel, data.riskLevel),
+		volatilityBps: mergePatch(existing.volatilityBps, data.volatilityBps),
+		horizonMonths: mergePatch(existing.horizonMonths, data.horizonMonths),
+		color: mergePatch(existing.color, data.color),
 	}
 	await db
 		.update(pools)
 		.set(updated)
 		.where(eq(pools.id, c.req.param('id')))
-	return c.json({ ...existing[0], ...updated })
+	return c.json({ ...existing, ...updated })
 })
 
 app.delete('/pools/:id', async (c) => {
@@ -317,19 +338,16 @@ app.post('/allocations', vValidator('json', allocationCreateSchema), async (c) =
 	if (!(await exists(pools, data.poolId))) {
 		return c.json({ error: 'Pool not found' }, 404)
 	}
-	if (!(await exists(accounts, data.accountId))) {
+	const state = await getAccountState(data.accountId)
+	if (!state) {
 		return c.json({ error: 'Account not found' }, 404)
 	}
-	const existing = await db
-		.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
-		.from(allocations)
-		.where(eq(allocations.accountId, data.accountId))
-	const over = await overAllocation(
-		data.accountId,
-		allocatedFor(data.accountId, existing) + data.amountCents,
-	)
-	if (over) {
-		return c.json({ error: 'Allocation exceeds account balance', ...over }, 422)
+	const proposed = state.allocated + data.amountCents
+	if (proposed > state.current) {
+		return c.json(
+			{ error: 'Allocation exceeds account balance', currentCents: state.current, allocatedCents: proposed },
+			422,
+		)
 	}
 	const row = {
 		id: id(),
@@ -346,23 +364,16 @@ app.post('/allocations', vValidator('json', allocationCreateSchema), async (c) =
 
 app.put('/allocations/:id', vValidator('json', allocationUpdateSchema), async (c) => {
 	const data = c.req.valid('json')
-	const existing = await db
-		.select()
-		.from(allocations)
-		.where(eq(allocations.id, c.req.param('id')))
-		.limit(1)
-	if (existing.length === 0) {
+	const existing = await findByIdOrNull<AllocationRow>(allocations, c.req.param('id'))
+	if (!existing) {
 		return c.json({ error: 'Allocation not found' }, 404)
 	}
 	const updated = {
-		poolId: data.poolId ?? existing[0].poolId,
-		accountId: data.accountId ?? existing[0].accountId,
-		amountCents: data.amountCents ?? existing[0].amountCents,
-		liquidityOverride:
-			data.liquidityOverride !== undefined
-				? (data.liquidityOverride ?? null)
-				: existing[0].liquidityOverride,
-		unlockAt: data.unlockAt !== undefined ? (data.unlockAt ?? null) : existing[0].unlockAt,
+		poolId: data.poolId ?? existing.poolId,
+		accountId: data.accountId ?? existing.accountId,
+		amountCents: data.amountCents ?? existing.amountCents,
+		liquidityOverride: mergePatch(existing.liquidityOverride, data.liquidityOverride),
+		unlockAt: mergePatch(existing.unlockAt, data.unlockAt),
 	}
 	if (data.poolId !== undefined && !(await exists(pools, updated.poolId))) {
 		return c.json({ error: 'Pool not found' }, 404)
@@ -373,25 +384,25 @@ app.put('/allocations/:id', vValidator('json', allocationUpdateSchema), async (c
 	if (
 		data.amountCents !== undefined ||
 		data.accountId !== undefined ||
-		updated.accountId !== existing[0].accountId
+		updated.accountId !== existing.accountId
 	) {
-		// Recompute allocation total for the (possibly new) account, excluding this row
-		const siblings = await db
-			.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
-			.from(allocations)
-			.where(eq(allocations.accountId, updated.accountId))
-		const siblingTotal = siblings
-			.filter((a) => a.accountId === updated.accountId)
-			.reduce((s, a) => s + a.amountCents, 0)
-		// siblings include this row's old amount only when account unchanged
-		const oldAmountInSiblings =
-			updated.accountId === existing[0].accountId ? existing[0].amountCents : 0
-		const over = await overAllocation(
-			updated.accountId,
-			siblingTotal - oldAmountInSiblings + updated.amountCents,
-		)
-		if (over) {
-			return c.json({ error: 'Allocation exceeds account balance', ...over }, 422)
+		// Recompute allocation total for the (possibly new) account, excluding this row.
+		// state.allocated already holds the current total for updated.accountId.
+		const state = await getAccountState(updated.accountId)
+		if (!state) {
+			return c.json({ error: 'Account not found' }, 404)
+		}
+		const oldAmountInState = updated.accountId === existing.accountId ? existing.amountCents : 0
+		const proposed = state.allocated - oldAmountInState + updated.amountCents
+		if (proposed > state.current) {
+			return c.json(
+				{
+					error: 'Allocation exceeds account balance',
+					currentCents: state.current,
+					allocatedCents: proposed,
+				},
+				422,
+			)
 		}
 		// Moving to another account frees the old account — no check needed there.
 	}
@@ -399,7 +410,7 @@ app.put('/allocations/:id', vValidator('json', allocationUpdateSchema), async (c
 		.update(allocations)
 		.set(updated)
 		.where(eq(allocations.id, c.req.param('id')))
-	return c.json({ ...existing[0], ...updated })
+	return c.json({ ...existing, ...updated })
 })
 
 app.delete('/allocations/:id', async (c) => {
@@ -441,28 +452,21 @@ app.post('/events', vValidator('json', eventCreateSchema), async (c) => {
 
 app.put('/events/:id', vValidator('json', eventUpdateSchema), async (c) => {
 	const data = c.req.valid('json')
-	const existing = await db
-		.select()
-		.from(events)
-		.where(eq(events.id, c.req.param('id')))
-		.limit(1)
-	if (existing.length === 0) {
+	const existing = await findByIdOrNull<EventRow>(events, c.req.param('id'))
+	if (!existing) {
 		return c.json({ error: 'Event not found' }, 404)
 	}
 	const updated = {
-		title: data.title ?? existing[0].title,
-		amountCents: data.amountCents ?? existing[0].amountCents,
-		direction: data.direction ?? existing[0].direction,
-		date: data.date ?? existing[0].date,
-		isRecurring: data.isRecurring ?? existing[0].isRecurring,
-		frequency: data.frequency !== undefined ? (data.frequency ?? null) : existing[0].frequency,
-		recurringUntil:
-			data.recurringUntil !== undefined
-				? (data.recurringUntil ?? null)
-				: existing[0].recurringUntil,
-		poolId: data.poolId !== undefined ? (data.poolId ?? null) : existing[0].poolId,
-		accountId: data.accountId !== undefined ? (data.accountId ?? null) : existing[0].accountId,
-		notes: data.notes !== undefined ? (data.notes ?? null) : existing[0].notes,
+		title: data.title ?? existing.title,
+		amountCents: data.amountCents ?? existing.amountCents,
+		direction: data.direction ?? existing.direction,
+		date: data.date ?? existing.date,
+		isRecurring: data.isRecurring ?? existing.isRecurring,
+		frequency: mergePatch(existing.frequency, data.frequency),
+		recurringUntil: mergePatch(existing.recurringUntil, data.recurringUntil),
+		poolId: mergePatch(existing.poolId, data.poolId),
+		accountId: mergePatch(existing.accountId, data.accountId),
+		notes: mergePatch(existing.notes, data.notes),
 	}
 	if (updated.poolId != null && !(await exists(pools, updated.poolId))) {
 		return c.json({ error: 'Pool not found' }, 404)
@@ -474,7 +478,7 @@ app.put('/events/:id', vValidator('json', eventUpdateSchema), async (c) => {
 		.update(events)
 		.set(updated)
 		.where(eq(events.id, c.req.param('id')))
-	return c.json({ ...existing[0], ...updated })
+	return c.json({ ...existing, ...updated })
 })
 
 app.delete('/events/:id', async (c) => {
@@ -507,25 +511,21 @@ app.post('/categories', vValidator('json', categoryCreateSchema), async (c) => {
 
 app.put('/categories/:id', vValidator('json', categoryUpdateSchema), async (c) => {
 	const data = c.req.valid('json')
-	const existing = await db
-		.select()
-		.from(categories)
-		.where(eq(categories.id, c.req.param('id')))
-		.limit(1)
-	if (existing.length === 0) {
+	const existing = await findByIdOrNull<CategoryRow>(categories, c.req.param('id'))
+	if (!existing) {
 		return c.json({ error: 'Category not found' }, 404)
 	}
 	const updated = {
-		name: data.name?.trim() ?? existing[0].name,
-		kind: data.kind !== undefined ? (data.kind ?? null) : existing[0].kind,
-		color: data.color !== undefined ? (data.color ?? null) : existing[0].color,
+		name: data.name?.trim() ?? existing.name,
+		kind: mergePatch(existing.kind, data.kind),
+		color: mergePatch(existing.color, data.color),
 	}
 	try {
 		await db.update(categories).set(updated).where(eq(categories.id, c.req.param('id')))
 	} catch {
 		return c.json({ error: 'Category name already exists' }, 409)
 	}
-	return c.json({ ...existing[0], ...updated })
+	return c.json({ ...existing, ...updated })
 })
 
 app.delete('/categories/:id', async (c) => {
@@ -558,28 +558,10 @@ app.post('/transactions', vValidator('json', transactionCreateSchema), async (c)
 	// Outflows must not push allocated money into over-allocation:
 	// balance after a new outflow must still cover allocations.
 	if (data.direction === 'outflow') {
-		const acc = await db
-			.select()
-			.from(accounts)
-			.where(eq(accounts.id, data.accountId))
-			.limit(1)
-		const txns = await db
-			.select({
-				accountId: transactions.accountId,
-				amountCents: transactions.amountCents,
-				direction: transactions.direction,
-			})
-			.from(transactions)
-			.where(eq(transactions.accountId, data.accountId))
-		const allocs = await db
-			.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
-			.from(allocations)
-			.where(eq(allocations.accountId, data.accountId))
-		const current = currentBalanceFor(acc[0], txns) - data.amountCents
-		const allocated = allocatedFor(data.accountId, allocs)
-		if (allocated > current) {
+		const over = await assertCovers(data.accountId, data.amountCents)
+		if (over) {
 			return c.json(
-				{ error: 'Transaction would over-allocate account', currentCents: current, allocatedCents: allocated },
+				{ error: 'Transaction would over-allocate account', ...over },
 				422,
 			)
 		}
@@ -602,25 +584,21 @@ app.post('/transactions', vValidator('json', transactionCreateSchema), async (c)
 
 app.put('/transactions/:id', vValidator('json', transactionUpdateSchema), async (c) => {
 	const data = c.req.valid('json')
-	const existing = await db
-		.select()
-		.from(transactions)
-		.where(eq(transactions.id, c.req.param('id')))
-		.limit(1)
-	if (existing.length === 0) {
+	const existing = await findByIdOrNull<TransactionRow>(transactions, c.req.param('id'))
+	if (!existing) {
 		return c.json({ error: 'Transaction not found' }, 404)
 	}
-	if (existing[0].transferId != null) {
+	if (existing.transferId != null) {
 		return c.json({ error: 'Transfer legs must be edited via DELETE + POST /transfers' }, 409)
 	}
 	const updated = {
-		accountId: data.accountId ?? existing[0].accountId,
-		date: data.date ?? existing[0].date,
-		payee: data.payee !== undefined ? (data.payee ?? null) : existing[0].payee,
-		categoryId: data.categoryId !== undefined ? (data.categoryId ?? null) : existing[0].categoryId,
-		amountCents: data.amountCents ?? existing[0].amountCents,
-		direction: data.direction ?? existing[0].direction,
-		notes: data.notes !== undefined ? (data.notes ?? null) : existing[0].notes,
+		accountId: data.accountId ?? existing.accountId,
+		date: data.date ?? existing.date,
+		payee: mergePatch(existing.payee, data.payee),
+		categoryId: mergePatch(existing.categoryId, data.categoryId),
+		amountCents: data.amountCents ?? existing.amountCents,
+		direction: data.direction ?? existing.direction,
+		notes: mergePatch(existing.notes, data.notes),
 	}
 	if (!(await exists(accounts, updated.accountId))) {
 		return c.json({ error: 'Account not found' }, 404)
@@ -629,21 +607,17 @@ app.put('/transactions/:id', vValidator('json', transactionUpdateSchema), async 
 		return c.json({ error: 'Category not found' }, 404)
 	}
 	await db.update(transactions).set(updated).where(eq(transactions.id, c.req.param('id')))
-	return c.json({ ...existing[0], ...updated })
+	return c.json({ ...existing, ...updated })
 })
 
 app.delete('/transactions/:id', async (c) => {
-	const existing = await db
-		.select()
-		.from(transactions)
-		.where(eq(transactions.id, c.req.param('id')))
-		.limit(1)
-	if (existing.length === 0) {
+	const existing = await findByIdOrNull<TransactionRow>(transactions, c.req.param('id'))
+	if (!existing) {
 		return c.json({ error: 'Transaction not found' }, 404)
 	}
-	if (existing[0].transferId != null) {
+	if (existing.transferId != null) {
 		// Delete both legs atomically
-		await db.delete(transactions).where(eq(transactions.transferId, existing[0].transferId))
+		await db.delete(transactions).where(eq(transactions.transferId, existing.transferId))
 		return c.json({ ok: true, deletedTransfer: true })
 	}
 	await db.delete(transactions).where(eq(transactions.id, c.req.param('id')))
@@ -666,28 +640,10 @@ app.post('/transfers', vValidator('json', transferCreateSchema), async (c) => {
 		return c.json({ error: 'Category not found' }, 404)
 	}
 	// Source balance after outflow must still cover its allocations
-	const src = await db
-		.select()
-		.from(accounts)
-		.where(eq(accounts.id, data.fromAccountId))
-		.limit(1)
-	const srcTxns = await db
-		.select({
-			accountId: transactions.accountId,
-			amountCents: transactions.amountCents,
-			direction: transactions.direction,
-		})
-		.from(transactions)
-		.where(eq(transactions.accountId, data.fromAccountId))
-	const srcAllocs = await db
-		.select({ accountId: allocations.accountId, amountCents: allocations.amountCents })
-		.from(allocations)
-		.where(eq(allocations.accountId, data.fromAccountId))
-	const srcCurrent = currentBalanceFor(src[0], srcTxns) - data.amountCents
-	const srcAllocated = allocatedFor(data.fromAccountId, srcAllocs)
-	if (srcAllocated > srcCurrent) {
+	const over = await assertCovers(data.fromAccountId, data.amountCents)
+	if (over) {
 		return c.json(
-			{ error: 'Transfer would over-allocate source account', currentCents: srcCurrent, allocatedCents: srcAllocated },
+			{ error: 'Transfer would over-allocate source account', ...over },
 			422,
 		)
 	}
@@ -832,34 +788,14 @@ app.get('/summary', async (c) => {
 			const until = ev.recurringUntil ? new Date(ev.recurringUntil) : in90
 			// fast forward
 			while (d < today && d <= until) {
-				if (ev.frequency === 'weekly') {
-					d.setDate(d.getDate() + 7)
-				} else if (ev.frequency === 'biweekly') {
-					d.setDate(d.getDate() + 14)
-				} else if (ev.frequency === 'monthly') {
-					d.setMonth(d.getMonth() + 1)
-				} else if (ev.frequency === 'quarterly') {
-					d.setMonth(d.getMonth() + 3)
-				} else if (ev.frequency === 'yearly') {
-					d.setFullYear(d.getFullYear() + 1)
-				} else {
+				if (!advanceDate(d, ev.frequency)) {
 					break
 				}
 			}
 			// collect all occurrences in window
 			while (d >= today && d <= in90 && d <= until) {
 				upcoming.push({ ...ev, projectedDate: d.toISOString().slice(0, 10) })
-				if (ev.frequency === 'weekly') {
-					d.setDate(d.getDate() + 7)
-				} else if (ev.frequency === 'biweekly') {
-					d.setDate(d.getDate() + 14)
-				} else if (ev.frequency === 'monthly') {
-					d.setMonth(d.getMonth() + 1)
-				} else if (ev.frequency === 'quarterly') {
-					d.setMonth(d.getMonth() + 3)
-				} else if (ev.frequency === 'yearly') {
-					d.setFullYear(d.getFullYear() + 1)
-				} else {
+				if (!advanceDate(d, ev.frequency)) {
 					break
 				}
 				// safety break

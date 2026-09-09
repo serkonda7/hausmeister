@@ -1,21 +1,31 @@
 import * as v from 'valibot'
+import {
+	accountTypeEnum,
+	categoryKindEnum,
+	directionEnum,
+	frequencyEnum,
+	liquidityTierEnum,
+} from './db/schema'
 
-export const liquidityTierSchema = v.picklist(['instant', 'days', 'weeks', 'months', 'locked'])
-export const accountTypeSchema = v.picklist([
-	'checking',
-	'savings',
-	'broker',
-	'cash',
-	'crypto',
-	'festgeld',
-	'other',
-])
+export const liquidityTierSchema = v.picklist([...liquidityTierEnum])
+export const accountTypeSchema = v.picklist([...accountTypeEnum])
+export const directionSchema = v.picklist([...directionEnum])
+export const frequencySchema = v.picklist([...frequencyEnum])
+export const categoryKindSchema = v.picklist([...categoryKindEnum])
+
+export const isoDateSchema = v.pipe(
+	v.string(),
+	v.minLength(1),
+	v.regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected ISO date YYYY-MM-DD'),
+)
+
+export const isoDateNullableSchema = v.optional(v.nullable(isoDateSchema))
 
 export const accountCreateSchema = v.object({
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(100)),
 	type: accountTypeSchema,
 	institution: v.optional(v.nullable(v.string())),
-	openingDate: v.optional(v.nullable(v.string())),
+	openingDate: isoDateNullableSchema,
 	openingBalanceCents: v.optional(
 		v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	),
@@ -47,7 +57,7 @@ export const allocationCreateSchema = v.object({
 	accountId: v.pipe(v.string(), v.minLength(1)),
 	amountCents: v.pipe(v.number(), v.integer(), v.minValue(0)),
 	liquidityOverride: v.optional(v.nullable(liquidityTierSchema)),
-	unlockAt: v.optional(v.nullable(v.string())),
+	unlockAt: isoDateNullableSchema,
 })
 
 export const allocationUpdateSchema = v.partial(allocationCreateSchema)
@@ -55,13 +65,11 @@ export const allocationUpdateSchema = v.partial(allocationCreateSchema)
 export const eventCreateSchema = v.object({
 	title: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
 	amountCents: v.pipe(v.number(), v.integer(), v.minValue(0)),
-	direction: v.picklist(['inflow', 'outflow']),
-	date: v.pipe(v.string(), v.minLength(1)), // ISO YYYY-MM-DD
+	direction: directionSchema,
+	date: isoDateSchema, // ISO YYYY-MM-DD
 	isRecurring: v.optional(v.nullable(v.boolean())),
-	frequency: v.optional(
-		v.nullable(v.picklist(['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'])),
-	),
-	recurringUntil: v.optional(v.nullable(v.string())),
+	frequency: v.optional(v.nullable(frequencySchema)),
+	recurringUntil: isoDateNullableSchema,
 	poolId: v.optional(v.nullable(v.string())),
 	accountId: v.optional(v.nullable(v.string())),
 	notes: v.optional(v.nullable(v.string())),
@@ -70,8 +78,6 @@ export const eventCreateSchema = v.object({
 export const eventUpdateSchema = v.partial(eventCreateSchema)
 
 // ---- Phase 1: ledger ----
-export const categoryKindSchema = v.picklist(['income', 'expense'])
-
 export const categoryCreateSchema = v.object({
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(100)),
 	kind: v.optional(v.nullable(categoryKindSchema)),
@@ -80,19 +86,13 @@ export const categoryCreateSchema = v.object({
 
 export const categoryUpdateSchema = v.partial(categoryCreateSchema)
 
-const isoDateSchema = v.pipe(
-	v.string(),
-	v.minLength(1),
-	v.regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected ISO date YYYY-MM-DD'),
-)
-
 export const transactionCreateSchema = v.object({
 	accountId: v.pipe(v.string(), v.minLength(1)),
 	date: isoDateSchema,
 	payee: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(200)))),
 	categoryId: v.optional(v.nullable(v.pipe(v.string(), v.minLength(1)))),
 	amountCents: v.pipe(v.number(), v.integer(), v.minValue(1)),
-	direction: v.picklist(['inflow', 'outflow']),
+	direction: directionSchema,
 	notes: v.optional(v.nullable(v.string())),
 })
 
