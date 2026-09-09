@@ -1,16 +1,15 @@
-import { Database } from 'bun:sqlite'
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { accounts, allocations, categories, events, pools, transactions } from './schema'
+import { db, sqlite } from './index'
 
-const sqlite = new Database('./data.db')
-sqlite.exec('PRAGMA journal_mode = WAL;')
+// Tables are created by './index' on import, so this also works on a fresh
+// checkout with no data.db yet.
 sqlite.exec('PRAGMA foreign_keys = OFF;')
 sqlite.exec(
 	'DELETE FROM transactions; DELETE FROM allocations; DELETE FROM events; DELETE FROM accounts; DELETE FROM pools; DELETE FROM categories;',
 )
 sqlite.exec('PRAGMA foreign_keys = ON;')
 
-const db = drizzle(sqlite)
+// db comes from './index' so it shares the same data.db file as the app.
 
 function id() {
 	return crypto.randomUUID()
@@ -370,8 +369,6 @@ await db.insert(events).values([
 	},
 ])
 
-console.log('Demo seed done: 5 accounts, 5 pools, 8 allocations, 10 events')
-
 // ---------- Categories ----------
 const catGehalt = {
 	id: id(),
@@ -530,4 +527,5 @@ await db.insert(transactions).values([
 	...transferLegs(accGiro.id, accCash.id, '2026-01-20', 10_000, 'Bargeld abgehoben', null, 'Haushaltskasse auffüllen'),
 ])
 
-console.log('Demo seed done: 9 categories, 35 transactions (incl. 5 transfers)')
+console.log('Demo seed done: 5 accounts, 5 pools, 8 allocations, 10 events, 9 categories, 35 transactions (incl. 5 transfers)')
+sqlite.close()

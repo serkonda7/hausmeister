@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 // Enums as text with check constraints (validated in app layer)
 export const liquidityTierEnum = ['instant', 'days', 'weeks', 'months', 'locked'] as const
@@ -93,23 +93,30 @@ export const categories = sqliteTable('categories', {
 	createdAt: text('created_at').notNull(),
 })
 
-export const transactions = sqliteTable('transactions', {
-	id: text('id').primaryKey(),
-	accountId: text('account_id')
-		.notNull()
-		.references(() => accounts.id, { onDelete: 'cascade' }),
-	date: text('date').notNull(), // ISO date (YYYY-MM-DD)
-	payee: text('payee'),
-	categoryId: text('category_id').references(() => categories.id, {
-		onDelete: 'set null',
-	}),
-	amountCents: integer('amount_cents').notNull(), // >= 0, see direction
-	direction: text('direction').notNull().$type<Direction>(),
-	// paired account-transfer legs share a transferId; null = plain transaction
-	transferId: text('transfer_id'),
-	notes: text('notes'),
-	createdAt: text('created_at').notNull(),
-})
+export const transactions = sqliteTable(
+	'transactions',
+	{
+		id: text('id').primaryKey(),
+		accountId: text('account_id')
+			.notNull()
+			.references(() => accounts.id, { onDelete: 'cascade' }),
+		date: text('date').notNull(), // ISO date (YYYY-MM-DD)
+		payee: text('payee'),
+		categoryId: text('category_id').references(() => categories.id, {
+			onDelete: 'set null',
+		}),
+		amountCents: integer('amount_cents').notNull(), // >= 0, see direction
+		direction: text('direction').notNull().$type<Direction>(),
+		// paired account-transfer legs share a transferId; null = plain transaction
+		transferId: text('transfer_id'),
+		notes: text('notes'),
+		createdAt: text('created_at').notNull(),
+	},
+	(t) => [
+		index('idx_transactions_account_date').on(t.accountId, t.date),
+		index('idx_transactions_transfer').on(t.transferId),
+	],
+)
 
 export type Account = typeof accounts.$inferSelect
 export type NewAccount = typeof accounts.$inferInsert
