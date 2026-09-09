@@ -1,5 +1,6 @@
 import { IconPencil, IconTrash } from '@tabler/icons-solidjs'
 import type { JSX } from 'solid-js'
+import { t } from '../lib/i18n'
 
 interface CrudRowProps {
 	onEdit: () => void
@@ -15,8 +16,8 @@ export default function CrudRow(props: CrudRowProps): JSX.Element {
 				type="button"
 				onClick={props.onEdit}
 				class="btn-icon"
-				aria-label={props.editLabel ?? 'Edit'}
-				title={props.editLabel ?? 'Edit'}
+				aria-label={props.editLabel ?? t().common.edit}
+				title={props.editLabel ?? t().common.edit}
 			>
 				<IconPencil size={18} />
 			</button>
@@ -24,8 +25,8 @@ export default function CrudRow(props: CrudRowProps): JSX.Element {
 				type="button"
 				onClick={props.onDelete}
 				class="btn-icon btn-icon--danger"
-				aria-label={props.deleteLabel ?? 'Delete'}
-				title={props.deleteLabel ?? 'Delete'}
+				aria-label={props.deleteLabel ?? t().common.delete}
+				title={props.deleteLabel ?? t().common.delete}
 			>
 				<IconTrash size={18} />
 			</button>

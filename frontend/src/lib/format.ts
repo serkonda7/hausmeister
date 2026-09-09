@@ -1,4 +1,11 @@
 import type { AccountType, LiquidityTier } from './enums'
+import { t } from './i18n'
+
+/**
+ * Number/currency formatting is ALWAYS de-DE, independent of the UI
+ * language. Dates are ALWAYS ISO `YYYY-MM-DD` (see {@link formatDateISO}).
+ */
+const FIXED_TAG = 'de-DE'
 
 /**
  * Label/color maps below are keyed by the shared enum types (`./enums`).
@@ -6,32 +13,33 @@ import type { AccountType, LiquidityTier } from './enums'
  * (e.g. `Object.entries(...)` keys in components) compiling without casts.
  */
 export function formatEUR(cents: number): string {
-	return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(
-		cents / 100,
-	)
+	return new Intl.NumberFormat(FIXED_TAG, {
+		style: 'currency',
+		currency: 'EUR',
+	}).format(cents / 100)
 }
 
 export function formatPercent(bps: number | null | undefined): string {
 	if (bps == null) {
 		return '—'
 	}
-	return new Intl.NumberFormat('de-DE', {
+	return new Intl.NumberFormat(FIXED_TAG, {
 		style: 'percent',
 		maximumFractionDigits: 2,
 	}).format(bps / 10_000)
 }
 
-/** Format an already-computed percent value (e.g. share of total) in de-DE. */
+/** Format an already-computed percent value (e.g. share of total), ALWAYS de-DE. */
 export function formatShare(pct: number): string {
-	return new Intl.NumberFormat('de-DE', {
+	return new Intl.NumberFormat(FIXED_TAG, {
 		minimumFractionDigits: 1,
 		maximumFractionDigits: 1,
 	}).format(pct)
 }
 
-/** Format a target percent that may carry more precision, trimming zeros. */
+/** Format a target percent that may carry more precision, trimming zeros. ALWAYS de-DE. */
 export function formatTargetPercent(pct: number): string {
-	return `${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 }).format(pct)} %`
+	return `${new Intl.NumberFormat(FIXED_TAG, { maximumFractionDigits: 2 }).format(pct)} %`
 }
 
 /**
@@ -49,19 +57,20 @@ export function formatTargetPercent(pct: number): string {
  * the day in timezones ahead of UTC. {@link todayISO} uses local time.
  */
 
-/** Display-only: render a backend ISO date (`YYYY-MM-DD…`) in de-DE for reading. */
+/** Display-only: render a backend ISO date ALWAYS as `YYYY-MM-DD` (no locale). */
 export function formatDateISO(dateStr: string): string {
-	const fmt = new Intl.DateTimeFormat('de-DE', {
-		day: '2-digit',
-		month: '2-digit',
-		year: 'numeric',
-	})
 	try {
 		if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-			const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
-			return fmt.format(new Date(y, m - 1, d))
+			return dateStr.slice(0, 10)
 		}
-		return fmt.format(new Date(dateStr))
+		const d = new Date(dateStr)
+		if (Number.isNaN(d.getTime())) {
+			return dateStr
+		}
+		const y = d.getFullYear()
+		const m = String(d.getMonth() + 1).padStart(2, '0')
+		const day = String(d.getDate()).padStart(2, '0')
+		return `${y}-${m}-${day}`
 	} catch {
 		return dateStr
 	}
@@ -79,14 +88,6 @@ export function todayISO(d = new Date()): string {
 	return `${y}-${m}-${day}`
 }
 
-export const liquidityLabels: Record<LiquidityTier, string> & Record<string, string> = {
-	instant: 'Sofort',
-	days: 'Tage',
-	weeks: 'Wochen',
-	months: 'Monate',
-	locked: 'Gebunden',
-}
-
 export const liquidityColors: Record<LiquidityTier, string> & Record<string, string> = {
 	instant: '#22c55e',
 	days: '#3b82f6',
@@ -95,37 +96,80 @@ export const liquidityColors: Record<LiquidityTier, string> & Record<string, str
 	locked: '#ef4444',
 }
 
+/** Reactive, locale-aware label lookups. Use these in components. */
+export function liquidityLabel(tier: string): string {
+	return (t().liquidity as Record<string, string>)[tier] ?? tier
+}
+
+export function accountTypeLabel(type: string): string {
+	return (t().accountType as Record<string, string>)[type] ?? type
+}
+
+export function accountTypeDescription(type: string): string {
+	return (t().accountTypeDesc as Record<string, string>)[type] ?? ''
+}
+
+export function riskLevelLabel(level: number): string {
+	return t().riskLevel[level] ?? '—'
+}
+
+/** Month label for a `YYYY-MM` group key — ALWAYS the raw `YYYY-MM` key. */
+export function formatMonthKey(key: string): string {
+	return key.slice(0, 7)
+}
+
+/**
+ * @deprecated Use {@link liquidityLabel} for locale-aware labels.
+ * Kept for backwards compatibility (German values).
+ */
+export const liquidityLabels: Record<LiquidityTier, string> & Record<string, string> = {
+	instant: 'Sofort',
+	days: 'Tage',
+	weeks: 'Wochen',
+	months: 'Monate',
+	locked: 'Gebunden',
+}
+
+/**
+ * @deprecated Use {@link accountTypeLabel} for locale-aware labels.
+ */
 export const accountTypeLabels: Record<AccountType, string> & Record<string, string> = {
-	checking: 'Girokonto',
-	savings: 'Sparkonto',
-	broker: 'Depot',
-	cash: 'Bargeld',
-	crypto: 'Krypto',
-	festgeld: 'Festgeld',
-	other: 'Sonstiges',
+	checking: 'Checking',
+	savings: 'Savings',
+	broker: 'Brokerage',
+	cash: 'Cash',
+	crypto: 'Crypto',
+	festgeld: 'Fixed-term',
+	other: 'Other',
 }
 
+/**
+ * @deprecated Use {@link accountTypeDescription} for locale-aware descriptions.
+ */
 export const accountTypeDescriptions: Record<AccountType, string> & Record<string, string> = {
-	checking: 'Alltagskonto für Einnahmen, Rechnungen und tägliche Ausgaben.',
-	savings: 'Langfristige Ersparnisse mit moderaten Zinsen und flexiblem Zugriff.',
-	broker: 'Wertpapierdepot für Aktien, ETFs und andere Anlagen.',
-	cash: 'Physisches Bargeld außerhalb eines Bankkontos.',
-	crypto: 'Digitale Vermögenswerte in einer Wallet oder auf einer Börse.',
-	festgeld: 'Festgeld mit gebundenen Zinsen bis zur Fälligkeit.',
-	other: 'Jedes andere Konto, das in keine Kategorie passt.',
+	checking: 'Everyday account for income, bills and daily spending.',
+	savings: 'Long-term savings with moderate interest and flexible access.',
+	broker: 'Brokerage account for stocks, ETFs and other securities.',
+	cash: 'Physical cash outside a bank account.',
+	crypto: 'Digital assets in a wallet or on an exchange.',
+	festgeld: 'Fixed-term deposit with locked interest until maturity.',
+	other: 'Any other account that fits no category.',
 }
 
+/**
+ * @deprecated Use {@link riskLevelLabel} for locale-aware labels.
+ */
 export const riskLevelLabels: Record<number, string> = {
-	1: 'Sehr niedrig',
-	2: 'Niedrig',
-	3: 'Mittel',
-	4: 'Hoch',
-	5: 'Sehr hoch',
+	1: 'Very low',
+	2: 'Low',
+	3: 'Medium',
+	4: 'High',
+	5: 'Very high',
 }
 
 export function formatRiskLevel(level: number | null | undefined): string {
 	if (level == null) {
 		return '—'
 	}
-	return riskLevelLabels[level] ?? '—'
+	return riskLevelLabel(level) ?? '—'
 }

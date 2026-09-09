@@ -8,8 +8,9 @@ import {
 	formatShare,
 	formatTargetPercent,
 	liquidityColors,
-	liquidityLabels,
+	liquidityLabel,
 } from '../lib/format'
+import { t } from '../lib/i18n'
 import './Dashboard.css'
 import Amount from './Amount'
 import EmptyState from './EmptyState'
@@ -41,10 +42,12 @@ export default function Dashboard() {
 	return (
 		<div class="page page--spacious">
 			<Show when={summary.loading}>
-				<p class="muted">Lädt…</p>
+				<p class="muted">{t().common.loading}</p>
 			</Show>
 			<Show when={summary.error}>
-				<p class="form-error">Fehler: {(summary.error as Error).message}</p>
+				<p class="form-error">
+					{t().common.error}: {(summary.error as Error).message}
+				</p>
 			</Show>
 			<Show when={summary()}>
 				{(get) => {
@@ -57,16 +60,17 @@ export default function Dashboard() {
 					return (
 						<>
 							<section class="dashboard-card">
-								<div class="dashboard-eyebrow">Gesamtvermögen</div>
+								<div class="dashboard-eyebrow">{t().dashboard.totalAssets}</div>
 								<div class="dashboard-total">{formatEUR(total)}</div>
 								<div class="dashboard-sub">
-									{counts.accounts} Konten · {counts.pools} Pools ·{' '}
-									{counts.allocations} Zuordnungen
+									{counts.accounts} {t().dashboard.accounts} · {counts.pools}{' '}
+									{t().dashboard.pools} · {counts.allocations}{' '}
+									{t().dashboard.allocations}
 								</div>
 							</section>
 
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Liquidität</h2>
+								<h2 class="dashboard-section-title">{t().dashboard.liquidity}</h2>
 								<div class="list">
 									<For each={liquidityEntries}>
 										{([tier, cents]) => {
@@ -74,7 +78,7 @@ export default function Dashboard() {
 											return (
 												<div>
 													<div class="liquidity-label-row">
-														<span>{liquidityLabels[tier] ?? tier}</span>
+														<span>{liquidityLabel(tier)}</span>
 														<span class="muted">
 															{formatEUR(cents)} ·{' '}
 															{formatShare(share)} %
@@ -99,15 +103,15 @@ export default function Dashboard() {
 							</section>
 
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Pools · Ziel vs. Ist</h2>
+								<h2 class="dashboard-section-title">{t().dashboard.poolsTitle}</h2>
 								<Show when={d.poolTotals.length === 0}>
 									<EmptyState
-										actionLabel="Pool erstellen →"
+										actionLabel={t().dashboard.poolsEmptyAction}
 										onAction={() => {
 											window.location.hash = '#/pools'
 										}}
 									>
-										Noch keine Pools. Lege unter „Pools“ deinen ersten Pool an.
+										{t().dashboard.poolsEmpty}
 									</EmptyState>
 								</Show>
 								<div class="list">
@@ -142,19 +146,20 @@ export default function Dashboard() {
 																{formatEUR(pt.currentCents)}
 															</div>
 															<div class="pool-sub">
-																{formatShare(share)} % vom Gesamt
+																{formatShare(share)} %{' '}
+																{t().dashboard.ofTotal}
 															</div>
 														</div>
 													</div>
 													<div class="pool-tags">
 														<span>
-															Ziel:{' '}
+															{t().dashboard.target}:{' '}
 															{targetPct != null
 																? `${formatTargetPercent(targetPct)} (${formatEUR(pt.targetCents ?? 0)})`
 																: '—'}
 														</span>
 														<span>
-															Bereich:{' '}
+															{t().dashboard.range}:{' '}
 															{pt.targetMin != null
 																? formatEUR(pt.targetMin)
 																: '—'}{' '}
@@ -164,20 +169,20 @@ export default function Dashboard() {
 																: '—'}
 														</span>
 														<span>
-															Rendite:{' '}
+															{t().dashboard.return}:{' '}
 															{formatPercent(
 																pt.pool.expectedReturnBps,
 															)}{' '}
-															p. a.
+															{t().dashboard.perAnnum}
 														</span>
 														<span>
-															Risiko:{' '}
+															{t().dashboard.risk}:{' '}
 															{formatRiskLevel(pt.pool.riskLevel)}
 														</span>
 														<span>
-															Horizont:{' '}
+															{t().dashboard.horizon}:{' '}
 															{pt.pool.horizonMonths != null
-																? `${pt.pool.horizonMonths} Monate`
+																? `${pt.pool.horizonMonths} ${t().dashboard.months}`
 																: '—'}
 														</span>
 														<span
@@ -187,7 +192,9 @@ export default function Dashboard() {
 																'status-badge--warn': !ok,
 															}}
 														>
-															{ok ? '✓ Am Ziel' : '⚠ Abweichung'}
+															{ok
+																? t().dashboard.onTarget
+																: t().dashboard.deviation}
 														</span>
 													</div>
 													<div class="bar-track bar-track--thin">
@@ -209,7 +216,7 @@ export default function Dashboard() {
 																style={{
 																	left: `${Math.min(100, targetPct ?? 0)}%`,
 																}}
-																title={`Ziel ${formatTargetPercent(targetPct ?? 0)}`}
+																title={`${t().dashboard.targetTooltip} ${formatTargetPercent(targetPct ?? 0)}`}
 															/>
 														</Show>
 													</div>
@@ -223,10 +230,10 @@ export default function Dashboard() {
 							<div class="dashboard-grid">
 								<section class="dashboard-card">
 									<h2 class="dashboard-section-title">
-										Next 90 days · Cash flow
+										{t().dashboard.cashflowTitle}
 									</h2>
 									<Show when={d.upcomingEvents.length === 0}>
-										<EmptyState>No events in this period.</EmptyState>
+										<EmptyState>{t().dashboard.cashflowEmpty}</EmptyState>
 									</Show>
 									<div class="list list--tight">
 										<For each={d.upcomingEvents}>
@@ -257,11 +264,11 @@ export default function Dashboard() {
 								</section>
 
 								<section class="dashboard-card">
-									<h2 class="dashboard-section-title">Available from</h2>
+									<h2 class="dashboard-section-title">
+										{t().dashboard.availableFrom}
+									</h2>
 									<Show when={d.unlocks.length === 0}>
-										<EmptyState>
-											Nothing locked in fixed-term deposits / allocations.
-										</EmptyState>
+										<EmptyState>{t().dashboard.availableEmpty}</EmptyState>
 									</Show>
 									<div class="list list--tight">
 										<For each={d.unlocks}>

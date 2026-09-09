@@ -2,7 +2,8 @@ import { createMemo, createResource, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
+import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabel } from '../lib/format'
+import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
@@ -98,14 +99,14 @@ export default function Pools() {
 					horizonMonths,
 				].some((v) => v !== null && Number.isNaN(v))
 			) {
-				throw new Error('Invalid number input')
+				throw new Error(t().pools.invalidNumber)
 			}
 			if (
 				targetMinCents != null &&
 				targetMaxCents != null &&
 				targetMinCents > targetMaxCents
 			) {
-				throw new Error('Target min must not exceed target max')
+				throw new Error(t().pools.minExceedsMax)
 			}
 			const payload: Omit<Pool, 'id' | 'createdAt'> = {
 				name: f.name,
@@ -130,11 +131,7 @@ export default function Pools() {
 	}
 
 	function remove(id: string) {
-		return removeWithConfirm(
-			'Delete pool? Allocations will be kept.',
-			() => api.pools.remove(id),
-			refetch,
-		)
+		return removeWithConfirm(t().pools.confirmDelete, () => api.pools.remove(id), refetch)
 	}
 
 	// Medium audit: live client-side validation hints (min > max, % sum > 100).
@@ -146,8 +143,8 @@ export default function Pools() {
 		return lo != null && hi != null && !Number.isNaN(lo) && !Number.isNaN(hi) && lo > hi
 	})
 	const targetPercentNum = () => {
-		const t = form().targetPercent.trim()
-		return t === '' ? null : Number.parseInt(t, 10)
+		const tt = form().targetPercent.trim()
+		return tt === '' ? null : Number.parseInt(tt, 10)
 	}
 	const percentOutOfRange = createMemo(() => {
 		const v = targetPercentNum()
@@ -170,14 +167,13 @@ export default function Pools() {
 		<div class="page">
 			<div class="page-header">
 				<div>
-					<h2 class="page-title">Pools</h2>
+					<h2 class="page-title">{t().nav.pools}</h2>
 					<p class="page-subtitle">
-						{(pools() ?? []).length} pools · targets, risk and expected return at a
-						glance.
+						{(pools() ?? []).length} {t().pools.subtitleSuffix}
 					</p>
 				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
-					+ Pool
+					{t().pools.add}
 				</button>
 			</div>
 
@@ -189,10 +185,10 @@ export default function Pools() {
 				onCancel={crud.close}
 			>
 				<fieldset class="form-group">
-					<legend>Basics</legend>
+					<legend>{t().pools.basics}</legend>
 					<div class="form-grid">
 						<label class="field">
-							Name{' '}
+							{t().pools.name}{' '}
 							<span class="req" aria-hidden="true">
 								*
 							</span>
@@ -205,33 +201,33 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Purpose
+							{t().pools.purpose}
 							<input
 								value={form().purpose}
 								onInput={(e) =>
 									patchForm(setForm, 'purpose', e.currentTarget.value)
 								}
 								class="input"
-								placeholder="e.g. Emergency fund, Retirement"
+								placeholder={t().pools.purposePlaceholder}
 							/>
 						</label>
 						<label class="field">
-							Color
+							{t().pools.color}
 							<input
 								type="color"
 								value={form().color}
 								onInput={(e) => patchForm(setForm, 'color', e.currentTarget.value)}
 								class="color-swatch"
-								aria-label="Pool color"
+								aria-label={t().pools.colorAria}
 							/>
 						</label>
 					</div>
 				</fieldset>
 				<fieldset class="form-group">
-					<legend>Targets</legend>
+					<legend>{t().pools.targets}</legend>
 					<div class="form-grid">
 						<label class="field">
-							Target min (€){' '}
+							{t().pools.targetMin}{' '}
 							<input
 								type="number"
 								step="1"
@@ -243,7 +239,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Target max (€){' '}
+							{t().pools.targetMax}{' '}
 							<input
 								type="number"
 								step="1"
@@ -255,7 +251,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Target %{' '}
+							{t().pools.targetPct}{' '}
 							<input
 								type="number"
 								min="0"
@@ -272,28 +268,25 @@ export default function Pools() {
 					</div>
 					<div id="pool-target-hints">
 						<Show when={minMaxInvalid()}>
-							<p class="form-hint form-hint--error">
-								Target min is greater than target max — that range is empty.
-							</p>
+							<p class="form-hint form-hint--error">{t().pools.minMaxHint}</p>
 						</Show>
 						<Show when={percentOutOfRange()}>
-							<p class="form-hint form-hint--error">
-								Target % must be between 0 and 100.
-							</p>
+							<p class="form-hint form-hint--error">{t().pools.pctRangeHint}</p>
 						</Show>
 						<Show when={percentSumOver() != null}>
 							<p class="form-hint form-hint--error">
-								Target shares add up to {percentSumOver()}% — over 100% across all
-								pools.
+								{t().pools.pctSumPrefix}
+								{percentSumOver()}
+								{t().pools.pctSumSuffix}
 							</p>
 						</Show>
 					</div>
 				</fieldset>
 				<fieldset class="form-group">
-					<legend>Risk & return</legend>
+					<legend>{t().pools.riskReturn}</legend>
 					<div class="form-grid">
 						<label class="field">
-							Expected return % p.a.{' '}
+							{t().pools.expectedReturn}{' '}
 							<input
 								type="number"
 								step="0.1"
@@ -305,7 +298,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Risk{' '}
+							{t().pools.risk}{' '}
 							<select
 								value={form().riskLevel}
 								onChange={(e) =>
@@ -313,18 +306,18 @@ export default function Pools() {
 								}
 								class="input"
 							>
-								<option value="">—</option>
+								<option value="">{t().common.dash}</option>
 								<For each={[1, 2, 3, 4, 5]}>
 									{(level) => (
 										<option value={level.toString()}>
-											{level} – {riskLevelLabels[level]}
+											{level} – {riskLevelLabel(level)}
 										</option>
 									)}
 								</For>
 							</select>
 						</label>
 						<label class="field">
-							Volatility %{' '}
+							{t().pools.volatility}{' '}
 							<input
 								type="number"
 								step="0.1"
@@ -336,7 +329,7 @@ export default function Pools() {
 							/>
 						</label>
 						<label class="field">
-							Horizon (months){' '}
+							{t().pools.horizon}{' '}
 							<input
 								type="number"
 								value={form().horizonMonths}
@@ -374,25 +367,34 @@ export default function Pools() {
 							</div>
 							<div class="muted text-sm meta-row">
 								<span>
-									Target: {p.targetPercent != null ? `${p.targetPercent}%` : '—'}{' '}
+									{t().pools.targetMeta}:{' '}
+									{p.targetPercent != null ? `${p.targetPercent}%` : '—'}{' '}
 									{p.targetMinCents != null || p.targetMaxCents != null
 										? `(${p.targetMinCents != null ? formatEUR(p.targetMinCents) : '—'} – ${p.targetMaxCents != null ? formatEUR(p.targetMaxCents) : '—'})`
 										: ''}
 								</span>
-								<span>Return: {formatPercent(p.expectedReturnBps)}</span>
-								<span>Risk: {formatRiskLevel(p.riskLevel)}</span>
-								<span>Volatility: {formatPercent(p.volatilityBps)}</span>
 								<span>
-									Horizon:{' '}
-									{p.horizonMonths != null ? `${p.horizonMonths} months` : '—'}
+									{t().pools.returnMeta}: {formatPercent(p.expectedReturnBps)}
+								</span>
+								<span>
+									{t().pools.riskMeta}: {formatRiskLevel(p.riskLevel)}
+								</span>
+								<span>
+									{t().pools.volatilityMeta}: {formatPercent(p.volatilityBps)}
+								</span>
+								<span>
+									{t().pools.horizonMeta}:{' '}
+									{p.horizonMonths != null
+										? `${p.horizonMonths} ${t().pools.monthsSuffix}`
+										: '—'}
 								</span>
 							</div>
 						</div>
 					)}
 				</For>
 				<Show when={(pools() ?? []).length === 0 && !pools.loading}>
-					<EmptyState actionLabel="Pool erstellen →" onAction={openCreate}>
-						Noch keine Pools. Lege z. B. „Notgroschen“, „Invest“ oder „Urlaub“ an.
+					<EmptyState actionLabel={t().pools.emptyAction} onAction={openCreate}>
+						{t().pools.emptyText}
 					</EmptyState>
 				</Show>
 			</div>

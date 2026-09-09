@@ -1,4 +1,5 @@
 import { type JSX, Show } from 'solid-js'
+import { t } from '../lib/i18n'
 
 interface CrudFormProps {
 	open: boolean
@@ -47,10 +48,10 @@ export default function CrudForm(props: CrudFormProps): JSX.Element {
 				</Show>
 				<div class="form-actions">
 					<button type="button" onClick={props.onCancel} class="btn-ghost">
-						Abbrechen
+						{t().common.cancel}
 					</button>
 					<button type="submit" class="btn-primary">
-						{props.editing ? 'Speichern' : 'Erstellen'}
+						{props.editing ? t().common.save : t().common.create}
 					</button>
 				</div>
 			</form>

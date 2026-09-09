@@ -2,13 +2,16 @@ import { createResource, For, Show } from 'solid-js'
 import { type Allocation, api } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { formatEUR, liquidityLabels } from '../lib/format'
+import { formatDateISO, formatEUR, liquidityLabel } from '../lib/format'
+import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
 import './Allocations.css'
+
+const LIQUIDITY_TIERS = ['instant', 'days', 'weeks', 'months', 'locked']
 
 export default function Allocations() {
 	const [allocations, { refetch }] = createResource(() => api.allocations.list())
@@ -62,7 +65,7 @@ export default function Allocations() {
 			const f = form()
 			const amountCents = parseEuroToCents(f.amount)
 			if (!f.poolId || !f.accountId || amountCents == null || Number.isNaN(amountCents)) {
-				throw new Error('Pool, account and amount are required')
+				throw new Error(t().allocations.required)
 			}
 			const payload: Omit<Allocation, 'id' | 'createdAt'> = {
 				poolId: f.poolId,
@@ -82,16 +85,20 @@ export default function Allocations() {
 	}
 
 	function remove(id: string) {
-		return removeWithConfirm('Delete allocation?', () => api.allocations.remove(id), refetch)
+		return removeWithConfirm(
+			t().allocations.confirmDelete,
+			() => api.allocations.remove(id),
+			refetch,
+		)
 	}
 
 	return (
 		<div class="page">
 			<div class="page-header">
 				<div>
-					<h2 class="page-title">Allocations</h2>
+					<h2 class="page-title">{t().allocations.title}</h2>
 					<p class="page-subtitle">
-						{(allocations() ?? []).length} allocations · link account balances to pools.
+						{(allocations() ?? []).length} {t().allocations.subtitleSuffix}
 					</p>
 				</div>
 				<button
@@ -100,11 +107,11 @@ export default function Allocations() {
 					class="btn-primary"
 					disabled={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}
 				>
-					+ Allocation
+					{t().allocations.add}
 				</button>
 			</div>
 			<Show when={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}>
-				<p class="muted text-sm">Create accounts and pools first, then link allocations.</p>
+				<p class="muted text-sm">{t().allocations.needFirst}</p>
 			</Show>
 
 			<CrudForm
@@ -116,7 +123,7 @@ export default function Allocations() {
 			>
 				<div class="form-grid">
 					<label class="field">
-						Pool{' '}
+						{t().allocations.pool}{' '}
 						<span class="req" aria-hidden="true">
 							*
 						</span>
@@ -133,7 +140,7 @@ export default function Allocations() {
 						</select>
 					</label>
 					<label class="field">
-						Account{' '}
+						{t().allocations.account}{' '}
 						<span class="req" aria-hidden="true">
 							*
 						</span>
@@ -150,7 +157,7 @@ export default function Allocations() {
 						</select>
 					</label>
 					<label class="field">
-						Amount (€){' '}
+						{t().allocations.amount}{' '}
 						<span class="req" aria-hidden="true">
 							*
 						</span>
@@ -165,7 +172,7 @@ export default function Allocations() {
 						/>
 					</label>
 					<label class="field">
-						Availability
+						{t().allocations.availability}
 						<select
 							value={form().liquidityOverride}
 							onChange={(e) =>
@@ -173,14 +180,14 @@ export default function Allocations() {
 							}
 							class="input"
 						>
-							<option value="">— Default from account</option>
-							<For each={Object.entries(liquidityLabels)}>
-								{([k, v]) => <option value={k}>{v}</option>}
+							<option value="">{t().allocations.defaultFromAccount}</option>
+							<For each={LIQUIDITY_TIERS}>
+								{(k) => <option value={k}>{liquidityLabel(k)}</option>}
 							</For>
 						</select>
 					</label>
 					<label class="field" for="allocation-unlock-at">
-						Available from
+						{t().allocations.availableFrom}
 						<DateInput
 							id="allocation-unlock-at"
 							value={form().unlockAt}
@@ -201,23 +208,26 @@ export default function Allocations() {
 									<div class="title">
 										{pool()?.name ?? (
 											<span class="unknown-ref" title={a.poolId}>
-												Unbekannt / gelöscht
+												{t().allocations.unknownRef}
 											</span>
 										)}{' '}
 										<span class="subtle">
 											→{' '}
 											{account()?.name ?? (
 												<span class="unknown-ref" title={a.accountId}>
-													Unbekannt / gelöscht
+													{t().allocations.unknownRef}
 												</span>
 											)}
 										</span>
 									</div>
 									<div class="muted text-sm">
 										{a.liquidityOverride
-											? `Override: ${liquidityLabels[a.liquidityOverride]}`
-											: 'Default from account'}{' '}
-										<Show when={a.unlockAt}>· from {a.unlockAt}</Show>
+											? `${t().allocations.overridePrefix}: ${liquidityLabel(a.liquidityOverride)}`
+											: t().allocations.defaultFrom}{' '}
+										<Show when={a.unlockAt}>
+											{t().allocations.fromPrefix}
+											{a.unlockAt ? formatDateISO(a.unlockAt) : ''}
+										</Show>
 									</div>
 								</div>
 								<div class="card-actions">
@@ -232,9 +242,7 @@ export default function Allocations() {
 					}}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
-					<EmptyState>
-						No allocations. Distribute account balances across pools.
-					</EmptyState>
+					<EmptyState>{t().allocations.empty}</EmptyState>
 				</Show>
 			</div>
 		</div>

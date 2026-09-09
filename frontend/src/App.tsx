@@ -17,15 +17,36 @@ import Events from './components/Events'
 import Pools from './components/Pools'
 import Transactions from './components/Transactions'
 import './App.css'
+import { LOCALES, type Locale, locale, setLocale, t } from './lib/i18n'
 import { initThemeListener, theme, toggleTheme } from './lib/theme'
 
+function viewLabel(id: string): string {
+	const d = t().nav
+	switch (id) {
+		case 'dashboard':
+			return d.dashboard
+		case 'accounts':
+			return d.accounts
+		case 'transactions':
+			return d.transactions
+		case 'pools':
+			return d.pools
+		case 'allocations':
+			return d.allocations
+		case 'events':
+			return d.events
+		default:
+			return id
+	}
+}
+
 const VIEWS = [
-	{ id: 'dashboard', label: 'Übersicht', comp: Dashboard, icon: IconDashboard },
-	{ id: 'accounts', label: 'Konten', comp: Accounts, icon: IconWallet },
-	{ id: 'transactions', label: 'Buchungen', comp: Transactions, icon: IconReceipt },
-	{ id: 'pools', label: 'Pools', comp: Pools, icon: IconCoins },
-	{ id: 'allocations', label: 'Zuordnungen', comp: Allocations, icon: IconExchange },
-	{ id: 'events', label: 'Ereignisse', comp: Events, icon: IconCalendarEvent },
+	{ id: 'dashboard', comp: Dashboard, icon: IconDashboard },
+	{ id: 'accounts', comp: Accounts, icon: IconWallet },
+	{ id: 'transactions', comp: Transactions, icon: IconReceipt },
+	{ id: 'pools', comp: Pools, icon: IconCoins },
+	{ id: 'allocations', comp: Allocations, icon: IconExchange },
+	{ id: 'events', comp: Events, icon: IconCalendarEvent },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
@@ -84,7 +105,7 @@ export default function App(): JSX.Element {
 						<div class="brand-name">Hausmeister</div>
 					</div>
 				</div>
-				<nav class="nav" aria-label="Hauptnavigation">
+				<nav class="nav" aria-label={t().nav.main}>
 					<For each={VIEWS}>
 						{(v) => (
 							<button
@@ -95,20 +116,31 @@ export default function App(): JSX.Element {
 								aria-current={view() === v.id ? 'page' : undefined}
 							>
 								<Dynamic component={v.icon} size={18} />
-								<span>{v.label}</span>
+								<span>{viewLabel(v.id)}</span>
 							</button>
 						)}
 					</For>
 				</nav>
 				<div class="sidebar-footer">
+					<label class="language-switcher">
+						<span class="sr-only">{t().language.label}</span>
+						<select
+							value={locale()}
+							onChange={(e) => setLocale(e.currentTarget.value as Locale)}
+							class="input input--sm"
+							aria-label={t().language.label}
+						>
+							<For each={LOCALES}>
+								{(l) => <option value={l.code}>{l.label}</option>}
+							</For>
+						</select>
+					</label>
 					<button
 						type="button"
 						onClick={toggleTheme}
 						class="btn-icon theme-toggle"
-						aria-label={
-							isDark() ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'
-						}
-						title={isDark() ? 'Heller Modus' : 'Dunkler Modus'}
+						aria-label={isDark() ? t().theme.toLight : t().theme.toDark}
+						title={isDark() ? t().theme.lightTitle : t().theme.darkTitle}
 					>
 						{isDark() ? <IconSun size={18} /> : <IconMoon size={18} />}
 					</button>

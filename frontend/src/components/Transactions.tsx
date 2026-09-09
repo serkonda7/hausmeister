@@ -3,6 +3,7 @@ import { api, type Category, type Transaction } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { formatDateISO, formatEUR, todayISO } from '../lib/format'
+import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import { accountName, categoryOf } from '../lib/names'
 import Amount from './Amount'
@@ -64,14 +65,14 @@ export default function Transactions() {
 		const q = query().trim().toLowerCase()
 		const dir = directionFilter()
 		return (transactions() ?? [])
-			.filter((t) => (!dir ? true : t.direction === dir))
-			.filter((t) => {
+			.filter((tt) => (!dir ? true : tt.direction === dir))
+			.filter((tt) => {
 				if (!q) {
 					return true
 				}
 				return (
-					(t.payee ?? '').toLowerCase().includes(q) ||
-					(t.notes ?? '').toLowerCase().includes(q)
+					(tt.payee ?? '').toLowerCase().includes(q) ||
+					(tt.notes ?? '').toLowerCase().includes(q)
 				)
 			})
 			.slice()
@@ -81,11 +82,11 @@ export default function Transactions() {
 	const totals = createMemo(() => {
 		let inflow = 0
 		let outflow = 0
-		for (const t of filtered()) {
-			if (t.direction === 'inflow') {
-				inflow += t.amountCents
+		for (const tt of filtered()) {
+			if (tt.direction === 'inflow') {
+				inflow += tt.amountCents
 			} else {
-				outflow += t.amountCents
+				outflow += tt.amountCents
 			}
 		}
 		return { inflow, outflow, net: inflow - outflow }
@@ -142,20 +143,20 @@ export default function Transactions() {
 		setError('')
 		setShowForm(true)
 	}
-	function openEdit(t: Transaction) {
-		if (t.transferId != null) {
+	function openEdit(txn: Transaction) {
+		if (txn.transferId != null) {
 			return
 		}
-		setEditingId(t.id)
+		setEditingId(txn.id)
 		setMode('transaction')
 		setForm({
-			accountId: t.accountId,
-			date: t.date,
-			payee: t.payee ?? '',
-			categoryId: t.categoryId ?? '',
-			amount: centsToEuroInput(t.amountCents),
-			direction: t.direction,
-			notes: t.notes ?? '',
+			accountId: txn.accountId,
+			date: txn.date,
+			payee: txn.payee ?? '',
+			categoryId: txn.categoryId ?? '',
+			amount: centsToEuroInput(txn.amountCents),
+			direction: txn.direction,
+			notes: txn.notes ?? '',
 		})
 		setError('')
 		setShowForm(true)
@@ -167,11 +168,11 @@ export default function Transactions() {
 		const f = form()
 		const amountCents = parseEuroToCents(f.amount)
 		if (!f.accountId) {
-			setError('Account is required')
+			setError(t().transactions.accountRequired)
 			return
 		}
 		if (!f.date || amountCents == null || Number.isNaN(amountCents) || amountCents <= 0) {
-			setError('Date and amount (> 0) are required')
+			setError(t().transactions.dateAmountRequired)
 			return
 		}
 		const payload = {
@@ -203,15 +204,15 @@ export default function Transactions() {
 		const f = transferForm()
 		const amountCents = parseEuroToCents(f.amount)
 		if (!f.fromAccountId || !f.toAccountId) {
-			setError('Source and destination accounts are required')
+			setError(t().transactions.srcDstRequired)
 			return
 		}
 		if (f.fromAccountId === f.toAccountId) {
-			setError('Source and destination must differ')
+			setError(t().transactions.srcDstDiffer)
 			return
 		}
 		if (!f.date || amountCents == null || Number.isNaN(amountCents) || amountCents <= 0) {
-			setError('Date and amount (> 0) are required')
+			setError(t().transactions.dateAmountRequired)
 			return
 		}
 		try {
@@ -231,15 +232,15 @@ export default function Transactions() {
 		}
 	}
 
-	async function remove(t: Transaction) {
-		const msg = t.transferId
-			? 'Delete this transfer? Both legs (inflow + outflow) will be removed.'
-			: 'Delete transaction?'
+	async function remove(txn: Transaction) {
+		const msg = txn.transferId
+			? t().transactions.deleteTransferConfirm
+			: t().transactions.deleteTransactionConfirm
 		if (!confirm(msg)) {
 			return
 		}
 		try {
-			await api.transactions.remove(t.id)
+			await api.transactions.remove(txn.id)
 			await refetch()
 		} catch (err) {
 			alert((err as Error).message)
@@ -257,7 +258,7 @@ export default function Transactions() {
 		return catCrud.submit(e, async () => {
 			const f = catForm()
 			if (!f.name.trim()) {
-				throw new Error('Name is required')
+				throw new Error(t().transactions.nameRequired)
 			}
 			const payload = {
 				name: f.name.trim(),
@@ -275,13 +276,13 @@ export default function Transactions() {
 	}
 	function removeCat(id: string) {
 		return removeWithConfirm(
-			'Delete category? Transactions keep their history (category set to none).',
+			t().transactions.deleteCategoryConfirm,
 			() => api.categories.remove(id),
 			refetchCats,
 		)
 	}
 
-	const isTransferLeg = (t: Transaction) => t.transferId != null
+	const isTransferLeg = (txn: Transaction) => txn.transferId != null
 
 	// Medium audit: live client-side hint when source == destination.
 	const transferSameAccount = () => {
@@ -289,14 +290,24 @@ export default function Transactions() {
 		return f.fromAccountId !== '' && f.fromAccountId === f.toAccountId
 	}
 
+	function categoryKindLabel(kind: string | null | undefined): string {
+		const d = t().transactions
+		switch (kind) {
+			case 'income':
+				return d.incomeKind
+			case 'expense':
+				return d.expenseKind
+			default:
+				return d.both
+		}
+	}
+
 	return (
 		<div class="page">
 			<div class="page-header">
 				<div>
-					<h2 class="page-title">Transactions</h2>
-					<p class="page-subtitle">
-						Einnahmen, Ausgaben und Umbuchungen über alle Konten.
-					</p>
+					<h2 class="page-title">{t().transactions.title}</h2>
+					<p class="page-subtitle">{t().transactions.subtitle}</p>
 				</div>
 				<div class="inline-row">
 					<button
@@ -305,7 +316,7 @@ export default function Transactions() {
 						class="btn-ghost"
 						disabled={(accounts()?.length ?? 0) < 2}
 					>
-						⇄ Transfer
+						{t().transactions.transferBtn}
 					</button>
 					<button
 						type="button"
@@ -313,52 +324,52 @@ export default function Transactions() {
 						class="btn-primary"
 						disabled={(accounts()?.length ?? 0) === 0}
 					>
-						+ Transaction
+						{t().transactions.addBtn}
 					</button>
 				</div>
 			</div>
 
 			<Show when={(accounts()?.length ?? 0) === 0}>
-				<p class="muted text-sm">Create an account first, then record transactions.</p>
+				<p class="muted text-sm">{t().transactions.needAccountHint}</p>
 			</Show>
 
 			{/* Filters + totals */}
 			<div class="card card--compact">
 				<div class="form-grid">
 					<label class="field">
-						Account
+						{t().transactions.account}
 						<select
 							value={accountFilter()}
 							onChange={(e) => setAccountFilter(e.currentTarget.value)}
 							class="input"
 						>
-							<option value="">All accounts</option>
+							<option value="">{t().transactions.allAccounts}</option>
 							<For each={accounts() ?? []}>
 								{(a) => <option value={a.id}>{a.name}</option>}
 							</For>
 						</select>
 					</label>
 					<label class="field">
-						Direction
+						{t().transactions.direction}
 						<select
 							value={directionFilter()}
 							onChange={(e) => setDirectionFilter(e.currentTarget.value)}
 							class="input"
 						>
-							<option value="">All</option>
-							<option value="inflow">Inflows (+)</option>
-							<option value="outflow">Outflows (−)</option>
+							<option value="">{t().transactions.all}</option>
+							<option value="inflow">{t().transactions.inflows}</option>
+							<option value="outflow">{t().transactions.outflows}</option>
 						</select>
 					</label>
 				</div>
 				<div class="form-grid" style={{ 'margin-top': '0.75rem' }}>
 					<label class="field">
-						Search payee / notes
+						{t().transactions.search}
 						<input
 							value={query()}
 							onInput={(e) => setQuery(e.currentTarget.value)}
 							class="input"
-							placeholder="e.g. REWE, salary…"
+							placeholder={t().transactions.searchPlaceholder}
 						/>
 					</label>
 				</div>
@@ -368,8 +379,9 @@ export default function Transactions() {
 			<div class="txn-summary" role="status">
 				<span class="txn-summary-stats">
 					<span>
-						{filtered().length} Treffer · Einnahmen {formatEUR(totals().inflow)} ·
-						Ausgaben {formatEUR(totals().outflow)} · Netto{' '}
+						{filtered().length} {t().transactions.results} · {t().transactions.income}{' '}
+						{formatEUR(totals().inflow)} · {t().transactions.expenses}{' '}
+						{formatEUR(totals().outflow)} · {t().transactions.net}{' '}
 						<Amount
 							cents={totals().net}
 							direction={totals().net >= 0 ? 'inflow' : 'outflow'}
@@ -379,7 +391,7 @@ export default function Transactions() {
 				</span>
 				<Show when={hasActiveFilters()}>
 					<button type="button" onClick={clearFilters} class="btn-ghost">
-						Filter löschen
+						{t().transactions.clearFilters}
 					</button>
 				</Show>
 			</div>
@@ -391,9 +403,9 @@ export default function Transactions() {
 					ref={txnFormWrap}
 					onKeyDown={handleFormKeyDown}
 					role="dialog"
-					aria-label="Buchung erfassen"
+					aria-label={t().transactions.dialogLabel}
 				>
-					<div class="segmented" role="tablist" aria-label="Erfassungsart">
+					<div class="segmented" role="tablist" aria-label={t().transactions.entryType}>
 						<button
 							type="button"
 							role="tab"
@@ -402,7 +414,7 @@ export default function Transactions() {
 							class="segmented-tab"
 							disabled={editingId() != null && mode() !== 'transaction'}
 						>
-							Buchung
+							{t().transactions.tabTransaction}
 						</button>
 						<button
 							type="button"
@@ -413,25 +425,22 @@ export default function Transactions() {
 							disabled={editingId() != null}
 							title={
 								editingId() != null
-									? 'Umbuchungen bestehen aus zwei verknüpften Buchungen und können nicht bearbeitet, nur gemeinsam gelöscht werden.'
-									: 'Geld zwischen zwei Konten umbuchen'
+									? t().transactions.transferEditDisabledTitle
+									: t().transactions.transferCreateTitle
 							}
 						>
-							Umbuchung
+							{t().transactions.tabTransfer}
 						</button>
 					</div>
 					<Show when={editingId() != null}>
-						<p class="muted text-sm">
-							Umbuchung ist beim Bearbeiten deaktiviert: Umbuchungen können nicht
-							bearbeitet, nur gemeinsam gelöscht werden.
-						</p>
+						<p class="muted text-sm">{t().transactions.editingHint}</p>
 					</Show>
 
 					<Show when={mode() === 'transaction'}>
 						<form onSubmit={submitTxn} class="txn-subform">
 							<div class="form-grid">
 								<label class="field">
-									Account
+									{t().transactions.account}
 									<select
 										value={form().accountId}
 										onChange={(e) =>
@@ -440,14 +449,14 @@ export default function Transactions() {
 										required
 										class="input"
 									>
-										<option value="">— select</option>
+										<option value="">{t().common.select}</option>
 										<For each={accounts() ?? []}>
 											{(a) => <option value={a.id}>{a.name}</option>}
 										</For>
 									</select>
 								</label>
 								<label class="field" for="txn-date">
-									Date
+									{t().transactions.date}
 									<DateInput
 										id="txn-date"
 										value={form().date}
@@ -456,18 +465,18 @@ export default function Transactions() {
 									/>
 								</label>
 								<label class="field">
-									Payee
+									{t().transactions.payee}
 									<input
 										value={form().payee}
 										onInput={(e) =>
 											patchForm(setForm, 'payee', e.currentTarget.value)
 										}
 										class="input"
-										placeholder="e.g. REWE, Employer…"
+										placeholder={t().transactions.payeePlaceholder}
 									/>
 								</label>
 								<label class="field">
-									Category
+									{t().transactions.category}
 									<select
 										value={form().categoryId}
 										onChange={(e) =>
@@ -475,14 +484,14 @@ export default function Transactions() {
 										}
 										class="input"
 									>
-										<option value="">— none</option>
+										<option value="">{t().common.none}</option>
 										<For each={categories() ?? []}>
 											{(c) => <option value={c.id}>{c.name}</option>}
 										</For>
 									</select>
 								</label>
 								<label class="field">
-									Amount (€)
+									{t().transactions.amount}
 									<input
 										type="number"
 										step="0.01"
@@ -496,7 +505,7 @@ export default function Transactions() {
 									/>
 								</label>
 								<label class="field">
-									Direction
+									{t().transactions.direction}
 									<select
 										value={form().direction}
 										onChange={(e) =>
@@ -508,13 +517,13 @@ export default function Transactions() {
 										}
 										class="input"
 									>
-										<option value="inflow">Inflow (+)</option>
-										<option value="outflow">Outflow (−)</option>
+										<option value="inflow">{t().transactions.inflow}</option>
+										<option value="outflow">{t().transactions.outflow}</option>
 									</select>
 								</label>
 							</div>
 							<label class="field">
-								Notes
+								{t().transactions.notesField}
 								<input
 									value={form().notes}
 									onInput={(e) =>
@@ -532,10 +541,10 @@ export default function Transactions() {
 									onClick={() => setShowForm(false)}
 									class="btn-ghost"
 								>
-									Abbrechen
+									{t().common.cancel}
 								</button>
 								<button type="submit" class="btn-primary">
-									{editingId() ? 'Speichern' : 'Erstellen'}
+									{editingId() ? t().common.save : t().common.create}
 								</button>
 							</div>
 						</form>
@@ -545,7 +554,7 @@ export default function Transactions() {
 						<form onSubmit={submitTransfer} class="txn-subform">
 							<div class="form-grid">
 								<label class="field">
-									From account{' '}
+									{t().transactions.fromAccount}{' '}
 									<span class="req" aria-hidden="true">
 										*
 									</span>
@@ -561,14 +570,14 @@ export default function Transactions() {
 										aria-required="true"
 										class="input"
 									>
-										<option value="">— select</option>
+										<option value="">{t().common.select}</option>
 										<For each={accounts() ?? []}>
 											{(a) => <option value={a.id}>{a.name}</option>}
 										</For>
 									</select>
 								</label>
 								<label class="field">
-									To account{' '}
+									{t().transactions.toAccount}{' '}
 									<span class="req" aria-hidden="true">
 										*
 									</span>
@@ -585,14 +594,14 @@ export default function Transactions() {
 										aria-describedby="transfer-accounts-hint"
 										class="input"
 									>
-										<option value="">— select</option>
+										<option value="">{t().common.select}</option>
 										<For each={accounts() ?? []}>
 											{(a) => <option value={a.id}>{a.name}</option>}
 										</For>
 									</select>
 								</label>
 								<label class="field">
-									Amount (€)
+									{t().transactions.amount}
 									<input
 										type="number"
 										step="0.01"
@@ -609,7 +618,7 @@ export default function Transactions() {
 									/>
 								</label>
 								<label class="field" for="transfer-date">
-									Date
+									{t().transactions.date}
 									<DateInput
 										id="transfer-date"
 										value={transferForm().date}
@@ -618,7 +627,7 @@ export default function Transactions() {
 									/>
 								</label>
 								<label class="field">
-									Payee (optional)
+									{t().transactions.payeeOptional}
 									<input
 										value={transferForm().payee}
 										onInput={(e) =>
@@ -631,7 +640,7 @@ export default function Transactions() {
 									/>
 								</label>
 								<label class="field">
-									Category (optional)
+									{t().transactions.categoryOptional}
 									<select
 										value={transferForm().categoryId}
 										onChange={(e) =>
@@ -642,7 +651,7 @@ export default function Transactions() {
 										}
 										class="input"
 									>
-										<option value="">— none</option>
+										<option value="">{t().common.none}</option>
 										<For each={categories() ?? []}>
 											{(c) => <option value={c.id}>{c.name}</option>}
 										</For>
@@ -651,12 +660,11 @@ export default function Transactions() {
 							</div>
 							<Show when={transferSameAccount()}>
 								<p id="transfer-accounts-hint" class="form-hint form-hint--error">
-									Quelle und Ziel müssen unterschiedlich sein — bitte wähle zwei
-									verschiedene Konten.
+									{t().transactions.sameAccountHint}
 								</p>
 							</Show>
 							<label class="field">
-								Notes
+								{t().transactions.notesField}
 								<input
 									value={transferForm().notes}
 									onInput={(e) =>
@@ -668,10 +676,7 @@ export default function Transactions() {
 									class="input"
 								/>
 							</label>
-							<p class="muted text-sm">
-								Erstellt zwei verknüpfte Buchungen (Ausgang + Eingang). Die Beine
-								können nur gemeinsam gelöscht, nicht bearbeitet werden.
-							</p>
+							<p class="muted text-sm">{t().transactions.transferExplainer}</p>
 							<Show when={error()}>
 								<p class="form-error">{error()}</p>
 							</Show>
@@ -681,14 +686,14 @@ export default function Transactions() {
 									onClick={() => setShowForm(false)}
 									class="btn-ghost"
 								>
-									Abbrechen
+									{t().common.cancel}
 								</button>
 								<button
 									type="submit"
 									class="btn-primary"
 									disabled={transferSameAccount()}
 								>
-									Umbuchung erstellen
+									{t().transactions.submitTransfer}
 								</button>
 							</div>
 						</form>
@@ -697,34 +702,38 @@ export default function Transactions() {
 			</Show>
 
 			<Show when={transactions.loading}>
-				<p class="muted">Loading…</p>
+				<p class="muted">{t().common.loading}</p>
 			</Show>
 			<Show when={transactions.error}>
-				<p class="form-error">Error: {(transactions.error as Error).message}</p>
+				<p class="form-error">
+					{t().common.error}: {(transactions.error as Error).message}
+				</p>
 			</Show>
 
 			{/* Medium audit: `ledger` tightens rows on desktop via CSS only. */}
 			<div class="list list--tight ledger">
 				<For each={filtered()}>
-					{(t) => {
-						const cat = () => categoryOf(categories(), t.categoryId)
+					{(txn) => {
+						const cat = () => categoryOf(categories(), txn.categoryId)
 						return (
 							<div class="card card--compact card-row">
 								<div>
 									<div class="title">
-										{t.payee || <span class="subtle">— no payee —</span>}{' '}
-										<Show when={isTransferLeg(t)}>
+										{txn.payee || (
+											<span class="subtle">{t().transactions.noPayee}</span>
+										)}{' '}
+										<Show when={isTransferLeg(txn)}>
 											<span
 												class="subtle text-sm"
-												title={`Transfer ${t.transferId}`}
+												title={`${t().transactions.transferPrefix} ${txn.transferId}`}
 											>
-												⇄ transfer
+												{t().transactions.transferBadge}
 											</span>
 										</Show>
 									</div>
 									<div class="muted text-sm">
-										{formatDateISO(t.date)} ·{' '}
-										{accountName(accounts(), t.accountId)}
+										{formatDateISO(txn.date)} ·{' '}
+										{accountName(accounts(), txn.accountId)}
 										<Show when={cat()}>
 											{' '}
 											·{' '}
@@ -743,28 +752,28 @@ export default function Transactions() {
 												{cat()?.name}
 											</span>
 										</Show>
-										<Show when={t.notes}> · {t.notes}</Show>
+										<Show when={txn.notes}> · {txn.notes}</Show>
 									</div>
 								</div>
 								<div class="card-actions">
-									<Amount cents={t.amountCents} direction={t.direction} />
+									<Amount cents={txn.amountCents} direction={txn.direction} />
 									<Show
-										when={!isTransferLeg(t)}
+										when={!isTransferLeg(txn)}
 										fallback={
 											<button
 												type="button"
-												onClick={() => remove(t)}
+												onClick={() => remove(txn)}
 												class="btn-icon btn-icon--danger"
-												aria-label="Delete transfer"
-												title="Delete transfer (both legs)"
+												aria-label={t().transactions.deleteTransfer}
+												title={t().transactions.deleteTransferTitle}
 											>
 												✕
 											</button>
 										}
 									>
 										<CrudRow
-											onEdit={() => openEdit(t)}
-											onDelete={() => remove(t)}
+											onEdit={() => openEdit(txn)}
+											onDelete={() => remove(txn)}
 										/>
 									</Show>
 								</div>
@@ -773,18 +782,17 @@ export default function Transactions() {
 					}}
 				</For>
 				<Show when={filtered().length === 0 && !transactions.loading}>
-					<EmptyState actionLabel="Transaktion hinzufügen" onAction={openCreate}>
-						Keine Buchungen gefunden. Erfasse Einnahmen und Ausgaben oder lege eine
-						Umbuchung zwischen Konten an.
+					<EmptyState actionLabel={t().transactions.emptyAction} onAction={openCreate}>
+						{t().transactions.emptyText}
 					</EmptyState>
 				</Show>
 			</div>
 
 			{/* Categories */}
 			<div class="page-header" style={{ 'margin-top': '1rem' }}>
-				<h2 class="page-title">Categories</h2>
+				<h2 class="page-title">{t().transactions.categoriesTitle}</h2>
 				<button type="button" onClick={openCatCreate} class="btn-ghost">
-					+ Category
+					{t().transactions.addCategory}
 				</button>
 			</div>
 
@@ -797,35 +805,35 @@ export default function Transactions() {
 			>
 				<div class="form-grid">
 					<label class="field">
-						Name
+						{t().transactions.nameField}
 						<input
 							value={catForm().name}
 							onInput={(e) => patchForm(setCatForm, 'name', e.currentTarget.value)}
 							required
 							class="input"
-							placeholder="e.g. Groceries, Salary"
+							placeholder={t().transactions.categoryPlaceholder}
 						/>
 					</label>
 					<label class="field">
-						Kind
+						{t().transactions.kind}
 						<select
 							value={catForm().kind}
 							onChange={(e) => patchForm(setCatForm, 'kind', e.currentTarget.value)}
 							class="input"
 						>
-							<option value="">Both</option>
-							<option value="income">Income</option>
-							<option value="expense">Expense</option>
+							<option value="">{t().transactions.both}</option>
+							<option value="income">{t().transactions.incomeKind}</option>
+							<option value="expense">{t().transactions.expenseKind}</option>
 						</select>
 					</label>
 					<label class="field">
-						Color
+						{t().transactions.color}
 						<input
 							type="color"
 							value={catForm().color}
 							onInput={(e) => patchForm(setCatForm, 'color', e.currentTarget.value)}
 							class="color-swatch"
-							aria-label="Kategoriefarbe"
+							aria-label={t().transactions.categoryColorLabel}
 						/>
 					</label>
 				</div>
@@ -838,7 +846,7 @@ export default function Transactions() {
 							<div class="inline-row">
 								<span class="dot" style={{ background: c.color ?? '#9ca3af' }} />
 								<span class="strong">{c.name}</span>
-								<span class="muted text-sm">· {c.kind ?? 'both'}</span>
+								<span class="muted text-sm">· {categoryKindLabel(c.kind)}</span>
 							</div>
 							<CrudRow
 								onEdit={() => openCatEdit(c)}
@@ -848,8 +856,8 @@ export default function Transactions() {
 					)}
 				</For>
 				<Show when={(categories() ?? []).length === 0 && !categories.loading}>
-					<EmptyState actionLabel="Kategorie hinzufügen" onAction={openCatCreate}>
-						Keine Kategorien. Lege z. B. Lebensmittel, Gehalt oder Miete an.
+					<EmptyState actionLabel={t().transactions.addCategory} onAction={openCatCreate}>
+						{t().transactions.emptyText}
 					</EmptyState>
 				</Show>
 			</div>

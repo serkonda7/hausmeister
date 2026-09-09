@@ -2,7 +2,8 @@ import { createMemo, createResource, For, Show } from 'solid-js'
 import { api, type FinanceEvent } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { formatDateISO, todayISO } from '../lib/format'
+import { formatDateISO, formatMonthKey, todayISO } from '../lib/format'
+import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import Amount from './Amount'
 import CrudForm from './CrudForm'
@@ -19,16 +20,6 @@ export default function Events() {
 		(events() ?? []).slice().sort((a, b) => b.date.localeCompare(a.date)),
 	)
 
-	/** Month label for a `YYYY-MM` group key (German, e.g. "September 2026"). */
-	function monthLabel(key: string): string {
-		const [y, m] = key.split('-').map(Number)
-		const label = new Intl.DateTimeFormat('de-DE', {
-			month: 'long',
-			year: 'numeric',
-		}).format(new Date(y, (m ?? 1) - 1, 1))
-		return label.charAt(0).toUpperCase() + label.slice(1)
-	}
-
 	/** Newest first, grouped by month for a scannable timeline. */
 	const groupedEvents = createMemo(() => {
 		const groups: Array<{
@@ -40,7 +31,7 @@ export default function Events() {
 			const key = ev.date.slice(0, 7)
 			let g = groups.find((x) => x.key === key)
 			if (!g) {
-				g = { key, label: monthLabel(key), items: [] }
+				g = { key, label: formatMonthKey(key), items: [] }
 				groups.push(g)
 			}
 			g.items.push(ev)
@@ -115,7 +106,7 @@ export default function Events() {
 			const f = form()
 			const amountCents = parseEuroToCents(f.amount)
 			if (!f.title || amountCents == null || Number.isNaN(amountCents)) {
-				throw new Error('Title and amount are required')
+				throw new Error(t().events.required)
 			}
 			const payload: Omit<FinanceEvent, 'id' | 'createdAt'> = {
 				title: f.title,
@@ -140,20 +131,38 @@ export default function Events() {
 	}
 
 	function remove(id: string) {
-		return removeWithConfirm('Delete event?', () => api.events.remove(id), refetch)
+		return removeWithConfirm(t().events.confirmDelete, () => api.events.remove(id), refetch)
+	}
+
+	function frequencyLabel(value: string): string {
+		const d = t().events
+		switch (value) {
+			case 'weekly':
+				return d.weekly
+			case 'biweekly':
+				return d.biweekly
+			case 'monthly':
+				return d.monthly
+			case 'quarterly':
+				return d.quarterly
+			case 'yearly':
+				return d.yearly
+			default:
+				return value
+		}
 	}
 
 	return (
 		<div class="page">
 			<div class="page-header">
 				<div>
-					<h2 class="page-title">Ereignisse</h2>
+					<h2 class="page-title">{t().events.title}</h2>
 					<p class="page-subtitle">
-						{(events() ?? []).length} Ereignisse · neueste zuerst, nach Monat gruppiert.
+						{(events() ?? []).length} {t().events.subtitleSuffix}
 					</p>
 				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
-					+ Event
+					{t().events.add}
 				</button>
 			</div>
 
@@ -166,7 +175,7 @@ export default function Events() {
 			>
 				<div class="form-grid">
 					<label class="field">
-						Title{' '}
+						{t().events.titleField}{' '}
 						<span class="req" aria-hidden="true">
 							*
 						</span>
@@ -179,7 +188,7 @@ export default function Events() {
 						/>
 					</label>
 					<label class="field">
-						Amount (€){' '}
+						{t().events.amount}{' '}
 						<span class="req" aria-hidden="true">
 							*
 						</span>
@@ -194,7 +203,7 @@ export default function Events() {
 						/>
 					</label>
 					<label class="field">
-						Direction
+						{t().events.direction}
 						<select
 							value={form().direction}
 							onChange={(e) =>
@@ -206,12 +215,12 @@ export default function Events() {
 							}
 							class="input"
 						>
-							<option value="inflow">Inflow (+)</option>
-							<option value="outflow">Outflow (−)</option>
+							<option value="inflow">{t().events.inflow}</option>
+							<option value="outflow">{t().events.outflow}</option>
 						</select>
 					</label>
 					<label class="field" for="ev-date">
-						Date{' '}
+						{t().events.date}{' '}
 						<span class="req" aria-hidden="true">
 							*
 						</span>
@@ -230,11 +239,11 @@ export default function Events() {
 								patchForm(setForm, 'isRecurring', e.currentTarget.checked)
 							}
 						/>{' '}
-						Recurring
+						{t().events.recurring}
 					</label>
 					<Show when={form().isRecurring}>
 						<label class="field">
-							Frequency
+							{t().events.frequency}
 							<select
 								value={form().frequency}
 								onChange={(e) =>
@@ -242,16 +251,16 @@ export default function Events() {
 								}
 								class="input"
 							>
-								<option value="">— select</option>
-								<option value="weekly">Weekly</option>
-								<option value="biweekly">Every 2 weeks</option>
-								<option value="monthly">Monthly</option>
-								<option value="quarterly">Quarterly</option>
-								<option value="yearly">Yearly</option>
+								<option value="">{t().common.select}</option>
+								<option value="weekly">{t().events.weekly}</option>
+								<option value="biweekly">{t().events.biweekly}</option>
+								<option value="monthly">{t().events.monthly}</option>
+								<option value="quarterly">{t().events.quarterly}</option>
+								<option value="yearly">{t().events.yearly}</option>
 							</select>
 						</label>
 						<label class="field" for="ev-recurring-until">
-							Until (date){' '}
+							{t().events.until}{' '}
 							<DateInput
 								id="ev-recurring-until"
 								value={form().recurringUntil}
@@ -260,26 +269,26 @@ export default function Events() {
 						</label>
 					</Show>
 					<label class="field">
-						Pool (optional)
+						{t().events.poolOptional}
 						<select
 							value={form().poolId}
 							onChange={(e) => patchForm(setForm, 'poolId', e.currentTarget.value)}
 							class="input"
 						>
-							<option value="">— no pool</option>
+							<option value="">{t().events.noPool}</option>
 							<For each={pools() ?? []}>
 								{(p) => <option value={p.id}>{p.name}</option>}
 							</For>
 						</select>
 					</label>
 					<label class="field">
-						Account (optional)
+						{t().events.accountOptional}
 						<select
 							value={form().accountId}
 							onChange={(e) => patchForm(setForm, 'accountId', e.currentTarget.value)}
 							class="input"
 						>
-							<option value="">— no account</option>
+							<option value="">{t().events.noAccount}</option>
 							<For each={accounts() ?? []}>
 								{(a) => <option value={a.id}>{a.name}</option>}
 							</For>
@@ -287,7 +296,7 @@ export default function Events() {
 					</label>
 				</div>
 				<label class="field">
-					Notes{' '}
+					{t().events.notes}{' '}
 					<input
 						value={form().notes}
 						onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
@@ -309,11 +318,15 @@ export default function Events() {
 											<div class="muted text-sm">
 												{formatDateISO(ev.date)}{' '}
 												<Show when={ev.isRecurring}>
-													· {ev.frequency} ↻
+													·{' '}
+													{ev.frequency
+														? frequencyLabel(ev.frequency)
+														: ''}{' '}
+													↻
 												</Show>{' '}
 												<Show when={ev.recurringUntil}>
 													{' '}
-													until{' '}
+													{t().events.untilPrefix}{' '}
 													{ev.recurringUntil
 														? formatDateISO(ev.recurringUntil)
 														: ''}
@@ -337,9 +350,7 @@ export default function Events() {
 					)}
 				</For>
 				<Show when={(events() ?? []).length === 0 && !events.loading}>
-					<EmptyState>
-						No events. Create e.g. salary (monthly inflow) or rent (monthly outflow).
-					</EmptyState>
+					<EmptyState>{t().events.empty}</EmptyState>
 				</Show>
 			</div>
 		</div>
