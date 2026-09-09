@@ -4,11 +4,11 @@ import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { formatEUR, liquidityLabels } from '../lib/format'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
-import { accountName, poolName } from '../lib/names'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import './Allocations.css'
 
 export default function Allocations() {
 	const [allocations, { refetch }] = createResource(() => api.allocations.list())
@@ -88,7 +88,12 @@ export default function Allocations() {
 	return (
 		<div class="page">
 			<div class="page-header">
-				<h2 class="page-title">Allocations</h2>
+				<div>
+					<h2 class="page-title">Allocations</h2>
+					<p class="page-subtitle">
+						{(allocations() ?? []).length} allocations · link account balances to pools.
+					</p>
+				</div>
 				<button
 					type="button"
 					onClick={openCreate}
@@ -111,11 +116,15 @@ export default function Allocations() {
 			>
 				<div class="form-grid">
 					<label class="field">
-						Pool
+						Pool{' '}
+						<span class="req" aria-hidden="true">
+							*
+						</span>
 						<select
 							value={form().poolId}
 							onChange={(e) => patchForm(setForm, 'poolId', e.currentTarget.value)}
 							required
+							aria-required="true"
 							class="input"
 						>
 							<For each={pools() ?? []}>
@@ -124,11 +133,15 @@ export default function Allocations() {
 						</select>
 					</label>
 					<label class="field">
-						Account
+						Account{' '}
+						<span class="req" aria-hidden="true">
+							*
+						</span>
 						<select
 							value={form().accountId}
 							onChange={(e) => patchForm(setForm, 'accountId', e.currentTarget.value)}
 							required
+							aria-required="true"
 							class="input"
 						>
 							<For each={accounts() ?? []}>
@@ -138,12 +151,16 @@ export default function Allocations() {
 					</label>
 					<label class="field">
 						Amount (€){' '}
+						<span class="req" aria-hidden="true">
+							*
+						</span>
 						<input
 							type="number"
 							step="0.01"
 							value={form().amount}
 							onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
 							required
+							aria-required="true"
 							class="input"
 						/>
 					</label>
@@ -175,31 +192,44 @@ export default function Allocations() {
 
 			<div class="list list--tight">
 				<For each={allocations() ?? []}>
-					{(a) => (
-						<div class="card card--compact card-row">
-							<div>
-								<div class="title">
-									{poolName(pools(), a.poolId)}{' '}
-									<span class="subtle">
-										→ {accountName(accounts(), a.accountId)}
-									</span>
+					{(a) => {
+						const pool = () => pools()?.find((p) => p.id === a.poolId)
+						const account = () => accounts()?.find((x) => x.id === a.accountId)
+						return (
+							<div class="card card--compact card-row">
+								<div>
+									<div class="title">
+										{pool()?.name ?? (
+											<span class="unknown-ref" title={a.poolId}>
+												Unbekannt / gelöscht
+											</span>
+										)}{' '}
+										<span class="subtle">
+											→{' '}
+											{account()?.name ?? (
+												<span class="unknown-ref" title={a.accountId}>
+													Unbekannt / gelöscht
+												</span>
+											)}
+										</span>
+									</div>
+									<div class="muted text-sm">
+										{a.liquidityOverride
+											? `Override: ${liquidityLabels[a.liquidityOverride]}`
+											: 'Default from account'}{' '}
+										<Show when={a.unlockAt}>· from {a.unlockAt}</Show>
+									</div>
 								</div>
-								<div class="muted text-sm">
-									{a.liquidityOverride
-										? `Override: ${liquidityLabels[a.liquidityOverride]}`
-										: 'Default from account'}{' '}
-									<Show when={a.unlockAt}>· from {a.unlockAt}</Show>
+								<div class="card-actions">
+									<span class="strong--bold">{formatEUR(a.amountCents)}</span>
+									<CrudRow
+										onEdit={() => openEdit(a.id)}
+										onDelete={() => remove(a.id)}
+									/>
 								</div>
 							</div>
-							<div class="card-actions">
-								<span class="strong--bold">{formatEUR(a.amountCents)}</span>
-								<CrudRow
-									onEdit={() => openEdit(a.id)}
-									onDelete={() => remove(a.id)}
-								/>
-							</div>
-						</div>
-					)}
+						)
+					}}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
 					<EmptyState>

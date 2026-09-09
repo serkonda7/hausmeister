@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
+import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Category, type Transaction } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
@@ -10,6 +10,7 @@ import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import './Transactions.css'
 
 type Mode = 'transaction' | 'transfer'
 
@@ -89,6 +90,33 @@ export default function Transactions() {
 		}
 		return { inflow, outflow, net: inflow - outflow }
 	})
+
+	const hasActiveFilters = () =>
+		accountFilter() !== '' || directionFilter() !== '' || query().trim() !== ''
+
+	function clearFilters() {
+		setAccountFilter('')
+		setDirectionFilter('')
+		setQuery('')
+	}
+
+	// Autofocus the first field whenever the create/edit form opens.
+	let txnFormWrap: HTMLDivElement | undefined
+	createEffect(() => {
+		if (showForm() && txnFormWrap) {
+			txnFormWrap
+				.querySelector<HTMLElement>(
+					'input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+				)
+				?.focus()
+		}
+	})
+
+	function handleFormKeyDown(e: KeyboardEvent): void {
+		if (e.key === 'Escape') {
+			setShowForm(false)
+		}
+	}
 
 	const catForm = catCrud.form
 	const setCatForm = catCrud.setForm
@@ -255,10 +283,21 @@ export default function Transactions() {
 
 	const isTransferLeg = (t: Transaction) => t.transferId != null
 
+	// Medium audit: live client-side hint when source == destination.
+	const transferSameAccount = () => {
+		const f = transferForm()
+		return f.fromAccountId !== '' && f.fromAccountId === f.toAccountId
+	}
+
 	return (
 		<div class="page">
 			<div class="page-header">
-				<h2 class="page-title">Transactions</h2>
+				<div>
+					<h2 class="page-title">Transactions</h2>
+					<p class="page-subtitle">
+						Einnahmen, Ausgaben und Umbuchungen über alle Konten.
+					</p>
+				</div>
 				<div class="inline-row">
 					<button
 						type="button"
@@ -322,48 +361,74 @@ export default function Transactions() {
 							placeholder="e.g. REWE, salary…"
 						/>
 					</label>
-					<div class="field">
-						<span class="muted text-sm">
-							{filtered().length} shown · in {formatEUR(totals().inflow)} · out{' '}
-							{formatEUR(totals().outflow)} · net{' '}
-							<Amount
-								cents={totals().net}
-								direction={totals().net >= 0 ? 'inflow' : 'outflow'}
-								showSign={false}
-							/>
-						</span>
-					</div>
 				</div>
+			</div>
+
+			{/* Sticky summary bar: hits + totals + clear-filters */}
+			<div class="txn-summary" role="status">
+				<span class="txn-summary-stats">
+					<span>
+						{filtered().length} Treffer · Einnahmen {formatEUR(totals().inflow)} ·
+						Ausgaben {formatEUR(totals().outflow)} · Netto{' '}
+						<Amount
+							cents={totals().net}
+							direction={totals().net >= 0 ? 'inflow' : 'outflow'}
+							showSign={false}
+						/>
+					</span>
+				</span>
+				<Show when={hasActiveFilters()}>
+					<button type="button" onClick={clearFilters} class="btn-ghost">
+						Filter löschen
+					</button>
+				</Show>
 			</div>
 
 			{/* Create / edit form */}
 			<Show when={showForm()}>
-				<div class="form-card">
-					<div class="inline-row">
+				<div
+					class="form-card"
+					ref={txnFormWrap}
+					onKeyDown={handleFormKeyDown}
+					role="dialog"
+					aria-label="Buchung erfassen"
+				>
+					<div class="segmented" role="tablist" aria-label="Erfassungsart">
 						<button
 							type="button"
+							role="tab"
+							aria-selected={mode() === 'transaction'}
 							onClick={() => setMode('transaction')}
-							class={mode() === 'transaction' ? 'btn-primary' : 'btn-ghost'}
-							disabled={editingId() != null}
+							class="segmented-tab"
+							disabled={editingId() != null && mode() !== 'transaction'}
 						>
-							Transaction
+							Buchung
 						</button>
 						<button
 							type="button"
+							role="tab"
+							aria-selected={mode() === 'transfer'}
 							onClick={() => setMode('transfer')}
-							class={mode() === 'transfer' ? 'btn-primary' : 'btn-ghost'}
+							class="segmented-tab"
 							disabled={editingId() != null}
+							title={
+								editingId() != null
+									? 'Umbuchungen bestehen aus zwei verknüpften Buchungen und können nicht bearbeitet, nur gemeinsam gelöscht werden.'
+									: 'Geld zwischen zwei Konten umbuchen'
+							}
 						>
-							Transfer
+							Umbuchung
 						</button>
 					</div>
+					<Show when={editingId() != null}>
+						<p class="muted text-sm">
+							Umbuchung ist beim Bearbeiten deaktiviert: Umbuchungen können nicht
+							bearbeitet, nur gemeinsam gelöscht werden.
+						</p>
+					</Show>
 
 					<Show when={mode() === 'transaction'}>
-						<form
-							onSubmit={submitTxn}
-							class="form-card"
-							style={{ padding: 0, border: 'none' }}
-						>
+						<form onSubmit={submitTxn} class="txn-subform">
 							<div class="form-grid">
 								<label class="field">
 									Account
@@ -467,24 +532,23 @@ export default function Transactions() {
 									onClick={() => setShowForm(false)}
 									class="btn-ghost"
 								>
-									Cancel
+									Abbrechen
 								</button>
 								<button type="submit" class="btn-primary">
-									{editingId() ? 'Save' : 'Create'}
+									{editingId() ? 'Speichern' : 'Erstellen'}
 								</button>
 							</div>
 						</form>
 					</Show>
 
 					<Show when={mode() === 'transfer'}>
-						<form
-							onSubmit={submitTransfer}
-							class="form-card"
-							style={{ padding: 0, border: 'none' }}
-						>
+						<form onSubmit={submitTransfer} class="txn-subform">
 							<div class="form-grid">
 								<label class="field">
-									From account
+									From account{' '}
+									<span class="req" aria-hidden="true">
+										*
+									</span>
 									<select
 										value={transferForm().fromAccountId}
 										onChange={(e) =>
@@ -494,6 +558,7 @@ export default function Transactions() {
 											}))
 										}
 										required
+										aria-required="true"
 										class="input"
 									>
 										<option value="">— select</option>
@@ -503,7 +568,10 @@ export default function Transactions() {
 									</select>
 								</label>
 								<label class="field">
-									To account
+									To account{' '}
+									<span class="req" aria-hidden="true">
+										*
+									</span>
 									<select
 										value={transferForm().toAccountId}
 										onChange={(e) =>
@@ -513,6 +581,8 @@ export default function Transactions() {
 											}))
 										}
 										required
+										aria-required="true"
+										aria-describedby="transfer-accounts-hint"
 										class="input"
 									>
 										<option value="">— select</option>
@@ -579,6 +649,12 @@ export default function Transactions() {
 									</select>
 								</label>
 							</div>
+							<Show when={transferSameAccount()}>
+								<p id="transfer-accounts-hint" class="form-hint form-hint--error">
+									Quelle und Ziel müssen unterschiedlich sein — bitte wähle zwei
+									verschiedene Konten.
+								</p>
+							</Show>
 							<label class="field">
 								Notes
 								<input
@@ -593,8 +669,8 @@ export default function Transactions() {
 								/>
 							</label>
 							<p class="muted text-sm">
-								Creates two linked legs (outflow + inflow). Legs can only be deleted
-								together, not edited.
+								Erstellt zwei verknüpfte Buchungen (Ausgang + Eingang). Die Beine
+								können nur gemeinsam gelöscht, nicht bearbeitet werden.
 							</p>
 							<Show when={error()}>
 								<p class="form-error">{error()}</p>
@@ -605,10 +681,14 @@ export default function Transactions() {
 									onClick={() => setShowForm(false)}
 									class="btn-ghost"
 								>
-									Cancel
+									Abbrechen
 								</button>
-								<button type="submit" class="btn-primary">
-									Create transfer
+								<button
+									type="submit"
+									class="btn-primary"
+									disabled={transferSameAccount()}
+								>
+									Umbuchung erstellen
 								</button>
 							</div>
 						</form>
@@ -623,7 +703,8 @@ export default function Transactions() {
 				<p class="form-error">Error: {(transactions.error as Error).message}</p>
 			</Show>
 
-			<div class="list list--tight">
+			{/* Medium audit: `ledger` tightens rows on desktop via CSS only. */}
+			<div class="list list--tight ledger">
 				<For each={filtered()}>
 					{(t) => {
 						const cat = () => categoryOf(categories(), t.categoryId)
@@ -692,9 +773,9 @@ export default function Transactions() {
 					}}
 				</For>
 				<Show when={filtered().length === 0 && !transactions.loading}>
-					<EmptyState>
-						No transactions found. Record income, expenses, or create a transfer between
-						accounts.
+					<EmptyState actionLabel="Transaktion hinzufügen" onAction={openCreate}>
+						Keine Buchungen gefunden. Erfasse Einnahmen und Ausgaben oder lege eine
+						Umbuchung zwischen Konten an.
 					</EmptyState>
 				</Show>
 			</div>
@@ -743,7 +824,8 @@ export default function Transactions() {
 							type="color"
 							value={catForm().color}
 							onInput={(e) => patchForm(setCatForm, 'color', e.currentTarget.value)}
-							class="input"
+							class="color-swatch"
+							aria-label="Kategoriefarbe"
 						/>
 					</label>
 				</div>
@@ -766,7 +848,9 @@ export default function Transactions() {
 					)}
 				</For>
 				<Show when={(categories() ?? []).length === 0 && !categories.loading}>
-					<EmptyState>No categories. Create e.g. Groceries, Salary, Rent.</EmptyState>
+					<EmptyState actionLabel="Kategorie hinzufügen" onAction={openCatCreate}>
+						Keine Kategorien. Lege z. B. Lebensmittel, Gehalt oder Miete an.
+					</EmptyState>
 				</Show>
 			</div>
 		</div>
