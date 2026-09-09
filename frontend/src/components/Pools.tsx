@@ -82,7 +82,9 @@ export default function Pools() {
 					: Math.round(Number.parseFloat(f.expectedReturn) * 100)
 			const riskLevel = f.riskLevel.trim() === '' ? null : Number.parseInt(f.riskLevel, 10)
 			const volatilityBps =
-				f.volatility.trim() === '' ? null : Math.round(Number.parseFloat(f.volatility) * 100)
+				f.volatility.trim() === ''
+					? null
+					: Math.round(Number.parseFloat(f.volatility) * 100)
 			const horizonMonths =
 				f.horizonMonths.trim() === '' ? null : Number.parseInt(f.horizonMonths, 10)
 			if (
@@ -144,129 +146,119 @@ export default function Pools() {
 				onSubmit={submit}
 				onCancel={crud.close}
 			>
-					<div class="form-grid">
-						<label class="field">
-							Name{' '}
-							<input
-								value={form().name}
-								onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
-								required
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Purpose
-							<input
-								value={form().purpose}
-								onInput={(e) =>
-									patchForm(setForm, 'purpose', e.currentTarget.value)
-								}
-								class="input"
-								placeholder="e.g. Emergency fund, Retirement"
-							/>
-						</label>
-						<label class="field">
-							Target min (€){' '}
-							<input
-								type="number"
-								step="1"
-								value={form().targetMin}
-								onInput={(e) =>
-									patchForm(setForm, 'targetMin', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Target max (€){' '}
-							<input
-								type="number"
-								step="1"
-								value={form().targetMax}
-								onInput={(e) =>
-									patchForm(setForm, 'targetMax', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Target %{' '}
-							<input
-								type="number"
-								min="0"
-								max="100"
-								step="1"
-								value={form().targetPercent}
-								onInput={(e) =>
-									patchForm(setForm, 'targetPercent', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Expected return % p.a.{' '}
-							<input
-								type="number"
-								step="0.1"
-								value={form().expectedReturn}
-								onInput={(e) =>
-									patchForm(setForm, 'expectedReturn', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Risk{' '}
-							<select
-								value={form().riskLevel}
-								onChange={(e) =>
-									patchForm(setForm, 'riskLevel', e.currentTarget.value)
-								}
-								class="input"
-							>
-								<option value="">—</option>
-								<For each={[1, 2, 3, 4, 5]}>
-									{(level) => (
-										<option value={level.toString()}>
-											{level} – {riskLevelLabels[level]}
-										</option>
-									)}
-								</For>
-							</select>
-						</label>
-						<label class="field">
-							Volatility %{' '}
-							<input
-								type="number"
-								step="0.1"
-								value={form().volatility}
-								onInput={(e) =>
-									patchForm(setForm, 'volatility', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Horizon (months){' '}
-							<input
-								type="number"
-								value={form().horizonMonths}
-								onInput={(e) =>
-									patchForm(setForm, 'horizonMonths', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Color{' '}
-							<input
-								type="color"
-								value={form().color}
-								onInput={(e) => patchForm(setForm, 'color', e.currentTarget.value)}
-								class="input"
-							/>
-						</label>
-					</div>
+				<div class="form-grid">
+					<label class="field">
+						Name{' '}
+						<input
+							value={form().name}
+							onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
+							required
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Purpose
+						<input
+							value={form().purpose}
+							onInput={(e) => patchForm(setForm, 'purpose', e.currentTarget.value)}
+							class="input"
+							placeholder="e.g. Emergency fund, Retirement"
+						/>
+					</label>
+					<label class="field">
+						Target min (€){' '}
+						<input
+							type="number"
+							step="1"
+							value={form().targetMin}
+							onInput={(e) => patchForm(setForm, 'targetMin', e.currentTarget.value)}
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Target max (€){' '}
+						<input
+							type="number"
+							step="1"
+							value={form().targetMax}
+							onInput={(e) => patchForm(setForm, 'targetMax', e.currentTarget.value)}
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Target %{' '}
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							value={form().targetPercent}
+							onInput={(e) =>
+								patchForm(setForm, 'targetPercent', e.currentTarget.value)
+							}
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Expected return % p.a.{' '}
+						<input
+							type="number"
+							step="0.1"
+							value={form().expectedReturn}
+							onInput={(e) =>
+								patchForm(setForm, 'expectedReturn', e.currentTarget.value)
+							}
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Risk{' '}
+						<select
+							value={form().riskLevel}
+							onChange={(e) => patchForm(setForm, 'riskLevel', e.currentTarget.value)}
+							class="input"
+						>
+							<option value="">—</option>
+							<For each={[1, 2, 3, 4, 5]}>
+								{(level) => (
+									<option value={level.toString()}>
+										{level} – {riskLevelLabels[level]}
+									</option>
+								)}
+							</For>
+						</select>
+					</label>
+					<label class="field">
+						Volatility %{' '}
+						<input
+							type="number"
+							step="0.1"
+							value={form().volatility}
+							onInput={(e) => patchForm(setForm, 'volatility', e.currentTarget.value)}
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Horizon (months){' '}
+						<input
+							type="number"
+							value={form().horizonMonths}
+							onInput={(e) =>
+								patchForm(setForm, 'horizonMonths', e.currentTarget.value)
+							}
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Color{' '}
+						<input
+							type="color"
+							value={form().color}
+							onInput={(e) => patchForm(setForm, 'color', e.currentTarget.value)}
+							class="input"
+						/>
+					</label>
+				</div>
 			</CrudForm>
 
 			<div class="list">

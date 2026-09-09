@@ -114,92 +114,88 @@ export default function Accounts() {
 				onSubmit={submit}
 				onCancel={crud.close}
 			>
-					<div class="form-grid">
-						<label class="field">
-							Name{' '}
-							<input
-								value={form().name}
-								onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
-								required
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Type
-							<select
-								value={form().type}
-								onChange={(e) =>
-									patchForm(
-										setForm,
-										'type',
-										e.currentTarget.value as Account['type'],
-									)
-								}
-								class="input"
-								title={accountTypeDescriptions[form().type] ?? ''}
-							>
-								<For each={Object.entries(accountTypeLabels)}>
-									{([k, v]) => (
-										<option value={k} title={accountTypeDescriptions[k] ?? ''}>
-											{v}
-										</option>
-									)}
-								</For>
-							</select>
-						</label>
-						<label class="field">
-							Institution{' '}
-							<input
-								value={form().institution}
-								onInput={(e) =>
-									patchForm(setForm, 'institution', e.currentTarget.value)
-								}
-								class="input"
-								list="institution-options"
-								placeholder="Select or type a new institution"
-								autocomplete="off"
-							/>
-							<datalist id="institution-options">
-								<For each={institutions()}>{(name) => <option value={name} />}</For>
-							</datalist>
-						</label>
-						<label class="field" for="account-opening-date">
-							Opening date{' '}
-							<DateInput
-								id="account-opening-date"
-								value={form().openingDate}
-								onInput={(v) => patchForm(setForm, 'openingDate', v)}
-							/>
-						</label>
-						<label class="field">
-							Opening balance (€){' '}
-							<input
-								type="number"
-								step="0.01"
-								value={form().openingBalance}
-								onInput={(e) =>
-									patchForm(setForm, 'openingBalance', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							IBAN{' '}
-							<input
-								value={form().iban}
-								onInput={(e) => patchForm(setForm, 'iban', e.currentTarget.value)}
-								class="input"
-							/>
-						</label>
-					</div>
+				<div class="form-grid">
 					<label class="field">
-						Notes{' '}
+						Name{' '}
 						<input
-							value={form().notes}
-							onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
+							value={form().name}
+							onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
+							required
 							class="input"
 						/>
 					</label>
+					<label class="field">
+						Type
+						<select
+							value={form().type}
+							onChange={(e) =>
+								patchForm(setForm, 'type', e.currentTarget.value as Account['type'])
+							}
+							class="input"
+							title={accountTypeDescriptions[form().type] ?? ''}
+						>
+							<For each={Object.entries(accountTypeLabels)}>
+								{([k, v]) => (
+									<option value={k} title={accountTypeDescriptions[k] ?? ''}>
+										{v}
+									</option>
+								)}
+							</For>
+						</select>
+					</label>
+					<label class="field">
+						Institution{' '}
+						<input
+							value={form().institution}
+							onInput={(e) =>
+								patchForm(setForm, 'institution', e.currentTarget.value)
+							}
+							class="input"
+							list="institution-options"
+							placeholder="Select or type a new institution"
+							autocomplete="off"
+						/>
+						<datalist id="institution-options">
+							<For each={institutions()}>{(name) => <option value={name} />}</For>
+						</datalist>
+					</label>
+					<label class="field" for="account-opening-date">
+						Opening date{' '}
+						<DateInput
+							id="account-opening-date"
+							value={form().openingDate}
+							onInput={(v) => patchForm(setForm, 'openingDate', v)}
+						/>
+					</label>
+					<label class="field">
+						Opening balance (€){' '}
+						<input
+							type="number"
+							step="0.01"
+							value={form().openingBalance}
+							onInput={(e) =>
+								patchForm(setForm, 'openingBalance', e.currentTarget.value)
+							}
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						IBAN{' '}
+						<input
+							value={form().iban}
+							onInput={(e) => patchForm(setForm, 'iban', e.currentTarget.value)}
+							class="input"
+						/>
+					</label>
+				</div>
+				<label class="field">
+					Notes{' '}
+					<input
+						value={form().notes}
+						onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
+						class="input"
+					/>
+				</label>
 			</CrudForm>
 
 			<Show when={accounts.loading}>

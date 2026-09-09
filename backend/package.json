@@ -12,6 +12,7 @@
     "db:check": "drizzle-kit check"
   },
   "dependencies": {
+    "@homie/contracts": "workspace:*",
     "better-result": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",

@@ -130,129 +130,125 @@ export default function Events() {
 				onSubmit={submit}
 				onCancel={crud.close}
 			>
-					<div class="form-grid">
-						<label class="field">
-							Title{' '}
-							<input
-								value={form().title}
-								onInput={(e) => patchForm(setForm, 'title', e.currentTarget.value)}
-								required
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Amount (€){' '}
-							<input
-								type="number"
-								step="0.01"
-								value={form().amount}
-								onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
-								required
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Direction
-							<select
-								value={form().direction}
-								onChange={(e) =>
-									patchForm(
-										setForm,
-										'direction',
-										e.currentTarget.value as FinanceEvent['direction'],
-									)
-								}
-								class="input"
-							>
-								<option value="inflow">Inflow (+)</option>
-								<option value="outflow">Outflow (−)</option>
-							</select>
-						</label>
-						<label class="field" for="ev-date">
-							Date{' '}
-							<DateInput
-								id="ev-date"
-								value={form().date}
-								onInput={(v) => patchForm(setForm, 'date', v)}
-								required
-							/>
-						</label>
-						<label class="field field--checkbox">
-							<input
-								type="checkbox"
-								checked={form().isRecurring}
-								onChange={(e) =>
-									patchForm(setForm, 'isRecurring', e.currentTarget.checked)
-								}
-							/>{' '}
-							Recurring
-						</label>
-						<Show when={form().isRecurring}>
-							<label class="field">
-								Frequency
-								<select
-									value={form().frequency}
-									onChange={(e) =>
-										patchForm(setForm, 'frequency', e.currentTarget.value)
-									}
-									class="input"
-								>
-									<option value="">— select</option>
-									<option value="weekly">Weekly</option>
-									<option value="biweekly">Every 2 weeks</option>
-									<option value="monthly">Monthly</option>
-									<option value="quarterly">Quarterly</option>
-									<option value="yearly">Yearly</option>
-								</select>
-							</label>
-							<label class="field" for="ev-recurring-until">
-								Until (date){' '}
-								<DateInput
-									id="ev-recurring-until"
-									value={form().recurringUntil}
-									onInput={(v) => patchForm(setForm, 'recurringUntil', v)}
-								/>
-							</label>
-						</Show>
-						<label class="field">
-							Pool (optional)
-							<select
-								value={form().poolId}
-								onChange={(e) =>
-									patchForm(setForm, 'poolId', e.currentTarget.value)
-								}
-								class="input"
-							>
-								<option value="">— no pool</option>
-								<For each={pools() ?? []}>
-									{(p) => <option value={p.id}>{p.name}</option>}
-								</For>
-							</select>
-						</label>
-						<label class="field">
-							Account (optional)
-							<select
-								value={form().accountId}
-								onChange={(e) =>
-									patchForm(setForm, 'accountId', e.currentTarget.value)
-								}
-								class="input"
-							>
-								<option value="">— no account</option>
-								<For each={accounts() ?? []}>
-									{(a) => <option value={a.id}>{a.name}</option>}
-								</For>
-							</select>
-						</label>
-					</div>
+				<div class="form-grid">
 					<label class="field">
-						Notes{' '}
+						Title{' '}
 						<input
-							value={form().notes}
-							onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
+							value={form().title}
+							onInput={(e) => patchForm(setForm, 'title', e.currentTarget.value)}
+							required
 							class="input"
 						/>
 					</label>
+					<label class="field">
+						Amount (€){' '}
+						<input
+							type="number"
+							step="0.01"
+							value={form().amount}
+							onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
+							required
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Direction
+						<select
+							value={form().direction}
+							onChange={(e) =>
+								patchForm(
+									setForm,
+									'direction',
+									e.currentTarget.value as FinanceEvent['direction'],
+								)
+							}
+							class="input"
+						>
+							<option value="inflow">Inflow (+)</option>
+							<option value="outflow">Outflow (−)</option>
+						</select>
+					</label>
+					<label class="field" for="ev-date">
+						Date{' '}
+						<DateInput
+							id="ev-date"
+							value={form().date}
+							onInput={(v) => patchForm(setForm, 'date', v)}
+							required
+						/>
+					</label>
+					<label class="field field--checkbox">
+						<input
+							type="checkbox"
+							checked={form().isRecurring}
+							onChange={(e) =>
+								patchForm(setForm, 'isRecurring', e.currentTarget.checked)
+							}
+						/>{' '}
+						Recurring
+					</label>
+					<Show when={form().isRecurring}>
+						<label class="field">
+							Frequency
+							<select
+								value={form().frequency}
+								onChange={(e) =>
+									patchForm(setForm, 'frequency', e.currentTarget.value)
+								}
+								class="input"
+							>
+								<option value="">— select</option>
+								<option value="weekly">Weekly</option>
+								<option value="biweekly">Every 2 weeks</option>
+								<option value="monthly">Monthly</option>
+								<option value="quarterly">Quarterly</option>
+								<option value="yearly">Yearly</option>
+							</select>
+						</label>
+						<label class="field" for="ev-recurring-until">
+							Until (date){' '}
+							<DateInput
+								id="ev-recurring-until"
+								value={form().recurringUntil}
+								onInput={(v) => patchForm(setForm, 'recurringUntil', v)}
+							/>
+						</label>
+					</Show>
+					<label class="field">
+						Pool (optional)
+						<select
+							value={form().poolId}
+							onChange={(e) => patchForm(setForm, 'poolId', e.currentTarget.value)}
+							class="input"
+						>
+							<option value="">— no pool</option>
+							<For each={pools() ?? []}>
+								{(p) => <option value={p.id}>{p.name}</option>}
+							</For>
+						</select>
+					</label>
+					<label class="field">
+						Account (optional)
+						<select
+							value={form().accountId}
+							onChange={(e) => patchForm(setForm, 'accountId', e.currentTarget.value)}
+							class="input"
+						>
+							<option value="">— no account</option>
+							<For each={accounts() ?? []}>
+								{(a) => <option value={a.id}>{a.name}</option>}
+							</For>
+						</select>
+					</label>
+				</div>
+				<label class="field">
+					Notes{' '}
+					<input
+						value={form().notes}
+						onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
+						class="input"
+					/>
+				</label>
 			</CrudForm>
 
 			<div class="list list--tight">
@@ -283,8 +279,7 @@ export default function Events() {
 				</For>
 				<Show when={(events() ?? []).length === 0 && !events.loading}>
 					<EmptyState>
-						No events. Create e.g. salary (monthly inflow) or rent (monthly
-						outflow).
+						No events. Create e.g. salary (monthly inflow) or rent (monthly outflow).
 					</EmptyState>
 				</Show>
 			</div>

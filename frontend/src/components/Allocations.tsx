@@ -3,8 +3,8 @@ import { type Allocation, api } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { formatEUR, liquidityLabels } from '../lib/format'
-import { accountName, poolName } from '../lib/names'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import { accountName, poolName } from '../lib/names'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
@@ -99,9 +99,7 @@ export default function Allocations() {
 				</button>
 			</div>
 			<Show when={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}>
-				<p class="muted text-sm">
-					Create accounts and pools first, then link allocations.
-				</p>
+				<p class="muted text-sm">Create accounts and pools first, then link allocations.</p>
 			</Show>
 
 			<CrudForm
@@ -111,72 +109,68 @@ export default function Allocations() {
 				onSubmit={submit}
 				onCancel={crud.close}
 			>
-					<div class="form-grid">
-						<label class="field">
-							Pool
-							<select
-								value={form().poolId}
-								onChange={(e) =>
-									patchForm(setForm, 'poolId', e.currentTarget.value)
-								}
-								required
-								class="input"
-							>
-								<For each={pools() ?? []}>
-									{(p) => <option value={p.id}>{p.name}</option>}
-								</For>
-							</select>
-						</label>
-						<label class="field">
-							Account
-							<select
-								value={form().accountId}
-								onChange={(e) =>
-									patchForm(setForm, 'accountId', e.currentTarget.value)
-								}
-								required
-								class="input"
-							>
-								<For each={accounts() ?? []}>
-									{(a) => <option value={a.id}>{a.name}</option>}
-								</For>
-							</select>
-						</label>
-						<label class="field">
-							Amount (€){' '}
-							<input
-								type="number"
-								step="0.01"
-								value={form().amount}
-								onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
-								required
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							Availability
-							<select
-								value={form().liquidityOverride}
-								onChange={(e) =>
-									patchForm(setForm, 'liquidityOverride', e.currentTarget.value)
-								}
-								class="input"
-							>
-								<option value="">— Default from account</option>
-								<For each={Object.entries(liquidityLabels)}>
-									{([k, v]) => <option value={k}>{v}</option>}
-								</For>
-							</select>
-						</label>
-						<label class="field" for="allocation-unlock-at">
-							Available from
-							<DateInput
-								id="allocation-unlock-at"
-								value={form().unlockAt}
-								onInput={(v) => patchForm(setForm, 'unlockAt', v)}
-							/>
-						</label>
-					</div>
+				<div class="form-grid">
+					<label class="field">
+						Pool
+						<select
+							value={form().poolId}
+							onChange={(e) => patchForm(setForm, 'poolId', e.currentTarget.value)}
+							required
+							class="input"
+						>
+							<For each={pools() ?? []}>
+								{(p) => <option value={p.id}>{p.name}</option>}
+							</For>
+						</select>
+					</label>
+					<label class="field">
+						Account
+						<select
+							value={form().accountId}
+							onChange={(e) => patchForm(setForm, 'accountId', e.currentTarget.value)}
+							required
+							class="input"
+						>
+							<For each={accounts() ?? []}>
+								{(a) => <option value={a.id}>{a.name}</option>}
+							</For>
+						</select>
+					</label>
+					<label class="field">
+						Amount (€){' '}
+						<input
+							type="number"
+							step="0.01"
+							value={form().amount}
+							onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
+							required
+							class="input"
+						/>
+					</label>
+					<label class="field">
+						Availability
+						<select
+							value={form().liquidityOverride}
+							onChange={(e) =>
+								patchForm(setForm, 'liquidityOverride', e.currentTarget.value)
+							}
+							class="input"
+						>
+							<option value="">— Default from account</option>
+							<For each={Object.entries(liquidityLabels)}>
+								{([k, v]) => <option value={k}>{v}</option>}
+							</For>
+						</select>
+					</label>
+					<label class="field" for="allocation-unlock-at">
+						Available from
+						<DateInput
+							id="allocation-unlock-at"
+							value={form().unlockAt}
+							onInput={(v) => patchForm(setForm, 'unlockAt', v)}
+						/>
+					</label>
+				</div>
 			</CrudForm>
 
 			<div class="list list--tight">
@@ -186,7 +180,9 @@ export default function Allocations() {
 							<div>
 								<div class="title">
 									{poolName(pools(), a.poolId)}{' '}
-									<span class="subtle">→ {accountName(accounts(), a.accountId)}</span>
+									<span class="subtle">
+										→ {accountName(accounts(), a.accountId)}
+									</span>
 								</div>
 								<div class="muted text-sm">
 									{a.liquidityOverride
@@ -206,7 +202,9 @@ export default function Allocations() {
 					)}
 				</For>
 				<Show when={(allocations() ?? []).length === 0 && !allocations.loading}>
-					<EmptyState>No allocations. Distribute account balances across pools.</EmptyState>
+					<EmptyState>
+						No allocations. Distribute account balances across pools.
+					</EmptyState>
 				</Show>
 			</div>
 		</div>

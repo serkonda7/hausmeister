@@ -1,11 +1,5 @@
 // All amounts in cents, dates as ISO strings (YYYY-MM-DD or ISO)
-import type {
-	AccountType,
-	CategoryKind,
-	Direction,
-	Frequency,
-	LiquidityTier,
-} from './enums'
+import type { AccountType, CategoryKind, Direction, Frequency, LiquidityTier } from './enums'
 
 // Re-export for backward compat (components may import these from './api')
 export type { AccountType, CategoryKind, Direction, Frequency, LiquidityTier } from './enums'
@@ -136,56 +130,50 @@ async function req<T>(path: string, opts?: RequestInit): Promise<T> {
 	return res.json() as Promise<T>
 }
 
+interface CrudResource<T, Create, Update> {
+	list: () => Promise<T[]>
+	create: (d: Create) => Promise<T>
+	update: (id: string, d: Update) => Promise<T>
+	remove: (id: string) => Promise<{ ok: true }>
+}
+
+/** Single place for the list/create/update/remove wrapper (one problem, one solution). */
+function crud<T, Create, Update>(path: string): CrudResource<T, Create, Update> {
+	return {
+		list: () => req<T[]>(path),
+		create: (d: Create) => req<T>(path, { method: 'POST', body: JSON.stringify(d) }),
+		update: (id: string, d: Update) =>
+			req<T>(`${path}/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
+		remove: (id: string) => req<{ ok: true }>(`${path}/${id}`, { method: 'DELETE' }),
+	}
+}
+
+type AccountCreate = Omit<Account, 'id' | 'createdAt'>
+type AccountUpdate = Partial<AccountCreate>
+type PoolCreate = Omit<Pool, 'id' | 'createdAt'>
+type PoolUpdate = Partial<PoolCreate>
+type AllocationCreate = Omit<Allocation, 'id' | 'createdAt'>
+type AllocationUpdate = Partial<AllocationCreate>
+type EventCreate = Omit<FinanceEvent, 'id' | 'createdAt'>
+type EventUpdate = Partial<EventCreate>
+type CategoryCreate = Omit<Category, 'id' | 'createdAt'>
+type CategoryUpdate = Partial<CategoryCreate>
+type TransactionCreate = Omit<Transaction, 'id' | 'createdAt' | 'transferId'>
+type TransactionUpdate = Partial<TransactionCreate>
+
 export const api = {
 	summary: () => req<Summary>('/api/summary'),
-	accounts: {
-		list: () => req<Account[]>('/api/accounts'),
-		create: (d: Omit<Account, 'id' | 'createdAt'>) =>
-			req<Account>('/api/accounts', { method: 'POST', body: JSON.stringify(d) }),
-		update: (id: string, d: Partial<Omit<Account, 'id' | 'createdAt'>>) =>
-			req<Account>(`/api/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
-		remove: (id: string) => req<{ ok: true }>(`/api/accounts/${id}`, { method: 'DELETE' }),
-	},
-	pools: {
-		list: () => req<Pool[]>('/api/pools'),
-		create: (d: Omit<Pool, 'id' | 'createdAt'>) =>
-			req<Pool>('/api/pools', { method: 'POST', body: JSON.stringify(d) }),
-		update: (id: string, d: Partial<Omit<Pool, 'id' | 'createdAt'>>) =>
-			req<Pool>(`/api/pools/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
-		remove: (id: string) => req<{ ok: true }>(`/api/pools/${id}`, { method: 'DELETE' }),
-	},
-	allocations: {
-		list: () => req<Allocation[]>('/api/allocations'),
-		create: (d: Omit<Allocation, 'id' | 'createdAt'>) =>
-			req<Allocation>('/api/allocations', { method: 'POST', body: JSON.stringify(d) }),
-		update: (id: string, d: Partial<Omit<Allocation, 'id' | 'createdAt'>>) =>
-			req<Allocation>(`/api/allocations/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
-		remove: (id: string) => req<{ ok: true }>(`/api/allocations/${id}`, { method: 'DELETE' }),
-	},
-	events: {
-		list: () => req<FinanceEvent[]>('/api/events'),
-		create: (d: Omit<FinanceEvent, 'id' | 'createdAt'>) =>
-			req<FinanceEvent>('/api/events', { method: 'POST', body: JSON.stringify(d) }),
-		update: (id: string, d: Partial<Omit<FinanceEvent, 'id' | 'createdAt'>>) =>
-			req<FinanceEvent>(`/api/events/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
-		remove: (id: string) => req<{ ok: true }>(`/api/events/${id}`, { method: 'DELETE' }),
-	},
-	categories: {
-		list: () => req<Category[]>('/api/categories'),
-		create: (d: Omit<Category, 'id' | 'createdAt'>) =>
-			req<Category>('/api/categories', { method: 'POST', body: JSON.stringify(d) }),
-		update: (id: string, d: Partial<Omit<Category, 'id' | 'createdAt'>>) =>
-			req<Category>(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
-		remove: (id: string) => req<{ ok: true }>(`/api/categories/${id}`, { method: 'DELETE' }),
-	},
+	accounts: crud<Account, AccountCreate, AccountUpdate>('/api/accounts'),
+	pools: crud<Pool, PoolCreate, PoolUpdate>('/api/pools'),
+	allocations: crud<Allocation, AllocationCreate, AllocationUpdate>('/api/allocations'),
+	events: crud<FinanceEvent, EventCreate, EventUpdate>('/api/events'),
+	categories: crud<Category, CategoryCreate, CategoryUpdate>('/api/categories'),
 	transactions: {
+		...crud<Transaction, TransactionCreate, TransactionUpdate>('/api/transactions'),
 		list: (accountId?: string) =>
-			req<Transaction[]>(accountId ? `/api/transactions?accountId=${accountId}` : '/api/transactions'),
-		create: (d: Omit<Transaction, 'id' | 'createdAt' | 'transferId'>) =>
-			req<Transaction>('/api/transactions', { method: 'POST', body: JSON.stringify(d) }),
-		update: (id: string, d: Partial<Omit<Transaction, 'id' | 'createdAt' | 'transferId'>>) =>
-			req<Transaction>(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(d) }),
-		remove: (id: string) => req<{ ok: true }>(`/api/transactions/${id}`, { method: 'DELETE' }),
+			req<Transaction[]>(
+				accountId ? `/api/transactions?accountId=${accountId}` : '/api/transactions',
+			),
 	},
 	transfers: {
 		create: (d: {
@@ -196,7 +184,11 @@ export const api = {
 			payee?: string | null
 			categoryId?: string | null
 			notes?: string | null
-		}) => req<{ transferId: string; legs: Transaction[] }>('/api/transfers', { method: 'POST', body: JSON.stringify(d) }),
+		}) =>
+			req<{ transferId: string; legs: Transaction[] }>('/api/transfers', {
+				method: 'POST',
+				body: JSON.stringify(d),
+			}),
 	},
 	balances: {
 		account: (id: string) =>

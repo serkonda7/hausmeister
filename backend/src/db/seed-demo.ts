@@ -1,5 +1,5 @@
-import { accounts, allocations, categories, events, pools, transactions } from './schema'
 import { db, sqlite } from './index'
+import { accounts, allocations, categories, events, pools, transactions } from './schema'
 
 // Tables are created by './index' on import, so this also works on a fresh
 // checkout with no data.db yet.
@@ -147,7 +147,9 @@ const poolSpass = {
 	color: '#ec4899',
 	createdAt: now(),
 }
-await db.insert(pools).values([poolNotgroschen, poolUrlaub, poolAltersvorsorge, poolFestgeldLeiter, poolSpass])
+await db
+	.insert(pools)
+	.values([poolNotgroschen, poolUrlaub, poolAltersvorsorge, poolFestgeldLeiter, poolSpass])
 
 // ---------- Allocations ----------
 await db.insert(allocations).values([
@@ -433,17 +435,19 @@ const catSparen = {
 	color: '#14b8a6',
 	createdAt: now(),
 }
-await db.insert(categories).values([
-	catGehalt,
-	catZinsen,
-	catMiete,
-	catLebensmittel,
-	catEnergie,
-	catMobilitaet,
-	catGesundheit,
-	catFreizeit,
-	catSparen,
-])
+await db
+	.insert(categories)
+	.values([
+		catGehalt,
+		catZinsen,
+		catMiete,
+		catLebensmittel,
+		catEnergie,
+		catMobilitaet,
+		catGesundheit,
+		catFreizeit,
+		catSparen,
+	])
 
 // ---------- Transactions (actuals ledger) ----------
 // Balances stay above allocations: Giro 9670 €, Tagesgeld 12192 €,
@@ -490,42 +494,212 @@ function transferLegs(
 
 await db.insert(transactions).values([
 	// Giro: salary in, rent & living out
-	txn(accGiro.id, '2026-01-01', 'Vermieter GmbH', catMiete.id, 95_000, 'outflow', 'Warmmiete Januar'),
-	txn(accGiro.id, '2026-01-02', 'Arbeitgeber AG', catGehalt.id, 350_000, 'inflow', 'Gehalt Januar'),
-	txn(accGiro.id, '2026-01-05', 'Stadtwerke', catEnergie.id, 12_000, 'outflow', 'Strom & Internet Januar'),
+	txn(
+		accGiro.id,
+		'2026-01-01',
+		'Vermieter GmbH',
+		catMiete.id,
+		95_000,
+		'outflow',
+		'Warmmiete Januar',
+	),
+	txn(
+		accGiro.id,
+		'2026-01-02',
+		'Arbeitgeber AG',
+		catGehalt.id,
+		350_000,
+		'inflow',
+		'Gehalt Januar',
+	),
+	txn(
+		accGiro.id,
+		'2026-01-05',
+		'Stadtwerke',
+		catEnergie.id,
+		12_000,
+		'outflow',
+		'Strom & Internet Januar',
+	),
 	txn(accGiro.id, '2026-01-08', 'REWE', catLebensmittel.id, 8_500, 'outflow'),
-	txn(accGiro.id, '2026-01-10', 'Kfz-Versicherung', catMobilitaet.id, 60_000, 'outflow', 'Jahresbeitrag'),
+	txn(
+		accGiro.id,
+		'2026-01-10',
+		'Kfz-Versicherung',
+		catMobilitaet.id,
+		60_000,
+		'outflow',
+		'Jahresbeitrag',
+	),
 	txn(accGiro.id, '2026-01-22', 'REWE', catLebensmittel.id, 6_200, 'outflow'),
-	txn(accGiro.id, '2026-02-01', 'Vermieter GmbH', catMiete.id, 95_000, 'outflow', 'Warmmiete Februar'),
-	txn(accGiro.id, '2026-02-02', 'Arbeitgeber AG', catGehalt.id, 350_000, 'inflow', 'Gehalt Februar'),
-	txn(accGiro.id, '2026-02-05', 'Stadtwerke', catEnergie.id, 12_000, 'outflow', 'Strom & Internet Februar'),
+	txn(
+		accGiro.id,
+		'2026-02-01',
+		'Vermieter GmbH',
+		catMiete.id,
+		95_000,
+		'outflow',
+		'Warmmiete Februar',
+	),
+	txn(
+		accGiro.id,
+		'2026-02-02',
+		'Arbeitgeber AG',
+		catGehalt.id,
+		350_000,
+		'inflow',
+		'Gehalt Februar',
+	),
+	txn(
+		accGiro.id,
+		'2026-02-05',
+		'Stadtwerke',
+		catEnergie.id,
+		12_000,
+		'outflow',
+		'Strom & Internet Februar',
+	),
 	txn(accGiro.id, '2026-02-07', 'REWE', catLebensmittel.id, 7_800, 'outflow'),
-	txn(accGiro.id, '2026-02-14', 'Ristorante Roma', catFreizeit.id, 4_500, 'outflow', 'Valentinstag'),
-	txn(accGiro.id, '2026-03-01', 'Vermieter GmbH', catMiete.id, 95_000, 'outflow', 'Warmmiete März'),
+	txn(
+		accGiro.id,
+		'2026-02-14',
+		'Ristorante Roma',
+		catFreizeit.id,
+		4_500,
+		'outflow',
+		'Valentinstag',
+	),
+	txn(
+		accGiro.id,
+		'2026-03-01',
+		'Vermieter GmbH',
+		catMiete.id,
+		95_000,
+		'outflow',
+		'Warmmiete März',
+	),
 	txn(accGiro.id, '2026-03-02', 'Arbeitgeber AG', catGehalt.id, 350_000, 'inflow', 'Gehalt März'),
 	txn(accGiro.id, '2026-03-06', 'REWE', catLebensmittel.id, 9_100, 'outflow'),
 	txn(accGiro.id, '2026-03-10', 'H&M', catFreizeit.id, 7_900, 'outflow', 'Frühjahrskleidung'),
 	// Tagesgeld: Zinsen in, Zahnarzt out
-	txn(accTagesgeld.id, '2026-07-01', 'Trade Republic', catZinsen.id, 4_200, 'inflow', 'Zinsen Q2'),
-	txn(accTagesgeld.id, '2026-08-20', 'Zahnarztpraxis Dr. Weber', catGesundheit.id, 45_000, 'outflow', 'Eigenanteil — aus Notgroschen'),
+	txn(
+		accTagesgeld.id,
+		'2026-07-01',
+		'Trade Republic',
+		catZinsen.id,
+		4_200,
+		'inflow',
+		'Zinsen Q2',
+	),
+	txn(
+		accTagesgeld.id,
+		'2026-08-20',
+		'Zahnarztpraxis Dr. Weber',
+		catGesundheit.id,
+		45_000,
+		'outflow',
+		'Eigenanteil — aus Notgroschen',
+	),
 	// Depot: Sparplan out, Dividende in
-	txn(accDepot.id, '2026-01-15', 'Trade Republic', catSparen.id, 50_000, 'outflow', 'MSCI World Sparplan Januar'),
-	txn(accDepot.id, '2026-02-15', 'Trade Republic', catSparen.id, 50_000, 'outflow', 'MSCI World Sparplan Februar'),
-	txn(accDepot.id, '2026-03-15', 'Trade Republic', catSparen.id, 50_000, 'outflow', 'MSCI World Sparplan März'),
-	txn(accDepot.id, '2026-06-15', 'iShares MSCI World', catZinsen.id, 15_000, 'inflow', 'Ausschüttung Q2'),
+	txn(
+		accDepot.id,
+		'2026-01-15',
+		'Trade Republic',
+		catSparen.id,
+		50_000,
+		'outflow',
+		'MSCI World Sparplan Januar',
+	),
+	txn(
+		accDepot.id,
+		'2026-02-15',
+		'Trade Republic',
+		catSparen.id,
+		50_000,
+		'outflow',
+		'MSCI World Sparplan Februar',
+	),
+	txn(
+		accDepot.id,
+		'2026-03-15',
+		'Trade Republic',
+		catSparen.id,
+		50_000,
+		'outflow',
+		'MSCI World Sparplan März',
+	),
+	txn(
+		accDepot.id,
+		'2026-06-15',
+		'iShares MSCI World',
+		catZinsen.id,
+		15_000,
+		'inflow',
+		'Ausschüttung Q2',
+	),
 	// Festgeld: Zinsen in (kein Puffer für Outflows — Allokation = 100 %)
-	txn(accFestgeld.id, '2026-09-01', 'Weltsparen', catZinsen.id, 31_000, 'inflow', '3,1 % auf 10.000 €'),
+	txn(
+		accFestgeld.id,
+		'2026-09-01',
+		'Weltsparen',
+		catZinsen.id,
+		31_000,
+		'inflow',
+		'3,1 % auf 10.000 €',
+	),
 	// Cash: Kiosk & Bäcker out
 	txn(accCash.id, '2026-02-03', 'Kiosk Hauptstraße', catLebensmittel.id, 1_200, 'outflow'),
 	txn(accCash.id, '2026-02-21', 'Wochenmarkt', catLebensmittel.id, 3_200, 'outflow'),
 	txn(accCash.id, '2026-03-07', 'Bäckerei Schmidt', catLebensmittel.id, 2_500, 'outflow'),
 	// Transfers (paired legs share a transferId)
-	...transferLegs(accGiro.id, accTagesgeld.id, '2026-01-15', 20_000, 'Monatliches Sparen', catSparen.id, 'Notgroschen aufbauen'),
-	...transferLegs(accGiro.id, accTagesgeld.id, '2026-02-15', 20_000, 'Monatliches Sparen', catSparen.id, 'Notgroschen aufbauen'),
-	...transferLegs(accGiro.id, accTagesgeld.id, '2026-03-15', 20_000, 'Monatliches Sparen', catSparen.id, 'Notgroschen aufbauen'),
-	...transferLegs(accGiro.id, accDepot.id, '2026-03-20', 50_000, 'ETF Einmalkauf', catSparen.id, 'Steuerrückzahlung investiert'),
-	...transferLegs(accGiro.id, accCash.id, '2026-01-20', 10_000, 'Bargeld abgehoben', null, 'Haushaltskasse auffüllen'),
+	...transferLegs(
+		accGiro.id,
+		accTagesgeld.id,
+		'2026-01-15',
+		20_000,
+		'Monatliches Sparen',
+		catSparen.id,
+		'Notgroschen aufbauen',
+	),
+	...transferLegs(
+		accGiro.id,
+		accTagesgeld.id,
+		'2026-02-15',
+		20_000,
+		'Monatliches Sparen',
+		catSparen.id,
+		'Notgroschen aufbauen',
+	),
+	...transferLegs(
+		accGiro.id,
+		accTagesgeld.id,
+		'2026-03-15',
+		20_000,
+		'Monatliches Sparen',
+		catSparen.id,
+		'Notgroschen aufbauen',
+	),
+	...transferLegs(
+		accGiro.id,
+		accDepot.id,
+		'2026-03-20',
+		50_000,
+		'ETF Einmalkauf',
+		catSparen.id,
+		'Steuerrückzahlung investiert',
+	),
+	...transferLegs(
+		accGiro.id,
+		accCash.id,
+		'2026-01-20',
+		10_000,
+		'Bargeld abgehoben',
+		null,
+		'Haushaltskasse auffüllen',
+	),
 ])
 
-console.log('Demo seed done: 5 accounts, 5 pools, 8 allocations, 10 events, 9 categories, 35 transactions (incl. 5 transfers)')
+console.log(
+	'Demo seed done: 5 accounts, 5 pools, 8 allocations, 10 events, 9 categories, 35 transactions (incl. 5 transfers)',
+)
 sqlite.close()

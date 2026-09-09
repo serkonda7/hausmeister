@@ -4,7 +4,8 @@
   "version": "0.0.1-dev",
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "packages/*"
   ],
   "scripts": {
     "dev": "turbo run dev",

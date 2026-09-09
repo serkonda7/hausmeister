@@ -26,9 +26,7 @@ export const accountCreateSchema = v.object({
 	type: accountTypeSchema,
 	institution: v.optional(v.nullable(v.string())),
 	openingDate: isoDateNullableSchema,
-	openingBalanceCents: v.optional(
-		v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0))),
-	),
+	openingBalanceCents: v.optional(v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0)))),
 	iban: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(34)))),
 	notes: v.optional(v.nullable(v.string())),
 })
@@ -44,7 +42,9 @@ export const poolCreateSchema = v.object({
 		v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
 	),
 	expectedReturnBps: v.optional(v.nullable(v.pipe(v.number(), v.integer()))),
-	riskLevel: v.optional(v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(5)))),
+	riskLevel: v.optional(
+		v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(5))),
+	),
 	volatilityBps: v.optional(v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0)))),
 	horizonMonths: v.optional(v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0)))),
 	color: v.optional(v.nullable(v.string())),

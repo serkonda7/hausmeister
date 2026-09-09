@@ -1,4 +1,4 @@
-import { createSignal, type Accessor, type Setter } from 'solid-js'
+import { type Accessor, createSignal, type Setter } from 'solid-js'
 
 export interface CrudFormState<TForm extends object, E> {
 	showForm: Accessor<boolean>
@@ -23,9 +23,7 @@ export interface CrudFormState<TForm extends object, E> {
  * Composes with {@link patchForm} — callers still use `patchForm(setForm, …)`
  * for individual inputs; this hook only owns the open/edit/submit shell.
  */
-export function useCrudForm<TForm extends object, E>(
-	initialForm: TForm,
-): CrudFormState<TForm, E> {
+export function useCrudForm<TForm extends object, E>(initialForm: TForm): CrudFormState<TForm, E> {
 	const [showForm, setShowForm] = createSignal(false)
 	const [editing, setEditing] = createSignal<E | null>(null)
 	const [error, setError] = createSignal('')

@@ -70,9 +70,7 @@ export default function App(): JSX.Element {
 						type="button"
 						onClick={toggleTheme}
 						class="btn-icon theme-toggle"
-						aria-label={
-							isDark() ? 'Switch to light mode' : 'Switch to dark mode'
-						}
+						aria-label={isDark() ? 'Switch to light mode' : 'Switch to dark mode'}
 						title={isDark() ? 'Light mode' : 'Dark mode'}
 					>
 						{isDark() ? <IconSun size={18} /> : <IconMoon size={18} />}

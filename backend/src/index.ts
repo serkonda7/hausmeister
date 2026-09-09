@@ -3,14 +3,7 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { db } from './db/index'
-import {
-	accounts,
-	allocations,
-	categories,
-	events,
-	pools,
-	transactions,
-} from './db/schema'
+import { accounts, allocations, categories, events, pools, transactions } from './db/schema'
 import {
 	accountCreateSchema,
 	accountUpdateSchema,
@@ -94,9 +87,12 @@ function allocatedFor(
 
 // 3b: shared account state — single place for load-account+txns+allocs →
 // currentBalanceFor → allocatedFor. All over-allocation guards use this.
-async function getAccountState(
-	accountId: string,
-): Promise<{ account: AccountRow; current: number; allocated: number; transactionCount: number } | null> {
+async function getAccountState(accountId: string): Promise<{
+	account: AccountRow
+	current: number
+	allocated: number
+	transactionCount: number
+} | null> {
 	const account = await findByIdOrNull<AccountRow>(accounts, accountId)
 	if (!account) {
 		return null
@@ -121,34 +117,40 @@ async function getAccountState(
 	}
 }
 
-async function overAllocation(
-	accountId: string,
-	proposedTotalAllocated: number,
-): Promise<{ currentCents: number; allocatedCents: number } | null> {
-	const state = await getAccountState(accountId)
-	if (!state) {
-		return null
-	}
-	if (proposedTotalAllocated > state.current) {
-		return { currentCents: state.current, allocatedCents: proposedTotalAllocated }
+type CoverBreach = { currentCents: number; allocatedCents: number }
+
+// Pure cores: single place for the `allocated <= current` invariant.
+function allocationBreach(
+	currentCents: number,
+	proposedAllocatedCents: number,
+): CoverBreach | null {
+	if (proposedAllocatedCents > currentCents) {
+		return { currentCents, allocatedCents: proposedAllocatedCents }
 	}
 	return null
 }
 
-// 3b: outflow guard — balance after a new outflow must still cover allocations.
-async function assertCovers(
-	accountId: string,
+function outflowBreach(
+	currentCents: number,
+	allocatedCents: number,
 	outflowCents: number,
-): Promise<{ currentCents: number; allocatedCents: number } | null> {
+): CoverBreach | null {
+	const after = currentCents - outflowCents
+	if (allocatedCents > after) {
+		return { currentCents: after, allocatedCents }
+	}
+	return null
+}
+
+// Async wrapper for call sites without a loaded state. Returns null when the
+// account is missing (callers 404 on `getAccountState()` first) or covered.
+// 3b: outflow guard — balance after a new outflow must still cover allocations.
+async function assertCovers(accountId: string, outflowCents: number): Promise<CoverBreach | null> {
 	const state = await getAccountState(accountId)
 	if (!state) {
 		return null
 	}
-	const after = state.current - outflowCents
-	if (state.allocated > after) {
-		return { currentCents: after, allocatedCents: state.allocated }
-	}
-	return null
+	return outflowBreach(state.current, state.allocated, outflowCents)
 }
 
 // 3d: frequency stepping — returns false for unknown freq.
@@ -343,11 +345,9 @@ app.post('/allocations', vValidator('json', allocationCreateSchema), async (c) =
 		return c.json({ error: 'Account not found' }, 404)
 	}
 	const proposed = state.allocated + data.amountCents
-	if (proposed > state.current) {
-		return c.json(
-			{ error: 'Allocation exceeds account balance', currentCents: state.current, allocatedCents: proposed },
-			422,
-		)
+	const breach = allocationBreach(state.current, proposed)
+	if (breach) {
+		return c.json({ error: 'Allocation exceeds account balance', ...breach }, 422)
 	}
 	const row = {
 		id: id(),
@@ -394,12 +394,12 @@ app.put('/allocations/:id', vValidator('json', allocationUpdateSchema), async (c
 		}
 		const oldAmountInState = updated.accountId === existing.accountId ? existing.amountCents : 0
 		const proposed = state.allocated - oldAmountInState + updated.amountCents
-		if (proposed > state.current) {
+		const breach = allocationBreach(state.current, proposed)
+		if (breach) {
 			return c.json(
 				{
 					error: 'Allocation exceeds account balance',
-					currentCents: state.current,
-					allocatedCents: proposed,
+					...breach,
 				},
 				422,
 			)
@@ -521,7 +521,10 @@ app.put('/categories/:id', vValidator('json', categoryUpdateSchema), async (c) =
 		color: mergePatch(existing.color, data.color),
 	}
 	try {
-		await db.update(categories).set(updated).where(eq(categories.id, c.req.param('id')))
+		await db
+			.update(categories)
+			.set(updated)
+			.where(eq(categories.id, c.req.param('id')))
 	} catch {
 		return c.json({ error: 'Category name already exists' }, 409)
 	}
@@ -560,10 +563,7 @@ app.post('/transactions', vValidator('json', transactionCreateSchema), async (c)
 	if (data.direction === 'outflow') {
 		const over = await assertCovers(data.accountId, data.amountCents)
 		if (over) {
-			return c.json(
-				{ error: 'Transaction would over-allocate account', ...over },
-				422,
-			)
+			return c.json({ error: 'Transaction would over-allocate account', ...over }, 422)
 		}
 	}
 	const row = {
@@ -606,7 +606,10 @@ app.put('/transactions/:id', vValidator('json', transactionUpdateSchema), async 
 	if (updated.categoryId != null && !(await exists(categories, updated.categoryId))) {
 		return c.json({ error: 'Category not found' }, 404)
 	}
-	await db.update(transactions).set(updated).where(eq(transactions.id, c.req.param('id')))
+	await db
+		.update(transactions)
+		.set(updated)
+		.where(eq(transactions.id, c.req.param('id')))
 	return c.json({ ...existing, ...updated })
 })
 
@@ -642,10 +645,7 @@ app.post('/transfers', vValidator('json', transferCreateSchema), async (c) => {
 	// Source balance after outflow must still cover its allocations
 	const over = await assertCovers(data.fromAccountId, data.amountCents)
 	if (over) {
-		return c.json(
-			{ error: 'Transfer would over-allocate source account', ...over },
-			422,
-		)
+		return c.json({ error: 'Transfer would over-allocate source account', ...over }, 422)
 	}
 	const transferId = id()
 	const stamp = now()
@@ -729,7 +729,7 @@ app.get('/summary', async (c) => {
 		const current = currentByAccount.get(acc.id) ?? 0
 		const remainder = current - allocated
 		if (remainder > 0) {
-			liquidityMap['instant'] = (liquidityMap['instant'] ?? 0) + remainder
+			liquidityMap.instant = (liquidityMap.instant ?? 0) + remainder
 		}
 	}
 

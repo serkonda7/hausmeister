@@ -1,27 +1,24 @@
+import type {
+	AccountType,
+	CategoryKind,
+	Direction,
+	Frequency,
+	LiquidityTier,
+} from '@homie/contracts'
+import {
+	accountTypeEnum,
+	categoryKindEnum,
+	directionEnum,
+	frequencyEnum,
+	liquidityTierEnum,
+} from '@homie/contracts'
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-// Enums as text with check constraints (validated in app layer)
-export const liquidityTierEnum = ['instant', 'days', 'weeks', 'months', 'locked'] as const
-export type LiquidityTier = (typeof liquidityTierEnum)[number]
-
-export const accountTypeEnum = [
-	'checking',
-	'savings',
-	'broker',
-	'cash',
-	'crypto',
-	'festgeld',
-	'other',
-] as const
-export type AccountType = (typeof accountTypeEnum)[number]
-
+export type { AccountType, CategoryKind, Direction, Frequency, LiquidityTier }
+// Single source of truth lives in `@homie/contracts`; re-exported here so
+// existing `from './db/schema'` imports keep working.
+export { accountTypeEnum, categoryKindEnum, directionEnum, frequencyEnum, liquidityTierEnum }
 export const riskLevelEnum = [1, 2, 3, 4, 5] as const
-
-export const directionEnum = ['inflow', 'outflow'] as const
-export type Direction = (typeof directionEnum)[number]
-
-export const frequencyEnum = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const
-export type Frequency = (typeof frequencyEnum)[number]
 
 export const accounts = sqliteTable('accounts', {
 	id: text('id').primaryKey(),
@@ -82,9 +79,6 @@ export const events = sqliteTable('events', {
 })
 
 // ---- Phase 1: ledger ----
-export const categoryKindEnum = ['income', 'expense'] as const
-export type CategoryKind = (typeof categoryKindEnum)[number]
-
 export const categories = sqliteTable('categories', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull().unique(),

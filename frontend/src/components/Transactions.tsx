@@ -3,8 +3,8 @@ import { api, type Category, type Transaction } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { formatDateISO, formatEUR, todayISO } from '../lib/format'
-import { accountName, categoryOf } from '../lib/names'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import { accountName, categoryOf } from '../lib/names'
 import Amount from './Amount'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
@@ -43,9 +43,7 @@ export default function Transactions() {
 		async () => api.transactions.list(accountFilter() || undefined),
 	)
 	const [accounts] = createResource(() => api.accounts.list())
-	const [categories, { refetch: refetchCats }] = createResource(() =>
-		api.categories.list(),
-	)
+	const [categories, { refetch: refetchCats }] = createResource(() => api.categories.list())
 
 	const [mode, setMode] = createSignal<Mode>('transaction')
 	const [showForm, setShowForm] = createSignal(false)
@@ -262,7 +260,12 @@ export default function Transactions() {
 			<div class="page-header">
 				<h2 class="page-title">Transactions</h2>
 				<div class="inline-row">
-					<button type="button" onClick={openTransfer} class="btn-ghost" disabled={(accounts()?.length ?? 0) < 2}>
+					<button
+						type="button"
+						onClick={openTransfer}
+						class="btn-ghost"
+						disabled={(accounts()?.length ?? 0) < 2}
+					>
 						⇄ Transfer
 					</button>
 					<button
@@ -356,13 +359,19 @@ export default function Transactions() {
 					</div>
 
 					<Show when={mode() === 'transaction'}>
-						<form onSubmit={submitTxn} class="form-card" style={{ padding: 0, border: 'none' }}>
+						<form
+							onSubmit={submitTxn}
+							class="form-card"
+							style={{ padding: 0, border: 'none' }}
+						>
 							<div class="form-grid">
 								<label class="field">
 									Account
 									<select
 										value={form().accountId}
-										onChange={(e) => patchForm(setForm, 'accountId', e.currentTarget.value)}
+										onChange={(e) =>
+											patchForm(setForm, 'accountId', e.currentTarget.value)
+										}
 										required
 										class="input"
 									>
@@ -385,7 +394,9 @@ export default function Transactions() {
 									Payee
 									<input
 										value={form().payee}
-										onInput={(e) => patchForm(setForm, 'payee', e.currentTarget.value)}
+										onInput={(e) =>
+											patchForm(setForm, 'payee', e.currentTarget.value)
+										}
 										class="input"
 										placeholder="e.g. REWE, Employer…"
 									/>
@@ -394,7 +405,9 @@ export default function Transactions() {
 									Category
 									<select
 										value={form().categoryId}
-										onChange={(e) => patchForm(setForm, 'categoryId', e.currentTarget.value)}
+										onChange={(e) =>
+											patchForm(setForm, 'categoryId', e.currentTarget.value)
+										}
 										class="input"
 									>
 										<option value="">— none</option>
@@ -410,7 +423,9 @@ export default function Transactions() {
 										step="0.01"
 										min="0.01"
 										value={form().amount}
-										onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
+										onInput={(e) =>
+											patchForm(setForm, 'amount', e.currentTarget.value)
+										}
 										required
 										class="input"
 									/>
@@ -420,7 +435,11 @@ export default function Transactions() {
 									<select
 										value={form().direction}
 										onChange={(e) =>
-											patchForm(setForm, 'direction', e.currentTarget.value as 'inflow' | 'outflow')
+											patchForm(
+												setForm,
+												'direction',
+												e.currentTarget.value as 'inflow' | 'outflow',
+											)
 										}
 										class="input"
 									>
@@ -433,7 +452,9 @@ export default function Transactions() {
 								Notes
 								<input
 									value={form().notes}
-									onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
+									onInput={(e) =>
+										patchForm(setForm, 'notes', e.currentTarget.value)
+									}
 									class="input"
 								/>
 							</label>
@@ -441,7 +462,11 @@ export default function Transactions() {
 								<p class="form-error">{error()}</p>
 							</Show>
 							<div class="form-actions">
-								<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
+								<button
+									type="button"
+									onClick={() => setShowForm(false)}
+									class="btn-ghost"
+								>
 									Cancel
 								</button>
 								<button type="submit" class="btn-primary">
@@ -452,14 +477,21 @@ export default function Transactions() {
 					</Show>
 
 					<Show when={mode() === 'transfer'}>
-						<form onSubmit={submitTransfer} class="form-card" style={{ padding: 0, border: 'none' }}>
+						<form
+							onSubmit={submitTransfer}
+							class="form-card"
+							style={{ padding: 0, border: 'none' }}
+						>
 							<div class="form-grid">
 								<label class="field">
 									From account
 									<select
 										value={transferForm().fromAccountId}
 										onChange={(e) =>
-											setTransferForm((p) => ({ ...p, fromAccountId: e.currentTarget.value }))
+											setTransferForm((p) => ({
+												...p,
+												fromAccountId: e.currentTarget.value,
+											}))
 										}
 										required
 										class="input"
@@ -475,7 +507,10 @@ export default function Transactions() {
 									<select
 										value={transferForm().toAccountId}
 										onChange={(e) =>
-											setTransferForm((p) => ({ ...p, toAccountId: e.currentTarget.value }))
+											setTransferForm((p) => ({
+												...p,
+												toAccountId: e.currentTarget.value,
+											}))
 										}
 										required
 										class="input"
@@ -494,7 +529,10 @@ export default function Transactions() {
 										min="0.01"
 										value={transferForm().amount}
 										onInput={(e) =>
-											setTransferForm((p) => ({ ...p, amount: e.currentTarget.value }))
+											setTransferForm((p) => ({
+												...p,
+												amount: e.currentTarget.value,
+											}))
 										}
 										required
 										class="input"
@@ -514,7 +552,10 @@ export default function Transactions() {
 									<input
 										value={transferForm().payee}
 										onInput={(e) =>
-											setTransferForm((p) => ({ ...p, payee: e.currentTarget.value }))
+											setTransferForm((p) => ({
+												...p,
+												payee: e.currentTarget.value,
+											}))
 										}
 										class="input"
 									/>
@@ -524,7 +565,10 @@ export default function Transactions() {
 									<select
 										value={transferForm().categoryId}
 										onChange={(e) =>
-											setTransferForm((p) => ({ ...p, categoryId: e.currentTarget.value }))
+											setTransferForm((p) => ({
+												...p,
+												categoryId: e.currentTarget.value,
+											}))
 										}
 										class="input"
 									>
@@ -540,7 +584,10 @@ export default function Transactions() {
 								<input
 									value={transferForm().notes}
 									onInput={(e) =>
-										setTransferForm((p) => ({ ...p, notes: e.currentTarget.value }))
+										setTransferForm((p) => ({
+											...p,
+											notes: e.currentTarget.value,
+										}))
 									}
 									class="input"
 								/>
@@ -553,7 +600,11 @@ export default function Transactions() {
 								<p class="form-error">{error()}</p>
 							</Show>
 							<div class="form-actions">
-								<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
+								<button
+									type="button"
+									onClick={() => setShowForm(false)}
+									class="btn-ghost"
+								>
 									Cancel
 								</button>
 								<button type="submit" class="btn-primary">
@@ -582,19 +633,31 @@ export default function Transactions() {
 									<div class="title">
 										{t.payee || <span class="subtle">— no payee —</span>}{' '}
 										<Show when={isTransferLeg(t)}>
-											<span class="subtle text-sm" title={`Transfer ${t.transferId}`}>
+											<span
+												class="subtle text-sm"
+												title={`Transfer ${t.transferId}`}
+											>
 												⇄ transfer
 											</span>
 										</Show>
 									</div>
 									<div class="muted text-sm">
-										{formatDateISO(t.date)} · {accountName(accounts(), t.accountId)}
+										{formatDateISO(t.date)} ·{' '}
+										{accountName(accounts(), t.accountId)}
 										<Show when={cat()}>
 											{' '}
 											·{' '}
-											<span class="inline-row" style={{ display: 'inline-flex' }}>
+											<span
+												class="inline-row"
+												style={{ display: 'inline-flex' }}
+											>
 												<Show when={cat()?.color}>
-													<span class="dot dot--sm" style={{ background: cat()?.color ?? '#9ca3af' }} />
+													<span
+														class="dot dot--sm"
+														style={{
+															background: cat()?.color ?? '#9ca3af',
+														}}
+													/>
 												</Show>
 												{cat()?.name}
 											</span>
@@ -618,7 +681,10 @@ export default function Transactions() {
 											</button>
 										}
 									>
-										<CrudRow onEdit={() => openEdit(t)} onDelete={() => remove(t)} />
+										<CrudRow
+											onEdit={() => openEdit(t)}
+											onDelete={() => remove(t)}
+										/>
 									</Show>
 								</div>
 							</div>
@@ -648,39 +714,39 @@ export default function Transactions() {
 				onSubmit={submitCat}
 				onCancel={catCrud.close}
 			>
-					<div class="form-grid">
-						<label class="field">
-							Name
-							<input
-								value={catForm().name}
-								onInput={(e) => patchForm(setCatForm, 'name', e.currentTarget.value)}
-								required
-								class="input"
-								placeholder="e.g. Groceries, Salary"
-							/>
-						</label>
-						<label class="field">
-							Kind
-							<select
-								value={catForm().kind}
-								onChange={(e) => patchForm(setCatForm, 'kind', e.currentTarget.value)}
-								class="input"
-							>
-								<option value="">Both</option>
-								<option value="income">Income</option>
-								<option value="expense">Expense</option>
-							</select>
-						</label>
-						<label class="field">
-							Color
-							<input
-								type="color"
-								value={catForm().color}
-								onInput={(e) => patchForm(setCatForm, 'color', e.currentTarget.value)}
-								class="input"
-							/>
-						</label>
-					</div>
+				<div class="form-grid">
+					<label class="field">
+						Name
+						<input
+							value={catForm().name}
+							onInput={(e) => patchForm(setCatForm, 'name', e.currentTarget.value)}
+							required
+							class="input"
+							placeholder="e.g. Groceries, Salary"
+						/>
+					</label>
+					<label class="field">
+						Kind
+						<select
+							value={catForm().kind}
+							onChange={(e) => patchForm(setCatForm, 'kind', e.currentTarget.value)}
+							class="input"
+						>
+							<option value="">Both</option>
+							<option value="income">Income</option>
+							<option value="expense">Expense</option>
+						</select>
+					</label>
+					<label class="field">
+						Color
+						<input
+							type="color"
+							value={catForm().color}
+							onInput={(e) => patchForm(setCatForm, 'color', e.currentTarget.value)}
+							class="input"
+						/>
+					</label>
+				</div>
 			</CrudForm>
 
 			<div class="list list--tight">
@@ -692,7 +758,10 @@ export default function Transactions() {
 								<span class="strong">{c.name}</span>
 								<span class="muted text-sm">· {c.kind ?? 'both'}</span>
 							</div>
-							<CrudRow onEdit={() => openCatEdit(c)} onDelete={() => removeCat(c.id)} />
+							<CrudRow
+								onEdit={() => openCatEdit(c)}
+								onDelete={() => removeCat(c.id)}
+							/>
 						</div>
 					)}
 				</For>
