@@ -68,7 +68,12 @@ body {
 	background: var(--bg);
 	color: var(--text);
 	margin: 0;
-	overflow: hidden;
+	/* Medium audit: no `overflow: hidden` here. The app shell keeps a single
+	   main scroll container (`.app-content` in App.css); locking `body`
+	   removed the window fallback scroller and risked a keyboard trap
+	   (scroll regions unreachable via keyboard when focus is outside them).
+	   Sidebar keeps its own independent nav scroll. */
+	overflow: auto;
 }
 
 html,
@@ -128,6 +133,7 @@ input[type="color"] {
 .btn-primary:hover {
 	background: var(--primary-hover);
 	border-color: var(--primary-hover);
+	/* Medium audit: lift reserved for primary actions only. */
 	transform: translateY(-1px);
 	box-shadow: var(--shadow-lg);
 }
@@ -156,7 +162,6 @@ input[type="color"] {
 .btn-ghost:hover {
 	background: var(--surface-2);
 	border-color: var(--border-strong);
-	transform: translateY(-1px);
 	box-shadow: var(--shadow);
 }
 
@@ -183,7 +188,6 @@ input[type="color"] {
 	background: var(--surface-2);
 	border-color: var(--border-strong);
 	color: var(--text);
-	transform: translateY(-1px);
 	box-shadow: var(--shadow);
 }
 
@@ -214,6 +218,22 @@ input[type="color"] {
 	outline-color: var(--danger);
 }
 
+/* Medium audit: honor reduced-motion — no lifts/transitions/animations.
+   Kill-switch intentionally uses !important so it overrides all author
+   transitions/animations for users who request reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must override author transform */
+		transform: none !important;
+		/* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must override author transitions */
+		transition: none !important;
+		/* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must override author animations */
+		animation: none !important;
+	}
+}
+
 /* Shared page layout */
 .page {
 	display: grid;
@@ -234,6 +254,13 @@ input[type="color"] {
 	margin: 0;
 	font-size: 1.125rem;
 	font-weight: 600;
+}
+
+/* Medium audit: per-view subtitle slot (count + description). */
+.page-subtitle {
+	margin: 0.15rem 0 0;
+	font-size: 0.875rem;
+	color: var(--muted);
 }
 
 /* Shared surfaces: one base + size modifiers.
@@ -269,6 +296,13 @@ input[type="color"] {
 	gap: 0.75rem;
 }
 
+/* Medium audit: single column on narrow screens. */
+@media (max-width: 640px) {
+	.form-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
 .field {
 	display: grid;
 	gap: 0.25rem;
@@ -296,6 +330,82 @@ input[type="color"] {
 	font-size: 0.875rem;
 }
 
+/* Medium audit: required marker + inline validation hints. */
+.req {
+	color: var(--danger);
+	font-weight: 700;
+}
+
+.form-hint {
+	font-size: 0.75rem;
+	color: var(--muted);
+	margin: 0.15rem 0 0;
+}
+
+.form-hint--error {
+	color: var(--error);
+	font-weight: 500;
+}
+
+/* Medium audit: grouped form sections (Pools form). */
+.form-group {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 0.75rem;
+	margin: 0;
+	display: grid;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+.form-group > legend {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 0 0.4rem;
+}
+
+/* Medium audit: compact color swatch instead of full-width bordered input. */
+.color-swatch {
+	width: 2.75rem;
+	height: 2rem;
+	padding: 0.15rem;
+	border: 1px solid var(--border-strong);
+	border-radius: 8px;
+	background: var(--input-bg);
+	cursor: pointer;
+}
+
+/* Medium audit: month group headings (Events view). */
+.month-heading {
+	margin: 0.75rem 0 0;
+	font-size: 0.8rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted);
+}
+
+/* Medium audit: denser desktop ledger rows (cards kept, just tightened).
+   Base .card--compact first so the more specific .ledger override below
+   ascends in specificity. */
+.card--compact {
+	padding: 0.9rem;
+}
+
+@media (min-width: 1024px) {
+	.ledger {
+		gap: 0.4rem;
+	}
+
+	.ledger .card--compact {
+		padding: 0.45rem 0.75rem;
+		border-radius: 8px;
+	}
+}
+
 .form-actions {
 	display: flex;
 	gap: 0.5rem;
@@ -310,10 +420,6 @@ input[type="color"] {
 
 .list--tight {
 	gap: 0.6rem;
-}
-
-.card--compact {
-	padding: 0.9rem;
 }
 
 .card-row {

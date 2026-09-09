@@ -16,8 +16,37 @@ export default function Events() {
 	const [pools] = createResource(() => api.pools.list())
 
 	const sortedEvents = createMemo(() =>
-		(events() ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)),
+		(events() ?? []).slice().sort((a, b) => b.date.localeCompare(a.date)),
 	)
+
+	/** Month label for a `YYYY-MM` group key (German, e.g. "September 2026"). */
+	function monthLabel(key: string): string {
+		const [y, m] = key.split('-').map(Number)
+		const label = new Intl.DateTimeFormat('de-DE', {
+			month: 'long',
+			year: 'numeric',
+		}).format(new Date(y, (m ?? 1) - 1, 1))
+		return label.charAt(0).toUpperCase() + label.slice(1)
+	}
+
+	/** Newest first, grouped by month for a scannable timeline. */
+	const groupedEvents = createMemo(() => {
+		const groups: Array<{
+			key: string
+			label: string
+			items: FinanceEvent[]
+		}> = []
+		for (const ev of sortedEvents()) {
+			const key = ev.date.slice(0, 7)
+			let g = groups.find((x) => x.key === key)
+			if (!g) {
+				g = { key, label: monthLabel(key), items: [] }
+				groups.push(g)
+			}
+			g.items.push(ev)
+		}
+		return groups
+	})
 
 	const crud = useCrudForm<
 		{
@@ -117,7 +146,12 @@ export default function Events() {
 	return (
 		<div class="page">
 			<div class="page-header">
-				<h2 class="page-title">Timeline</h2>
+				<div>
+					<h2 class="page-title">Ereignisse</h2>
+					<p class="page-subtitle">
+						{(events() ?? []).length} Ereignisse · neueste zuerst, nach Monat gruppiert.
+					</p>
+				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Event
 				</button>
@@ -133,21 +167,29 @@ export default function Events() {
 				<div class="form-grid">
 					<label class="field">
 						Title{' '}
+						<span class="req" aria-hidden="true">
+							*
+						</span>
 						<input
 							value={form().title}
 							onInput={(e) => patchForm(setForm, 'title', e.currentTarget.value)}
 							required
+							aria-required="true"
 							class="input"
 						/>
 					</label>
 					<label class="field">
 						Amount (€){' '}
+						<span class="req" aria-hidden="true">
+							*
+						</span>
 						<input
 							type="number"
 							step="0.01"
 							value={form().amount}
 							onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
 							required
+							aria-required="true"
 							class="input"
 						/>
 					</label>
@@ -170,6 +212,9 @@ export default function Events() {
 					</label>
 					<label class="field" for="ev-date">
 						Date{' '}
+						<span class="req" aria-hidden="true">
+							*
+						</span>
 						<DateInput
 							id="ev-date"
 							value={form().date}
@@ -252,29 +297,43 @@ export default function Events() {
 			</CrudForm>
 
 			<div class="list list--tight">
-				<For each={sortedEvents()}>
-					{(ev) => (
-						<div class="card card--compact card-row">
-							<div>
-								<div class="title">{ev.title}</div>
-								<div class="muted text-sm">
-									{formatDateISO(ev.date)}{' '}
-									<Show when={ev.isRecurring}>· {ev.frequency} ↻</Show>{' '}
-									<Show when={ev.recurringUntil}>
-										{' '}
-										until{' '}
-										{ev.recurringUntil ? formatDateISO(ev.recurringUntil) : ''}
-									</Show>
-								</div>
-							</div>
-							<div class="card-actions">
-								<Amount cents={ev.amountCents} direction={ev.direction} />
-								<CrudRow
-									onEdit={() => openEdit(ev.id)}
-									onDelete={() => remove(ev.id)}
-								/>
-							</div>
-						</div>
+				<For each={groupedEvents()}>
+					{(g) => (
+						<>
+							<h3 class="month-heading">{g.label}</h3>
+							<For each={g.items}>
+								{(ev) => (
+									<div class="card card--compact card-row">
+										<div>
+											<div class="title">{ev.title}</div>
+											<div class="muted text-sm">
+												{formatDateISO(ev.date)}{' '}
+												<Show when={ev.isRecurring}>
+													· {ev.frequency} ↻
+												</Show>{' '}
+												<Show when={ev.recurringUntil}>
+													{' '}
+													until{' '}
+													{ev.recurringUntil
+														? formatDateISO(ev.recurringUntil)
+														: ''}
+												</Show>
+											</div>
+										</div>
+										<div class="card-actions">
+											<Amount
+												cents={ev.amountCents}
+												direction={ev.direction}
+											/>
+											<CrudRow
+												onEdit={() => openEdit(ev.id)}
+												onDelete={() => remove(ev.id)}
+											/>
+										</div>
+									</div>
+								)}
+							</For>
+						</>
 					)}
 				</For>
 				<Show when={(events() ?? []).length === 0 && !events.loading}>

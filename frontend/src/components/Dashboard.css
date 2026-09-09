@@ -63,16 +63,57 @@
 
 .pool-tags {
 	display: flex;
-	gap: 1rem;
+	gap: 0.4rem;
 	margin-top: 0.5rem;
 	font-size: 0.75rem;
 	color: var(--muted);
 	flex-wrap: wrap;
+	align-items: center;
+}
+
+/* Medium audit: chip-ify Target/Range/Return/Risk/Horizon (CSS only —
+   markup and bar logic untouched). */
+.pool-tags > span:not(.pool-status) {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.15rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface-2);
+	color: var(--text-secondary);
+	font-weight: 500;
+	white-space: nowrap;
 }
 
 .pool-status {
 	margin-left: auto;
 	font-weight: 600;
+}
+
+/* Status badge: pill + icon + text, never color-only (color-blind safe). */
+.status-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.15rem 0.6rem;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	border: 1px solid transparent;
+	white-space: nowrap;
+}
+
+.status-badge--ok {
+	color: var(--success);
+	border-color: var(--success);
+	background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.status-badge--warn {
+	color: var(--warning);
+	border-color: var(--warning);
+	background: color-mix(in srgb, var(--warning) 12%, transparent);
 }
 
 .pool-target {

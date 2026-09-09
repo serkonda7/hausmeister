@@ -1,4 +1,4 @@
-import { createResource, For, Show } from 'solid-js'
+import { createMemo, createResource, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
@@ -100,6 +100,13 @@ export default function Pools() {
 			) {
 				throw new Error('Invalid number input')
 			}
+			if (
+				targetMinCents != null &&
+				targetMaxCents != null &&
+				targetMinCents > targetMaxCents
+			) {
+				throw new Error('Target min must not exceed target max')
+			}
 			const payload: Omit<Pool, 'id' | 'createdAt'> = {
 				name: f.name,
 				purpose: f.purpose || null,
@@ -130,10 +137,45 @@ export default function Pools() {
 		)
 	}
 
+	// Medium audit: live client-side validation hints (min > max, % sum > 100).
+	const minCents = () => parseEuroToCents(form().targetMin)
+	const maxCents = () => parseEuroToCents(form().targetMax)
+	const minMaxInvalid = createMemo(() => {
+		const lo = minCents()
+		const hi = maxCents()
+		return lo != null && hi != null && !Number.isNaN(lo) && !Number.isNaN(hi) && lo > hi
+	})
+	const targetPercentNum = () => {
+		const t = form().targetPercent.trim()
+		return t === '' ? null : Number.parseInt(t, 10)
+	}
+	const percentOutOfRange = createMemo(() => {
+		const v = targetPercentNum()
+		return v != null && !Number.isNaN(v) && (v < 0 || v > 100)
+	})
+	const percentSumOver = createMemo(() => {
+		const cur = targetPercentNum()
+		if (cur == null || Number.isNaN(cur)) {
+			return null
+		}
+		const editingId = crud.editing()?.id
+		const sum = (pools() ?? [])
+			.filter((p) => p.id !== editingId)
+			.reduce((s, p) => s + (p.targetPercent ?? 0), 0)
+		const total = sum + cur
+		return total > 100 ? total : null
+	})
+
 	return (
 		<div class="page">
 			<div class="page-header">
-				<h2 class="page-title">Pools</h2>
+				<div>
+					<h2 class="page-title">Pools</h2>
+					<p class="page-subtitle">
+						{(pools() ?? []).length} pools · targets, risk and expected return at a
+						glance.
+					</p>
+				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					+ Pool
 				</button>
@@ -146,119 +188,166 @@ export default function Pools() {
 				onSubmit={submit}
 				onCancel={crud.close}
 			>
-				<div class="form-grid">
-					<label class="field">
-						Name{' '}
-						<input
-							value={form().name}
-							onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
-							required
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						Purpose
-						<input
-							value={form().purpose}
-							onInput={(e) => patchForm(setForm, 'purpose', e.currentTarget.value)}
-							class="input"
-							placeholder="e.g. Emergency fund, Retirement"
-						/>
-					</label>
-					<label class="field">
-						Target min (€){' '}
-						<input
-							type="number"
-							step="1"
-							value={form().targetMin}
-							onInput={(e) => patchForm(setForm, 'targetMin', e.currentTarget.value)}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						Target max (€){' '}
-						<input
-							type="number"
-							step="1"
-							value={form().targetMax}
-							onInput={(e) => patchForm(setForm, 'targetMax', e.currentTarget.value)}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						Target %{' '}
-						<input
-							type="number"
-							min="0"
-							max="100"
-							step="1"
-							value={form().targetPercent}
-							onInput={(e) =>
-								patchForm(setForm, 'targetPercent', e.currentTarget.value)
-							}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						Expected return % p.a.{' '}
-						<input
-							type="number"
-							step="0.1"
-							value={form().expectedReturn}
-							onInput={(e) =>
-								patchForm(setForm, 'expectedReturn', e.currentTarget.value)
-							}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						Risk{' '}
-						<select
-							value={form().riskLevel}
-							onChange={(e) => patchForm(setForm, 'riskLevel', e.currentTarget.value)}
-							class="input"
-						>
-							<option value="">—</option>
-							<For each={[1, 2, 3, 4, 5]}>
-								{(level) => (
-									<option value={level.toString()}>
-										{level} – {riskLevelLabels[level]}
-									</option>
-								)}
-							</For>
-						</select>
-					</label>
-					<label class="field">
-						Volatility %{' '}
-						<input
-							type="number"
-							step="0.1"
-							value={form().volatility}
-							onInput={(e) => patchForm(setForm, 'volatility', e.currentTarget.value)}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						Horizon (months){' '}
-						<input
-							type="number"
-							value={form().horizonMonths}
-							onInput={(e) =>
-								patchForm(setForm, 'horizonMonths', e.currentTarget.value)
-							}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						Color{' '}
-						<input
-							type="color"
-							value={form().color}
-							onInput={(e) => patchForm(setForm, 'color', e.currentTarget.value)}
-							class="input"
-						/>
-					</label>
-				</div>
+				<fieldset class="form-group">
+					<legend>Basics</legend>
+					<div class="form-grid">
+						<label class="field">
+							Name{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
+							<input
+								value={form().name}
+								onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
+								required
+								aria-required="true"
+								class="input"
+							/>
+						</label>
+						<label class="field">
+							Purpose
+							<input
+								value={form().purpose}
+								onInput={(e) =>
+									patchForm(setForm, 'purpose', e.currentTarget.value)
+								}
+								class="input"
+								placeholder="e.g. Emergency fund, Retirement"
+							/>
+						</label>
+						<label class="field">
+							Color
+							<input
+								type="color"
+								value={form().color}
+								onInput={(e) => patchForm(setForm, 'color', e.currentTarget.value)}
+								class="color-swatch"
+								aria-label="Pool color"
+							/>
+						</label>
+					</div>
+				</fieldset>
+				<fieldset class="form-group">
+					<legend>Targets</legend>
+					<div class="form-grid">
+						<label class="field">
+							Target min (€){' '}
+							<input
+								type="number"
+								step="1"
+								value={form().targetMin}
+								onInput={(e) =>
+									patchForm(setForm, 'targetMin', e.currentTarget.value)
+								}
+								class="input"
+							/>
+						</label>
+						<label class="field">
+							Target max (€){' '}
+							<input
+								type="number"
+								step="1"
+								value={form().targetMax}
+								onInput={(e) =>
+									patchForm(setForm, 'targetMax', e.currentTarget.value)
+								}
+								class="input"
+							/>
+						</label>
+						<label class="field">
+							Target %{' '}
+							<input
+								type="number"
+								min="0"
+								max="100"
+								step="1"
+								value={form().targetPercent}
+								onInput={(e) =>
+									patchForm(setForm, 'targetPercent', e.currentTarget.value)
+								}
+								class="input"
+								aria-describedby="pool-target-hints"
+							/>
+						</label>
+					</div>
+					<div id="pool-target-hints">
+						<Show when={minMaxInvalid()}>
+							<p class="form-hint form-hint--error">
+								Target min is greater than target max — that range is empty.
+							</p>
+						</Show>
+						<Show when={percentOutOfRange()}>
+							<p class="form-hint form-hint--error">
+								Target % must be between 0 and 100.
+							</p>
+						</Show>
+						<Show when={percentSumOver() != null}>
+							<p class="form-hint form-hint--error">
+								Target shares add up to {percentSumOver()}% — over 100% across all
+								pools.
+							</p>
+						</Show>
+					</div>
+				</fieldset>
+				<fieldset class="form-group">
+					<legend>Risk & return</legend>
+					<div class="form-grid">
+						<label class="field">
+							Expected return % p.a.{' '}
+							<input
+								type="number"
+								step="0.1"
+								value={form().expectedReturn}
+								onInput={(e) =>
+									patchForm(setForm, 'expectedReturn', e.currentTarget.value)
+								}
+								class="input"
+							/>
+						</label>
+						<label class="field">
+							Risk{' '}
+							<select
+								value={form().riskLevel}
+								onChange={(e) =>
+									patchForm(setForm, 'riskLevel', e.currentTarget.value)
+								}
+								class="input"
+							>
+								<option value="">—</option>
+								<For each={[1, 2, 3, 4, 5]}>
+									{(level) => (
+										<option value={level.toString()}>
+											{level} – {riskLevelLabels[level]}
+										</option>
+									)}
+								</For>
+							</select>
+						</label>
+						<label class="field">
+							Volatility %{' '}
+							<input
+								type="number"
+								step="0.1"
+								value={form().volatility}
+								onInput={(e) =>
+									patchForm(setForm, 'volatility', e.currentTarget.value)
+								}
+								class="input"
+							/>
+						</label>
+						<label class="field">
+							Horizon (months){' '}
+							<input
+								type="number"
+								value={form().horizonMonths}
+								onInput={(e) =>
+									patchForm(setForm, 'horizonMonths', e.currentTarget.value)
+								}
+								class="input"
+							/>
+						</label>
+					</div>
+				</fieldset>
 			</CrudForm>
 
 			<div class="list">
@@ -302,8 +391,8 @@ export default function Pools() {
 					)}
 				</For>
 				<Show when={(pools() ?? []).length === 0 && !pools.loading}>
-					<EmptyState>
-						No pools. Create e.g. “Emergency fund”, “Invest”, “Vacation”.
+					<EmptyState actionLabel="Pool erstellen →" onAction={openCreate}>
+						Noch keine Pools. Lege z. B. „Notgroschen“, „Invest“ oder „Urlaub“ an.
 					</EmptyState>
 				</Show>
 			</div>
