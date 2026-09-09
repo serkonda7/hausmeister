@@ -2,7 +2,7 @@ import { createMemo, createResource, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { accountTypeDescriptions, accountTypeLabels, formatEUR } from '../lib/format'
+import { accountTypeDescriptions, accountTypeLabels, formatDateISO, formatEUR } from '../lib/format'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
@@ -11,6 +11,18 @@ import EmptyState from './EmptyState'
 
 export default function Accounts() {
 	const [accounts, { refetch }] = createResource(() => api.accounts.list())
+	const [summary] = createResource(() => api.summary())
+
+	const balances = createMemo(() => {
+		const map = new Map<string, { currentCents: number; unallocatedCents: number }>()
+		for (const b of summary()?.accountBalances ?? []) {
+			map.set(b.accountId, {
+				currentCents: b.currentCents,
+				unallocatedCents: b.unallocatedCents,
+			})
+		}
+		return map
+	})
 	const crud = useCrudForm<
 		{
 			name: string
@@ -73,7 +85,7 @@ export default function Accounts() {
 			const f = form()
 			const openingBalanceCents = parseEuroToCents(f.openingBalance)
 			if (openingBalanceCents !== null && Number.isNaN(openingBalanceCents)) {
-				throw new Error('Invalid opening balance')
+				throw new Error('Ungültiger Anfangssaldo')
 			}
 			const payload: Omit<Account, 'id' | 'createdAt'> = {
 				name: f.name,
@@ -95,15 +107,21 @@ export default function Accounts() {
 	}
 
 	function remove(id: string) {
-		return removeWithConfirm('Really delete?', () => api.accounts.remove(id), refetch)
+		return removeWithConfirm('Wirklich löschen?', () => api.accounts.remove(id), refetch)
 	}
 
 	return (
 		<div class="page">
 			<div class="page-header">
-				<h2 class="page-title">Accounts</h2>
+				<div>
+					<h2 class="page-title">Konten</h2>
+					<p class="page-subtitle">
+						{(accounts() ?? []).length} Konten · Giro, Sparkonten, Depots und mehr im
+						Überblick.
+					</p>
+				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
-					+ Account
+					+ Konto
 				</button>
 			</div>
 
@@ -117,15 +135,19 @@ export default function Accounts() {
 				<div class="form-grid">
 					<label class="field">
 						Name{' '}
+						<span class="req" aria-hidden="true">
+							*
+						</span>
 						<input
 							value={form().name}
 							onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
 							required
+							aria-required="true"
 							class="input"
 						/>
 					</label>
 					<label class="field">
-						Type
+						Typ
 						<select
 							value={form().type}
 							onChange={(e) =>
@@ -144,7 +166,7 @@ export default function Accounts() {
 						</select>
 					</label>
 					<label class="field">
-						Institution{' '}
+						Institut{' '}
 						<input
 							value={form().institution}
 							onInput={(e) =>
@@ -152,7 +174,7 @@ export default function Accounts() {
 							}
 							class="input"
 							list="institution-options"
-							placeholder="Select or type a new institution"
+							placeholder="Institut wählen oder neu eingeben"
 							autocomplete="off"
 						/>
 						<datalist id="institution-options">
@@ -160,7 +182,7 @@ export default function Accounts() {
 						</datalist>
 					</label>
 					<label class="field" for="account-opening-date">
-						Opening date{' '}
+						Eröffnungsdatum{' '}
 						<DateInput
 							id="account-opening-date"
 							value={form().openingDate}
@@ -168,7 +190,7 @@ export default function Accounts() {
 						/>
 					</label>
 					<label class="field">
-						Opening balance (€){' '}
+						Anfangssaldo (€){' '}
 						<input
 							type="number"
 							step="0.01"
@@ -189,7 +211,7 @@ export default function Accounts() {
 					</label>
 				</div>
 				<label class="field">
-					Notes{' '}
+					Notizen{' '}
 					<input
 						value={form().notes}
 						onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
@@ -199,42 +221,78 @@ export default function Accounts() {
 			</CrudForm>
 
 			<Show when={accounts.loading}>
-				<p class="muted">Loading…</p>
+				<p class="muted">Lädt…</p>
 			</Show>
 
 			<div class="list">
 				<For each={accounts() ?? []}>
-					{(a) => (
-						<div class="card card-row">
-							<div>
-								<div class="strong">
-									{a.name}{' '}
-									<span
-										class="subtle"
-										title={accountTypeDescriptions[a.type] ?? ''}
-									>
-										· {accountTypeLabels[a.type]}
-									</span>
+					{(a) => {
+						const b = () => balances().get(a.id)
+						return (
+							<div class="card card-row">
+								<div>
+									<div class="strong">
+										{a.name}{' '}
+										<span
+											class="subtle"
+											title={accountTypeDescriptions[a.type] ?? ''}
+										>
+											· {accountTypeLabels[a.type]}
+										</span>
+									</div>
+									<div class="muted text-sm">
+										{a.institution ?? '—'}
+										<Show when={a.iban}> · {a.iban}</Show>
+										<Show when={a.openingDate}>
+											{' '}
+											· eröffnet {formatDateISO(a.openingDate ?? '')}
+										</Show>
+									</div>
 								</div>
-								<div class="muted text-sm">
-									{a.institution ?? '—'}
-									<Show when={a.iban}> · {a.iban}</Show>
-									<Show when={a.openingDate}> · opened {a.openingDate}</Show>
+								<div class="card-actions">
+									<div style={{ 'text-align': 'right' }}>
+										<div
+											class="strong--bold"
+											style={{ 'white-space': 'nowrap' }}
+										>
+											<Show
+												when={b()}
+												fallback={
+													a.openingBalanceCents != null
+														? formatEUR(a.openingBalanceCents)
+														: '—'
+												}
+											>
+												{(bal) => formatEUR(bal().currentCents)}
+											</Show>
+										</div>
+										<Show when={b()}>
+											{(bal) => (
+												<div
+													class="muted text-sm"
+													style={{ 'white-space': 'nowrap' }}
+												>
+													Frei {formatEUR(bal().unallocatedCents)}
+													<Show when={a.openingBalanceCents != null}>
+														{' '}
+														· Start{' '}
+														{formatEUR(a.openingBalanceCents ?? 0)}
+													</Show>
+												</div>
+											)}
+										</Show>
+									</div>
+									<CrudRow
+										onEdit={() => openEdit(a)}
+										onDelete={() => remove(a.id)}
+									/>
 								</div>
 							</div>
-							<div class="card-actions">
-								<div class="strong--bold" style={{ 'white-space': 'nowrap' }}>
-									{a.openingBalanceCents != null
-										? formatEUR(a.openingBalanceCents)
-										: '—'}
-								</div>
-								<CrudRow onEdit={() => openEdit(a)} onDelete={() => remove(a.id)} />
-							</div>
-						</div>
-					)}
+						)
+					}}
 				</For>
 				<Show when={(accounts() ?? []).length === 0 && !accounts.loading}>
-					<EmptyState>No accounts. Create your first account.</EmptyState>
+					<EmptyState>Keine Konten. Erstelle dein erstes Konto.</EmptyState>
 				</Show>
 			</div>
 		</div>

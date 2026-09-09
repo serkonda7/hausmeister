@@ -20,22 +20,57 @@ import './App.css'
 import { initThemeListener, theme, toggleTheme } from './lib/theme'
 
 const VIEWS = [
-	{ id: 'dashboard', label: 'Dashboard', comp: Dashboard, icon: IconDashboard },
-	{ id: 'accounts', label: 'Accounts', comp: Accounts, icon: IconWallet },
-	{ id: 'transactions', label: 'Transactions', comp: Transactions, icon: IconReceipt },
+	{ id: 'dashboard', label: 'Übersicht', comp: Dashboard, icon: IconDashboard },
+	{ id: 'accounts', label: 'Konten', comp: Accounts, icon: IconWallet },
+	{ id: 'transactions', label: 'Buchungen', comp: Transactions, icon: IconReceipt },
 	{ id: 'pools', label: 'Pools', comp: Pools, icon: IconCoins },
-	{ id: 'allocations', label: 'Allocations', comp: Allocations, icon: IconExchange },
-	{ id: 'events', label: 'Timeline', comp: Events, icon: IconCalendarEvent },
+	{ id: 'allocations', label: 'Zuordnungen', comp: Allocations, icon: IconExchange },
+	{ id: 'events', label: 'Ereignisse', comp: Events, icon: IconCalendarEvent },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
 
+const VIEW_IDS = new Set<string>(VIEWS.map((v) => v.id))
+
+/** Parse `#/accounts` (also `#accounts`, `#/accounts?…`) with fallback to dashboard. */
+function viewFromHash(): View {
+	const raw = window.location.hash.replace(/^#\/?/, '').split(/[?/]/)[0] ?? ''
+	return (VIEW_IDS.has(raw) ? raw : 'dashboard') as View
+}
+
+function hashFor(view: View): string {
+	return `#/${view}`
+}
+
 export default function App(): JSX.Element {
-	const [view, setView] = createSignal<View>('dashboard')
+	const [view, setView] = createSignal<View>(viewFromHash())
+
+	function navigate(next: View) {
+		if (next === view()) {
+			return
+		}
+		// Updating the hash drives the view via the `hashchange` listener,
+		// so back/forward buttons and deep-links stay in sync for free.
+		if (window.location.hash !== hashFor(next)) {
+			window.location.hash = hashFor(next)
+		} else {
+			setView(next)
+		}
+	}
 
 	onMount(() => {
+		// Deep-link on load + fallback for unknown hashes.
+		setView(viewFromHash())
+		if (!window.location.hash || !VIEW_IDS.has(viewFromHash())) {
+			window.location.hash = hashFor(viewFromHash())
+		}
+		const onHashChange = () => setView(viewFromHash())
+		window.addEventListener('hashchange', onHashChange)
 		const dispose = initThemeListener()
-		onCleanup(dispose)
+		onCleanup(() => {
+			window.removeEventListener('hashchange', onHashChange)
+			dispose()
+		})
 	})
 
 	const isDark = () => theme() === 'dark'
@@ -49,12 +84,12 @@ export default function App(): JSX.Element {
 						<div class="brand-name">Hausmeister</div>
 					</div>
 				</div>
-				<nav class="nav" aria-label="Main navigation">
+				<nav class="nav" aria-label="Hauptnavigation">
 					<For each={VIEWS}>
 						{(v) => (
 							<button
 								type="button"
-								onClick={() => setView(v.id)}
+								onClick={() => navigate(v.id)}
 								class="nav-item"
 								classList={{ 'nav-item--active': view() === v.id }}
 								aria-current={view() === v.id ? 'page' : undefined}
@@ -70,8 +105,10 @@ export default function App(): JSX.Element {
 						type="button"
 						onClick={toggleTheme}
 						class="btn-icon theme-toggle"
-						aria-label={isDark() ? 'Switch to light mode' : 'Switch to dark mode'}
-						title={isDark() ? 'Light mode' : 'Dark mode'}
+						aria-label={
+							isDark() ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'
+						}
+						title={isDark() ? 'Heller Modus' : 'Dunkler Modus'}
 					>
 						{isDark() ? <IconSun size={18} /> : <IconMoon size={18} />}
 					</button>

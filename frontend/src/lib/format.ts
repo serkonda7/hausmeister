@@ -6,7 +6,7 @@ import type { AccountType, LiquidityTier } from './enums'
  * (e.g. `Object.entries(...)` keys in components) compiling without casts.
  */
 export function formatEUR(cents: number): string {
-	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(
+	return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(
 		cents / 100,
 	)
 }
@@ -15,7 +15,23 @@ export function formatPercent(bps: number | null | undefined): string {
 	if (bps == null) {
 		return '—'
 	}
-	return `${(bps / 100).toFixed(2)}%`
+	return new Intl.NumberFormat('de-DE', {
+		style: 'percent',
+		maximumFractionDigits: 2,
+	}).format(bps / 10_000)
+}
+
+/** Format an already-computed percent value (e.g. share of total) in de-DE. */
+export function formatShare(pct: number): string {
+	return new Intl.NumberFormat('de-DE', {
+		minimumFractionDigits: 1,
+		maximumFractionDigits: 1,
+	}).format(pct)
+}
+
+/** Format a target percent that may carry more precision, trimming zeros. */
+export function formatTargetPercent(pct: number): string {
+	return `${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 }).format(pct)} %`
 }
 
 /**
@@ -33,13 +49,19 @@ export function formatPercent(bps: number | null | undefined): string {
  * the day in timezones ahead of UTC. {@link todayISO} uses local time.
  */
 
-/** Display-only: render a backend ISO date (`YYYY-MM-DD…`) for reading. */
+/** Display-only: render a backend ISO date (`YYYY-MM-DD…`) in de-DE for reading. */
 export function formatDateISO(dateStr: string): string {
+	const fmt = new Intl.DateTimeFormat('de-DE', {
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric',
+	})
 	try {
 		if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-			return dateStr.slice(0, 10)
+			const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+			return fmt.format(new Date(y, m - 1, d))
 		}
-		return new Date(dateStr).toISOString().slice(0, 10)
+		return fmt.format(new Date(dateStr))
 	} catch {
 		return dateStr
 	}
@@ -58,11 +80,11 @@ export function todayISO(d = new Date()): string {
 }
 
 export const liquidityLabels: Record<LiquidityTier, string> & Record<string, string> = {
-	instant: 'Instant',
-	days: 'Days',
-	weeks: 'Weeks',
-	months: 'Months',
-	locked: 'Locked',
+	instant: 'Sofort',
+	days: 'Tage',
+	weeks: 'Wochen',
+	months: 'Monate',
+	locked: 'Gebunden',
 }
 
 export const liquidityColors: Record<LiquidityTier, string> & Record<string, string> = {
@@ -74,31 +96,31 @@ export const liquidityColors: Record<LiquidityTier, string> & Record<string, str
 }
 
 export const accountTypeLabels: Record<AccountType, string> & Record<string, string> = {
-	checking: 'Checking',
-	savings: 'Savings',
-	broker: 'Broker',
-	cash: 'Cash',
-	crypto: 'Crypto',
-	festgeld: 'Fixed-term deposit',
-	other: 'Other',
+	checking: 'Girokonto',
+	savings: 'Sparkonto',
+	broker: 'Depot',
+	cash: 'Bargeld',
+	crypto: 'Krypto',
+	festgeld: 'Festgeld',
+	other: 'Sonstiges',
 }
 
 export const accountTypeDescriptions: Record<AccountType, string> & Record<string, string> = {
-	checking: 'Everyday account for income, bills and daily spending.',
-	savings: 'Long-term savings with modest interest and flexible access.',
-	broker: 'Securities account for stocks, ETFs and other investments.',
-	cash: 'Physical cash held outside of any bank account.',
-	crypto: 'Digital assets held in a wallet or on an exchange.',
-	festgeld: 'Fixed-term deposit with locked interest until maturity.',
-	other: 'Any other account that fits no category above.',
+	checking: 'Alltagskonto für Einnahmen, Rechnungen und tägliche Ausgaben.',
+	savings: 'Langfristige Ersparnisse mit moderaten Zinsen und flexiblem Zugriff.',
+	broker: 'Wertpapierdepot für Aktien, ETFs und andere Anlagen.',
+	cash: 'Physisches Bargeld außerhalb eines Bankkontos.',
+	crypto: 'Digitale Vermögenswerte in einer Wallet oder auf einer Börse.',
+	festgeld: 'Festgeld mit gebundenen Zinsen bis zur Fälligkeit.',
+	other: 'Jedes andere Konto, das in keine Kategorie passt.',
 }
 
 export const riskLevelLabels: Record<number, string> = {
-	1: 'Very low',
-	2: 'Low',
-	3: 'Medium',
-	4: 'High',
-	5: 'Very high',
+	1: 'Sehr niedrig',
+	2: 'Niedrig',
+	3: 'Mittel',
+	4: 'Hoch',
+	5: 'Sehr hoch',
 }
 
 export function formatRiskLevel(level: number | null | undefined): string {

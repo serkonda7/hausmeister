@@ -5,6 +5,8 @@ import {
 	formatEUR,
 	formatPercent,
 	formatRiskLevel,
+	formatShare,
+	formatTargetPercent,
 	liquidityColors,
 	liquidityLabels,
 } from '../lib/format'
@@ -39,10 +41,10 @@ export default function Dashboard() {
 	return (
 		<div class="page page--spacious">
 			<Show when={summary.loading}>
-				<p class="muted">Loading…</p>
+				<p class="muted">Lädt…</p>
 			</Show>
 			<Show when={summary.error}>
-				<p class="form-error">Error: {(summary.error as Error).message}</p>
+				<p class="form-error">Fehler: {(summary.error as Error).message}</p>
 			</Show>
 			<Show when={summary()}>
 				{(get) => {
@@ -55,16 +57,16 @@ export default function Dashboard() {
 					return (
 						<>
 							<section class="dashboard-card">
-								<div class="dashboard-eyebrow">Total assets</div>
+								<div class="dashboard-eyebrow">Gesamtvermögen</div>
 								<div class="dashboard-total">{formatEUR(total)}</div>
 								<div class="dashboard-sub">
-									{counts.accounts} accounts · {counts.pools} pools ·{' '}
-									{counts.allocations} allocations
+									{counts.accounts} Konten · {counts.pools} Pools ·{' '}
+									{counts.allocations} Zuordnungen
 								</div>
 							</section>
 
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Liquidity</h2>
+								<h2 class="dashboard-section-title">Liquidität</h2>
 								<div class="list">
 									<For each={liquidityEntries}>
 										{([tier, cents]) => {
@@ -74,7 +76,8 @@ export default function Dashboard() {
 													<div class="liquidity-label-row">
 														<span>{liquidityLabels[tier] ?? tier}</span>
 														<span class="muted">
-															{formatEUR(cents)} · {share.toFixed(1)}%
+															{formatEUR(cents)} ·{' '}
+															{formatShare(share)} %
 														</span>
 													</div>
 													<div class="bar-track">
@@ -96,10 +99,15 @@ export default function Dashboard() {
 							</section>
 
 							<section class="dashboard-card">
-								<h2 class="dashboard-section-title">Pools · Target vs. actual</h2>
+								<h2 class="dashboard-section-title">Pools · Ziel vs. Ist</h2>
 								<Show when={d.poolTotals.length === 0}>
-									<EmptyState>
-										No pools yet. Create a pool under “Pools”.
+									<EmptyState
+										actionLabel="Pool erstellen →"
+										onAction={() => {
+											window.location.hash = '#/pools'
+										}}
+									>
+										Noch keine Pools. Lege unter „Pools“ deinen ersten Pool an.
 									</EmptyState>
 								</Show>
 								<div class="list">
@@ -134,19 +142,19 @@ export default function Dashboard() {
 																{formatEUR(pt.currentCents)}
 															</div>
 															<div class="pool-sub">
-																{share.toFixed(1)}% of total
+																{formatShare(share)} % vom Gesamt
 															</div>
 														</div>
 													</div>
 													<div class="pool-tags">
 														<span>
-															Target:{' '}
+															Ziel:{' '}
 															{targetPct != null
-																? `${targetPct}% (${formatEUR(pt.targetCents ?? 0)})`
+																? `${formatTargetPercent(targetPct)} (${formatEUR(pt.targetCents ?? 0)})`
 																: '—'}
 														</span>
 														<span>
-															Range:{' '}
+															Bereich:{' '}
 															{pt.targetMin != null
 																? formatEUR(pt.targetMin)
 																: '—'}{' '}
@@ -156,30 +164,30 @@ export default function Dashboard() {
 																: '—'}
 														</span>
 														<span>
-															Return:{' '}
+															Rendite:{' '}
 															{formatPercent(
 																pt.pool.expectedReturnBps,
 															)}{' '}
-															p.a.
+															p. a.
 														</span>
 														<span>
-															Risk:{' '}
+															Risiko:{' '}
 															{formatRiskLevel(pt.pool.riskLevel)}
 														</span>
 														<span>
-															Horizon:{' '}
+															Horizont:{' '}
 															{pt.pool.horizonMonths != null
-																? `${pt.pool.horizonMonths} months`
+																? `${pt.pool.horizonMonths} Monate`
 																: '—'}
 														</span>
 														<span
-															class="pool-status"
+															class="pool-status status-badge"
 															classList={{
-																'amount--in': ok,
-																'amount--warn': !ok,
+																'status-badge--ok': ok,
+																'status-badge--warn': !ok,
 															}}
 														>
-															{ok ? '✓ on target' : '⚠ off target'}
+															{ok ? '✓ Am Ziel' : '⚠ Abweichung'}
 														</span>
 													</div>
 													<div class="bar-track bar-track--thin">
@@ -190,9 +198,9 @@ export default function Dashboard() {
 																'bar-fill--warn': !ok,
 															}}
 															style={{
-																// Pool shares of the grand total are small;
-																// scale ×2 for visibility, capped at 100%.
-																width: `${Math.min(100, share * 2)}%`,
+																// Same 0–100 % scale as the target
+																// marker below so bar and marker align.
+																width: `${Math.min(100, share)}%`,
 															}}
 														/>
 														<Show when={targetPct != null}>
@@ -201,7 +209,7 @@ export default function Dashboard() {
 																style={{
 																	left: `${Math.min(100, targetPct ?? 0)}%`,
 																}}
-																title={`Target ${targetPct}%`}
+																title={`Ziel ${formatTargetPercent(targetPct ?? 0)}`}
 															/>
 														</Show>
 													</div>
