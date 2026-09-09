@@ -11,6 +11,22 @@ export function formatPercent(bps: number | null | undefined): string {
 	return `${(bps / 100).toFixed(2)}%`
 }
 
+/**
+ * Dates: display vs. input (single place documenting both).
+ *
+ * - Display: {@link formatDateISO} renders a backend ISO date for reading.
+ * - Editing: `<DateInput>` (`../components/DateInput.tsx`, native
+ *   `<input type="date">`) edits ISO dates (`YYYY-MM-DD` or `''`), matching
+ *   the backend contract. Use it for every date field instead of a plain
+ *   text/number input.
+ * - Defaults: {@link todayISO} provides the initial value for a new
+ *   `<DateInput>`.
+ *
+ * Never use `new Date().toISOString().slice(0, 10)` for defaults — it shifts
+ * the day in timezones ahead of UTC. {@link todayISO} uses local time.
+ */
+
+/** Display-only: render a backend ISO date (`YYYY-MM-DD…`) for reading. */
 export function formatDateISO(dateStr: string): string {
 	try {
 		if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
@@ -22,7 +38,11 @@ export function formatDateISO(dateStr: string): string {
 	}
 }
 
-/** Today's date as ISO `YYYY-MM-DD` in local time (no UTC shift). */
+/**
+ * Input-default-only: today's date as ISO `YYYY-MM-DD` in local time (no UTC
+ * shift). Use as the initial `value` for `<DateInput>`
+ * (`../components/DateInput.tsx`); use {@link formatDateISO} for display.
+ */
 export function todayISO(d = new Date()): string {
 	const y = d.getFullYear()
 	const m = String(d.getMonth() + 1).padStart(2, '0')

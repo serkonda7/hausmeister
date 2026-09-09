@@ -2,6 +2,7 @@ import { createResource, createSignal, For, Show } from 'solid-js'
 import { type Allocation, api } from '../lib/api'
 import { patchForm } from '../lib/form'
 import { formatEUR, liquidityLabels } from '../lib/format'
+import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
@@ -43,7 +44,7 @@ export default function Allocations() {
 		setForm({
 			poolId: a.poolId,
 			accountId: a.accountId,
-			amount: (a.amountCents / 100).toString(),
+			amount: centsToEuroInput(a.amountCents),
 			liquidityOverride: a.liquidityOverride ?? '',
 			unlockAt: a.unlockAt ?? '',
 		})
@@ -55,8 +56,8 @@ export default function Allocations() {
 		e.preventDefault()
 		setError('')
 		const f = form()
-		const amountCents = Math.round(Number.parseFloat(f.amount || '0') * 100)
-		if (!f.poolId || !f.accountId || Number.isNaN(amountCents)) {
+		const amountCents = parseEuroToCents(f.amount)
+		if (!f.poolId || !f.accountId || amountCents == null || Number.isNaN(amountCents)) {
 			setError('Pool, account and amount are required')
 			return
 		}

@@ -2,6 +2,7 @@ import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { patchForm } from '../lib/form'
 import { accountTypeDescriptions, accountTypeLabels, formatEUR } from '../lib/format'
+import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
@@ -53,8 +54,7 @@ export default function Accounts() {
 			type: a.type,
 			institution: a.institution ?? '',
 			openingDate: a.openingDate ?? '',
-			openingBalance:
-				a.openingBalanceCents != null ? (a.openingBalanceCents / 100).toString() : '',
+			openingBalance: centsToEuroInput(a.openingBalanceCents),
 			iban: a.iban ?? '',
 			notes: a.notes ?? '',
 		})
@@ -66,10 +66,7 @@ export default function Accounts() {
 		e.preventDefault()
 		setError('')
 		const f = form()
-		const openingBalanceCents =
-			f.openingBalance.trim() === ''
-				? null
-				: Math.round(Number.parseFloat(f.openingBalance) * 100)
+		const openingBalanceCents = parseEuroToCents(f.openingBalance)
 		if (openingBalanceCents !== null && Number.isNaN(openingBalanceCents)) {
 			setError('Invalid opening balance')
 			return

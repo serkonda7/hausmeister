@@ -2,6 +2,7 @@ import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Category, type Transaction } from '../lib/api'
 import { patchForm } from '../lib/form'
 import { formatDateISO, formatEUR, todayISO } from '../lib/format'
+import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
@@ -132,7 +133,7 @@ export default function Transactions() {
 			date: t.date,
 			payee: t.payee ?? '',
 			categoryId: t.categoryId ?? '',
-			amount: (t.amountCents / 100).toString(),
+			amount: centsToEuroInput(t.amountCents),
 			direction: t.direction,
 			notes: t.notes ?? '',
 		})
@@ -144,12 +145,12 @@ export default function Transactions() {
 		e.preventDefault()
 		setError('')
 		const f = form()
-		const amountCents = Math.round(Number.parseFloat(f.amount || '0') * 100)
+		const amountCents = parseEuroToCents(f.amount)
 		if (!f.accountId) {
 			setError('Account is required')
 			return
 		}
-		if (!f.date || Number.isNaN(amountCents) || amountCents <= 0) {
+		if (!f.date || amountCents == null || Number.isNaN(amountCents) || amountCents <= 0) {
 			setError('Date and amount (> 0) are required')
 			return
 		}
@@ -180,7 +181,7 @@ export default function Transactions() {
 		e.preventDefault()
 		setError('')
 		const f = transferForm()
-		const amountCents = Math.round(Number.parseFloat(f.amount || '0') * 100)
+		const amountCents = parseEuroToCents(f.amount)
 		if (!f.fromAccountId || !f.toAccountId) {
 			setError('Source and destination accounts are required')
 			return
@@ -189,7 +190,7 @@ export default function Transactions() {
 			setError('Source and destination must differ')
 			return
 		}
-		if (!f.date || Number.isNaN(amountCents) || amountCents <= 0) {
+		if (!f.date || amountCents == null || Number.isNaN(amountCents) || amountCents <= 0) {
 			setError('Date and amount (> 0) are required')
 			return
 		}

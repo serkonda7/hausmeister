@@ -2,6 +2,7 @@ import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { api, type FinanceEvent } from '../lib/api'
 import { patchForm } from '../lib/form'
 import { formatDateISO, formatEUR, todayISO } from '../lib/format'
+import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
@@ -56,7 +57,7 @@ export default function Events() {
 		setEditingId(id)
 		setForm({
 			title: ev.title,
-			amount: (ev.amountCents / 100).toString(),
+			amount: centsToEuroInput(ev.amountCents),
 			direction: ev.direction,
 			date: ev.date,
 			isRecurring: ev.isRecurring,
@@ -74,8 +75,8 @@ export default function Events() {
 		e.preventDefault()
 		setError('')
 		const f = form()
-		const amountCents = Math.round(Number.parseFloat(f.amount || '0') * 100)
-		if (!f.title || Number.isNaN(amountCents)) {
+		const amountCents = parseEuroToCents(f.amount)
+		if (!f.title || amountCents == null || Number.isNaN(amountCents)) {
 			setError('Title and amount are required')
 			return
 		}
