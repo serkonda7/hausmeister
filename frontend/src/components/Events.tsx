@@ -1,8 +1,11 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
+import { createMemo, createResource, For, Show } from 'solid-js'
 import { api, type FinanceEvent } from '../lib/api'
+import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { formatDateISO, formatEUR, todayISO } from '../lib/format'
+import { formatDateISO, todayISO } from '../lib/format'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import Amount from './Amount'
+import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
@@ -16,25 +19,37 @@ export default function Events() {
 		(events() ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)),
 	)
 
-	const [showForm, setShowForm] = createSignal(false)
-	const [editingId, setEditingId] = createSignal<string | null>(null)
-	const [error, setError] = createSignal('')
-	const [form, setForm] = createSignal({
+	const crud = useCrudForm<
+		{
+			title: string
+			amount: string
+			direction: 'inflow' | 'outflow'
+			date: string
+			isRecurring: boolean
+			frequency: string
+			recurringUntil: string
+			poolId: string
+			accountId: string
+			notes: string
+		},
+		string
+	>({
 		title: '',
 		amount: '',
-		direction: 'outflow' as 'inflow' | 'outflow',
+		direction: 'outflow',
 		date: todayISO(),
 		isRecurring: false,
-		frequency: '' as string,
+		frequency: '',
 		recurringUntil: '',
-		poolId: '' as string,
-		accountId: '' as string,
+		poolId: '',
+		accountId: '',
 		notes: '',
 	})
+	const form = crud.form
+	const setForm = crud.setForm
 
 	function openCreate() {
-		setEditingId(null)
-		setForm({
+		crud.openCreate({
 			title: '',
 			amount: '',
 			direction: 'outflow',
@@ -46,16 +61,13 @@ export default function Events() {
 			accountId: '',
 			notes: '',
 		})
-		setError('')
-		setShowForm(true)
 	}
 	function openEdit(id: string) {
 		const ev = events()?.find((x) => x.id === id)
 		if (!ev) {
 			return
 		}
-		setEditingId(id)
-		setForm({
+		crud.openEdit(id, {
 			title: ev.title,
 			amount: centsToEuroInput(ev.amountCents),
 			direction: ev.direction,
@@ -67,51 +79,39 @@ export default function Events() {
 			accountId: ev.accountId ?? '',
 			notes: ev.notes ?? '',
 		})
-		setError('')
-		setShowForm(true)
 	}
 
-	async function submit(e: Event) {
-		e.preventDefault()
-		setError('')
-		const f = form()
-		const amountCents = parseEuroToCents(f.amount)
-		if (!f.title || amountCents == null || Number.isNaN(amountCents)) {
-			setError('Title and amount are required')
-			return
-		}
-		const payload: Omit<FinanceEvent, 'id' | 'createdAt'> = {
-			title: f.title,
-			amountCents,
-			direction: f.direction,
-			date: f.date,
-			isRecurring: f.isRecurring,
-			frequency: (f.frequency || null) as FinanceEvent['frequency'],
-			recurringUntil: f.recurringUntil || null,
-			poolId: f.poolId || null,
-			accountId: f.accountId || null,
-			notes: f.notes || null,
-		}
-		try {
-			const eid = editingId()
+	function submit(e: Event) {
+		return crud.submit(e, async () => {
+			const f = form()
+			const amountCents = parseEuroToCents(f.amount)
+			if (!f.title || amountCents == null || Number.isNaN(amountCents)) {
+				throw new Error('Title and amount are required')
+			}
+			const payload: Omit<FinanceEvent, 'id' | 'createdAt'> = {
+				title: f.title,
+				amountCents,
+				direction: f.direction,
+				date: f.date,
+				isRecurring: f.isRecurring,
+				frequency: (f.frequency || null) as FinanceEvent['frequency'],
+				recurringUntil: f.recurringUntil || null,
+				poolId: f.poolId || null,
+				accountId: f.accountId || null,
+				notes: f.notes || null,
+			}
+			const eid = crud.editing()
 			if (eid) {
 				await api.events.update(eid, payload)
 			} else {
 				await api.events.create(payload)
 			}
-			setShowForm(false)
 			await refetch()
-		} catch (err) {
-			setError((err as Error).message)
-		}
+		})
 	}
 
-	async function remove(id: string) {
-		if (!confirm('Delete event?')) {
-			return
-		}
-		await api.events.remove(id)
-		await refetch()
+	function remove(id: string) {
+		return removeWithConfirm('Delete event?', () => api.events.remove(id), refetch)
 	}
 
 	return (
@@ -123,8 +123,13 @@ export default function Events() {
 				</button>
 			</div>
 
-			<Show when={showForm()}>
-				<form onSubmit={submit} class="form-card">
+			<CrudForm
+				open={crud.showForm()}
+				error={crud.error()}
+				editing={crud.editing()}
+				onSubmit={submit}
+				onCancel={crud.close}
+			>
 					<div class="form-grid">
 						<label class="field">
 							Title{' '}
@@ -248,19 +253,7 @@ export default function Events() {
 							class="input"
 						/>
 					</label>
-					<Show when={error()}>
-						<p class="form-error">{error()}</p>
-					</Show>
-					<div class="form-actions">
-						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
-							Cancel
-						</button>
-						<button type="submit" class="btn-primary">
-							{editingId() ? 'Save' : 'Create'}
-						</button>
-					</div>
-				</form>
-			</Show>
+			</CrudForm>
 
 			<div class="list list--tight">
 				<For each={sortedEvents()}>
@@ -279,17 +272,7 @@ export default function Events() {
 								</div>
 							</div>
 							<div class="card-actions">
-								<span
-									class="strong--bold"
-									style={{ 'white-space': 'nowrap' }}
-									classList={{
-										'amount--in': ev.direction === 'inflow',
-										'amount--out': ev.direction !== 'inflow',
-									}}
-								>
-									{ev.direction === 'inflow' ? '+' : '−'}
-									{formatEUR(ev.amountCents)}
-								</span>
+								<Amount cents={ev.amountCents} direction={ev.direction} />
 								<CrudRow
 									onEdit={() => openEdit(ev.id)}
 									onDelete={() => remove(ev.id)}

@@ -1,13 +1,14 @@
 // All amounts in cents, dates as ISO strings (YYYY-MM-DD or ISO)
-export type LiquidityTier = 'instant' | 'days' | 'weeks' | 'months' | 'locked'
-export type AccountType =
-	| 'checking'
-	| 'savings'
-	| 'broker'
-	| 'cash'
-	| 'crypto'
-	| 'festgeld'
-	| 'other'
+import type {
+	AccountType,
+	CategoryKind,
+	Direction,
+	Frequency,
+	LiquidityTier,
+} from './enums'
+
+// Re-export for backward compat (components may import these from './api')
+export type { AccountType, CategoryKind, Direction, Frequency, LiquidityTier } from './enums'
 
 export interface Account {
 	id: string
@@ -50,10 +51,10 @@ export interface FinanceEvent {
 	id: string
 	title: string
 	amountCents: number
-	direction: 'inflow' | 'outflow'
+	direction: Direction
 	date: string
 	isRecurring: boolean
-	frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly' | null
+	frequency: Frequency | null
 	recurringUntil: string | null
 	poolId: string | null
 	accountId: string | null
@@ -62,8 +63,6 @@ export interface FinanceEvent {
 }
 
 // Phase 1: ledger
-export type CategoryKind = 'income' | 'expense'
-
 export interface Category {
 	id: string
 	name: string
@@ -79,7 +78,7 @@ export interface Transaction {
 	payee: string | null
 	categoryId: string | null
 	amountCents: number
-	direction: 'inflow' | 'outflow'
+	direction: Direction
 	transferId: string | null
 	notes: string | null
 	createdAt: string

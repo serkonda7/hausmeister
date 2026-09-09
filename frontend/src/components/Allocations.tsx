@@ -1,8 +1,11 @@
-import { createResource, createSignal, For, Show } from 'solid-js'
+import { createResource, For, Show } from 'solid-js'
 import { type Allocation, api } from '../lib/api'
+import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { formatEUR, liquidityLabels } from '../lib/format'
+import { accountName, poolName } from '../lib/names'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
@@ -12,89 +15,74 @@ export default function Allocations() {
 	const [accounts] = createResource(() => api.accounts.list())
 	const [pools] = createResource(() => api.pools.list())
 
-	const [showForm, setShowForm] = createSignal(false)
-	const [editingId, setEditingId] = createSignal<string | null>(null)
-	const [error, setError] = createSignal('')
-	const [form, setForm] = createSignal({
+	const crud = useCrudForm<
+		{
+			poolId: string
+			accountId: string
+			amount: string
+			liquidityOverride: string
+			unlockAt: string
+		},
+		string
+	>({
 		poolId: '',
 		accountId: '',
 		amount: '',
-		liquidityOverride: '' as string,
+		liquidityOverride: '',
 		unlockAt: '',
 	})
+	const form = crud.form
+	const setForm = crud.setForm
 
 	function openCreate() {
-		setEditingId(null)
-		setForm({
+		crud.openCreate({
 			poolId: pools()?.[0]?.id ?? '',
 			accountId: accounts()?.[0]?.id ?? '',
 			amount: '',
 			liquidityOverride: '',
 			unlockAt: '',
 		})
-		setError('')
-		setShowForm(true)
 	}
 	function openEdit(id: string) {
 		const a = allocations()?.find((x) => x.id === id)
 		if (!a) {
 			return
 		}
-		setEditingId(id)
-		setForm({
+		crud.openEdit(id, {
 			poolId: a.poolId,
 			accountId: a.accountId,
 			amount: centsToEuroInput(a.amountCents),
 			liquidityOverride: a.liquidityOverride ?? '',
 			unlockAt: a.unlockAt ?? '',
 		})
-		setError('')
-		setShowForm(true)
 	}
 
-	async function submit(e: Event) {
-		e.preventDefault()
-		setError('')
-		const f = form()
-		const amountCents = parseEuroToCents(f.amount)
-		if (!f.poolId || !f.accountId || amountCents == null || Number.isNaN(amountCents)) {
-			setError('Pool, account and amount are required')
-			return
-		}
-		const payload: Omit<Allocation, 'id' | 'createdAt'> = {
-			poolId: f.poolId,
-			accountId: f.accountId,
-			amountCents,
-			liquidityOverride: (f.liquidityOverride || null) as Allocation['liquidityOverride'],
-			unlockAt: f.unlockAt || null,
-		}
-		try {
-			const eid = editingId()
+	function submit(e: Event) {
+		return crud.submit(e, async () => {
+			const f = form()
+			const amountCents = parseEuroToCents(f.amount)
+			if (!f.poolId || !f.accountId || amountCents == null || Number.isNaN(amountCents)) {
+				throw new Error('Pool, account and amount are required')
+			}
+			const payload: Omit<Allocation, 'id' | 'createdAt'> = {
+				poolId: f.poolId,
+				accountId: f.accountId,
+				amountCents,
+				liquidityOverride: (f.liquidityOverride || null) as Allocation['liquidityOverride'],
+				unlockAt: f.unlockAt || null,
+			}
+			const eid = crud.editing()
 			if (eid) {
 				await api.allocations.update(eid, payload)
 			} else {
 				await api.allocations.create(payload)
 			}
-			setShowForm(false)
 			await refetch()
-		} catch (err) {
-			setError((err as Error).message)
-		}
+		})
 	}
 
-	async function remove(id: string) {
-		if (!confirm('Delete allocation?')) {
-			return
-		}
-		await api.allocations.remove(id)
-		await refetch()
-	}
-
-	function poolName(id: string): string {
-		return pools()?.find((p) => p.id === id)?.name ?? id.slice(0, 8)
-	}
-	function accountName(id: string): string {
-		return accounts()?.find((a) => a.id === id)?.name ?? id.slice(0, 8)
+	function remove(id: string) {
+		return removeWithConfirm('Delete allocation?', () => api.allocations.remove(id), refetch)
 	}
 
 	return (
@@ -116,8 +104,13 @@ export default function Allocations() {
 				</p>
 			</Show>
 
-			<Show when={showForm()}>
-				<form onSubmit={submit} class="form-card">
+			<CrudForm
+				open={crud.showForm()}
+				error={crud.error()}
+				editing={crud.editing()}
+				onSubmit={submit}
+				onCancel={crud.close}
+			>
 					<div class="form-grid">
 						<label class="field">
 							Pool
@@ -184,19 +177,7 @@ export default function Allocations() {
 							/>
 						</label>
 					</div>
-					<Show when={error()}>
-						<p class="form-error">{error()}</p>
-					</Show>
-					<div class="form-actions">
-						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
-							Cancel
-						</button>
-						<button type="submit" class="btn-primary">
-							{editingId() ? 'Save' : 'Create'}
-						</button>
-					</div>
-				</form>
-			</Show>
+			</CrudForm>
 
 			<div class="list list--tight">
 				<For each={allocations() ?? []}>
@@ -204,8 +185,8 @@ export default function Allocations() {
 						<div class="card card--compact card-row">
 							<div>
 								<div class="title">
-									{poolName(a.poolId)}{' '}
-									<span class="subtle">→ {accountName(a.accountId)}</span>
+									{poolName(pools(), a.poolId)}{' '}
+									<span class="subtle">→ {accountName(accounts(), a.accountId)}</span>
 								</div>
 								<div class="muted text-sm">
 									{a.liquidityOverride

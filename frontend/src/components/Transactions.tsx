@@ -1,8 +1,12 @@
 import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 import { api, type Category, type Transaction } from '../lib/api'
+import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { formatDateISO, formatEUR, todayISO } from '../lib/format'
+import { accountName, categoryOf } from '../lib/names'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import Amount from './Amount'
+import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
@@ -50,13 +54,10 @@ export default function Transactions() {
 	const [form, setForm] = createSignal({ ...EMPTY_TXN })
 	const [transferForm, setTransferForm] = createSignal({ ...EMPTY_TRANSFER })
 
-	// Categories manager state
-	const [showCatForm, setShowCatForm] = createSignal(false)
-	const [editingCat, setEditingCat] = createSignal<Category | null>(null)
-	const [catError, setCatError] = createSignal('')
-	const [catForm, setCatForm] = createSignal({
+	// Categories manager state (shared CRUD shell)
+	const catCrud = useCrudForm<{ name: string; kind: string; color: string }, Category>({
 		name: '',
-		kind: '' as string,
+		kind: '',
 		color: '#22c55e',
 	})
 
@@ -91,15 +92,8 @@ export default function Transactions() {
 		return { inflow, outflow, net: inflow - outflow }
 	})
 
-	function accountName(id: string): string {
-		return accounts()?.find((a) => a.id === id)?.name ?? id.slice(0, 8)
-	}
-	function categoryOf(id: string | null): Category | undefined {
-		if (!id) {
-			return undefined
-		}
-		return categories()?.find((c) => c.id === id)
-	}
+	const catForm = catCrud.form
+	const setCatForm = catCrud.setForm
 
 	function openCreate() {
 		setEditingId(null)
@@ -228,49 +222,37 @@ export default function Transactions() {
 
 	// ---- Categories ----
 	function openCatCreate() {
-		setEditingCat(null)
-		setCatForm({ name: '', kind: '', color: '#22c55e' })
-		setCatError('')
-		setShowCatForm(true)
+		catCrud.openCreate({ name: '', kind: '', color: '#22c55e' })
 	}
 	function openCatEdit(c: Category) {
-		setEditingCat(c)
-		setCatForm({ name: c.name, kind: c.kind ?? '', color: c.color ?? '#22c55e' })
-		setCatError('')
-		setShowCatForm(true)
+		catCrud.openEdit(c, { name: c.name, kind: c.kind ?? '', color: c.color ?? '#22c55e' })
 	}
-	async function submitCat(e: Event) {
-		e.preventDefault()
-		setCatError('')
-		const f = catForm()
-		if (!f.name.trim()) {
-			setCatError('Name is required')
-			return
-		}
-		const payload = {
-			name: f.name.trim(),
-			kind: (f.kind || null) as Category['kind'],
-			color: f.color || null,
-		}
-		try {
-			const cur = editingCat()
+	function submitCat(e: Event) {
+		return catCrud.submit(e, async () => {
+			const f = catForm()
+			if (!f.name.trim()) {
+				throw new Error('Name is required')
+			}
+			const payload = {
+				name: f.name.trim(),
+				kind: (f.kind || null) as Category['kind'],
+				color: f.color || null,
+			}
+			const cur = catCrud.editing()
 			if (cur) {
 				await api.categories.update(cur.id, payload)
 			} else {
 				await api.categories.create(payload)
 			}
-			setShowCatForm(false)
 			await refetchCats()
-		} catch (err) {
-			setCatError((err as Error).message)
-		}
+		})
 	}
-	async function removeCat(id: string) {
-		if (!confirm('Delete category? Transactions keep their history (category set to none).')) {
-			return
-		}
-		await api.categories.remove(id)
-		await refetchCats()
+	function removeCat(id: string) {
+		return removeWithConfirm(
+			'Delete category? Transactions keep their history (category set to none).',
+			() => api.categories.remove(id),
+			refetchCats,
+		)
 	}
 
 	const isTransferLeg = (t: Transaction) => t.transferId != null
@@ -341,14 +323,11 @@ export default function Transactions() {
 						<span class="muted text-sm">
 							{filtered().length} shown · in {formatEUR(totals().inflow)} · out{' '}
 							{formatEUR(totals().outflow)} · net{' '}
-							<span
-								classList={{
-									'amount--in': totals().net >= 0,
-									'amount--out': totals().net < 0,
-								}}
-							>
-								{formatEUR(totals().net)}
-							</span>
+							<Amount
+								cents={totals().net}
+								direction={totals().net >= 0 ? 'inflow' : 'outflow'}
+								showSign={false}
+							/>
 						</span>
 					</div>
 				</div>
@@ -596,7 +575,7 @@ export default function Transactions() {
 			<div class="list list--tight">
 				<For each={filtered()}>
 					{(t) => {
-						const cat = () => categoryOf(t.categoryId)
+						const cat = () => categoryOf(categories(), t.categoryId)
 						return (
 							<div class="card card--compact card-row">
 								<div>
@@ -609,7 +588,7 @@ export default function Transactions() {
 										</Show>
 									</div>
 									<div class="muted text-sm">
-										{formatDateISO(t.date)} · {accountName(t.accountId)}
+										{formatDateISO(t.date)} · {accountName(accounts(), t.accountId)}
 										<Show when={cat()}>
 											{' '}
 											·{' '}
@@ -624,17 +603,7 @@ export default function Transactions() {
 									</div>
 								</div>
 								<div class="card-actions">
-									<span
-										class="strong--bold"
-										style={{ 'white-space': 'nowrap' }}
-										classList={{
-											'amount--in': t.direction === 'inflow',
-											'amount--out': t.direction !== 'inflow',
-										}}
-									>
-										{t.direction === 'inflow' ? '+' : '−'}
-										{formatEUR(t.amountCents)}
-									</span>
+									<Amount cents={t.amountCents} direction={t.direction} />
 									<Show
 										when={!isTransferLeg(t)}
 										fallback={
@@ -672,8 +641,13 @@ export default function Transactions() {
 				</button>
 			</div>
 
-			<Show when={showCatForm()}>
-				<form onSubmit={submitCat} class="form-card">
+			<CrudForm
+				open={catCrud.showForm()}
+				error={catCrud.error()}
+				editing={catCrud.editing()}
+				onSubmit={submitCat}
+				onCancel={catCrud.close}
+			>
 					<div class="form-grid">
 						<label class="field">
 							Name
@@ -707,19 +681,7 @@ export default function Transactions() {
 							/>
 						</label>
 					</div>
-					<Show when={catError()}>
-						<p class="form-error">{catError()}</p>
-					</Show>
-					<div class="form-actions">
-						<button type="button" onClick={() => setShowCatForm(false)} class="btn-ghost">
-							Cancel
-						</button>
-						<button type="submit" class="btn-primary">
-							{editingCat() ? 'Save' : 'Create'}
-						</button>
-					</div>
-				</form>
-			</Show>
+			</CrudForm>
 
 			<div class="list list--tight">
 				<For each={categories() ?? []}>

@@ -1,17 +1,30 @@
-import { createResource, createSignal, For, Show } from 'solid-js'
+import { createResource, For, Show } from 'solid-js'
 import { api, type Pool } from '../lib/api'
+import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { formatEUR, formatPercent, formatRiskLevel, riskLevelLabels } from '../lib/format'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import EmptyState from './EmptyState'
 
 export default function Pools() {
 	const [pools, { refetch }] = createResource(() => api.pools.list())
-	const [showForm, setShowForm] = createSignal(false)
-	const [editing, setEditing] = createSignal<Pool | null>(null)
-	const [error, setError] = createSignal('')
-	const [form, setForm] = createSignal({
+	const crud = useCrudForm<
+		{
+			name: string
+			purpose: string
+			targetMin: string
+			targetMax: string
+			targetPercent: string
+			expectedReturn: string
+			riskLevel: string
+			volatility: string
+			horizonMonths: string
+			color: string
+		},
+		Pool
+	>({
 		name: '',
 		purpose: '',
 		targetMin: '',
@@ -23,10 +36,11 @@ export default function Pools() {
 		horizonMonths: '',
 		color: '#22c55e',
 	})
+	const form = crud.form
+	const setForm = crud.setForm
 
 	function openCreate() {
-		setEditing(null)
-		setForm({
+		crud.openCreate({
 			name: '',
 			purpose: '',
 			targetMin: '',
@@ -38,12 +52,9 @@ export default function Pools() {
 			horizonMonths: '',
 			color: '#22c55e',
 		})
-		setError('')
-		setShowForm(true)
 	}
 	function openEdit(p: Pool) {
-		setEditing(p)
-		setForm({
+		crud.openEdit(p, {
 			name: p.name,
 			purpose: p.purpose ?? '',
 			targetMin: centsToEuroInput(p.targetMinCents),
@@ -56,29 +67,40 @@ export default function Pools() {
 			horizonMonths: p.horizonMonths?.toString() ?? '',
 			color: p.color ?? '#22c55e',
 		})
-		setError('')
-		setShowForm(true)
 	}
 
-	async function submit(e: Event) {
-		e.preventDefault()
-		setError('')
-		const f = form()
-		const targetMinCents = parseEuroToCents(f.targetMin)
-		const targetMaxCents = parseEuroToCents(f.targetMax)
-		const targetPercent =
-			f.targetPercent.trim() === '' ? null : Number.parseInt(f.targetPercent, 10)
-		const expectedReturnBps =
-			f.expectedReturn.trim() === ''
-				? null
-				: Math.round(Number.parseFloat(f.expectedReturn) * 100)
-		const riskLevel = f.riskLevel.trim() === '' ? null : Number.parseInt(f.riskLevel, 10)
-		const volatilityBps =
-			f.volatility.trim() === '' ? null : Math.round(Number.parseFloat(f.volatility) * 100)
-		const horizonMonths =
-			f.horizonMonths.trim() === '' ? null : Number.parseInt(f.horizonMonths, 10)
-		if (
-			[
+	function submit(e: Event) {
+		return crud.submit(e, async () => {
+			const f = form()
+			const targetMinCents = parseEuroToCents(f.targetMin)
+			const targetMaxCents = parseEuroToCents(f.targetMax)
+			const targetPercent =
+				f.targetPercent.trim() === '' ? null : Number.parseInt(f.targetPercent, 10)
+			const expectedReturnBps =
+				f.expectedReturn.trim() === ''
+					? null
+					: Math.round(Number.parseFloat(f.expectedReturn) * 100)
+			const riskLevel = f.riskLevel.trim() === '' ? null : Number.parseInt(f.riskLevel, 10)
+			const volatilityBps =
+				f.volatility.trim() === '' ? null : Math.round(Number.parseFloat(f.volatility) * 100)
+			const horizonMonths =
+				f.horizonMonths.trim() === '' ? null : Number.parseInt(f.horizonMonths, 10)
+			if (
+				[
+					targetMinCents,
+					targetMaxCents,
+					targetPercent,
+					expectedReturnBps,
+					riskLevel,
+					volatilityBps,
+					horizonMonths,
+				].some((v) => v !== null && Number.isNaN(v))
+			) {
+				throw new Error('Invalid number input')
+			}
+			const payload: Omit<Pool, 'id' | 'createdAt'> = {
+				name: f.name,
+				purpose: f.purpose || null,
 				targetMinCents,
 				targetMaxCents,
 				targetPercent,
@@ -86,43 +108,24 @@ export default function Pools() {
 				riskLevel,
 				volatilityBps,
 				horizonMonths,
-			].some((v) => v !== null && Number.isNaN(v))
-		) {
-			setError('Invalid number input')
-			return
-		}
-		const payload: Omit<Pool, 'id' | 'createdAt'> = {
-			name: f.name,
-			purpose: f.purpose || null,
-			targetMinCents,
-			targetMaxCents,
-			targetPercent,
-			expectedReturnBps,
-			riskLevel,
-			volatilityBps,
-			horizonMonths,
-			color: f.color || null,
-		}
-		try {
-			const current = editing()
+				color: f.color || null,
+			}
+			const current = crud.editing()
 			if (current) {
 				await api.pools.update(current.id, payload)
 			} else {
 				await api.pools.create(payload)
 			}
-			setShowForm(false)
 			await refetch()
-		} catch (err) {
-			setError((err as Error).message)
-		}
+		})
 	}
 
-	async function remove(id: string) {
-		if (!confirm('Delete pool? Allocations will be kept.')) {
-			return
-		}
-		await api.pools.remove(id)
-		await refetch()
+	function remove(id: string) {
+		return removeWithConfirm(
+			'Delete pool? Allocations will be kept.',
+			() => api.pools.remove(id),
+			refetch,
+		)
 	}
 
 	return (
@@ -134,8 +137,13 @@ export default function Pools() {
 				</button>
 			</div>
 
-			<Show when={showForm()}>
-				<form onSubmit={submit} class="form-card">
+			<CrudForm
+				open={crud.showForm()}
+				error={crud.error()}
+				editing={crud.editing()}
+				onSubmit={submit}
+				onCancel={crud.close}
+			>
 					<div class="form-grid">
 						<label class="field">
 							Name{' '}
@@ -259,19 +267,7 @@ export default function Pools() {
 							/>
 						</label>
 					</div>
-					<Show when={error()}>
-						<p class="form-error">{error()}</p>
-					</Show>
-					<div class="form-actions">
-						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
-							Cancel
-						</button>
-						<button type="submit" class="btn-primary">
-							{editing() ? 'Save' : 'Create'}
-						</button>
-					</div>
-				</form>
-			</Show>
+			</CrudForm>
 
 			<div class="list">
 				<For each={pools() ?? []}>

@@ -1,3 +1,10 @@
+import type { AccountType, LiquidityTier } from './enums'
+
+/**
+ * Label/color maps below are keyed by the shared enum types (`./enums`).
+ * The intersected `Record<string, string>` keeps plain-`string` indexing
+ * (e.g. `Object.entries(...)` keys in components) compiling without casts.
+ */
 export function formatEUR(cents: number): string {
 	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(
 		cents / 100,
@@ -50,7 +57,7 @@ export function todayISO(d = new Date()): string {
 	return `${y}-${m}-${day}`
 }
 
-export const liquidityLabels: Record<string, string> = {
+export const liquidityLabels: Record<LiquidityTier, string> & Record<string, string> = {
 	instant: 'Instant',
 	days: 'Days',
 	weeks: 'Weeks',
@@ -58,7 +65,7 @@ export const liquidityLabels: Record<string, string> = {
 	locked: 'Locked',
 }
 
-export const liquidityColors: Record<string, string> = {
+export const liquidityColors: Record<LiquidityTier, string> & Record<string, string> = {
 	instant: '#22c55e',
 	days: '#3b82f6',
 	weeks: '#f59e0b',
@@ -66,7 +73,7 @@ export const liquidityColors: Record<string, string> = {
 	locked: '#ef4444',
 }
 
-export const accountTypeLabels: Record<string, string> = {
+export const accountTypeLabels: Record<AccountType, string> & Record<string, string> = {
 	checking: 'Checking',
 	savings: 'Savings',
 	broker: 'Broker',
@@ -76,7 +83,7 @@ export const accountTypeLabels: Record<string, string> = {
 	other: 'Other',
 }
 
-export const accountTypeDescriptions: Record<string, string> = {
+export const accountTypeDescriptions: Record<AccountType, string> & Record<string, string> = {
 	checking: 'Everyday account for income, bills and daily spending.',
 	savings: 'Long-term savings with modest interest and flexible access.',
 	broker: 'Securities account for stocks, ETFs and other investments.',

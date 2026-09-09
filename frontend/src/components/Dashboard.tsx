@@ -9,6 +9,7 @@ import {
 	liquidityLabels,
 } from '../lib/format'
 import './Dashboard.css'
+import Amount from './Amount'
 import EmptyState from './EmptyState'
 
 function pct(cents: number, total: number): number {
@@ -235,18 +236,11 @@ export default function Dashboard() {
 																</Show>
 															</div>
 														</div>
-														<div
+														<Amount
+															cents={ev.amountCents}
+															direction={ev.direction}
 															class="row-amount"
-															classList={{
-																'amount--in':
-																	ev.direction === 'inflow',
-																'amount--out':
-																	ev.direction !== 'inflow',
-															}}
-														>
-															{ev.direction === 'inflow' ? '+' : '−'}
-															{formatEUR(ev.amountCents)}
-														</div>
+														/>
 													</div>
 												)
 											}}

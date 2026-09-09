@@ -1,26 +1,38 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
+import { createMemo, createResource, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
+import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
 import { accountTypeDescriptions, accountTypeLabels, formatEUR } from '../lib/format'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
 
 export default function Accounts() {
 	const [accounts, { refetch }] = createResource(() => api.accounts.list())
-	const [showForm, setShowForm] = createSignal(false)
-	const [editing, setEditing] = createSignal<Account | null>(null)
-	const [form, setForm] = createSignal({
+	const crud = useCrudForm<
+		{
+			name: string
+			type: Account['type']
+			institution: string
+			openingDate: string
+			openingBalance: string
+			iban: string
+			notes: string
+		},
+		Account
+	>({
 		name: '',
-		type: 'checking' as Account['type'],
+		type: 'checking',
 		institution: '',
 		openingDate: '',
 		openingBalance: '',
 		iban: '',
 		notes: '',
 	})
-	const [error, setError] = createSignal('')
+	const form = crud.form
+	const setForm = crud.setForm
 
 	const institutions = createMemo(() => {
 		const seen = new Set<string>()
@@ -34,8 +46,7 @@ export default function Accounts() {
 	})
 
 	function openCreate() {
-		setEditing(null)
-		setForm({
+		crud.openCreate({
 			name: '',
 			type: 'checking',
 			institution: '',
@@ -44,12 +55,9 @@ export default function Accounts() {
 			iban: '',
 			notes: '',
 		})
-		setError('')
-		setShowForm(true)
 	}
 	function openEdit(a: Account) {
-		setEditing(a)
-		setForm({
+		crud.openEdit(a, {
 			name: a.name,
 			type: a.type,
 			institution: a.institution ?? '',
@@ -58,48 +66,36 @@ export default function Accounts() {
 			iban: a.iban ?? '',
 			notes: a.notes ?? '',
 		})
-		setError('')
-		setShowForm(true)
 	}
 
-	async function submit(e: Event) {
-		e.preventDefault()
-		setError('')
-		const f = form()
-		const openingBalanceCents = parseEuroToCents(f.openingBalance)
-		if (openingBalanceCents !== null && Number.isNaN(openingBalanceCents)) {
-			setError('Invalid opening balance')
-			return
-		}
-		const payload: Omit<Account, 'id' | 'createdAt'> = {
-			name: f.name,
-			type: f.type,
-			institution: f.institution.trim() || null,
-			openingDate: f.openingDate || null,
-			openingBalanceCents,
-			iban: f.iban.trim() || null,
-			notes: f.notes || null,
-		}
-		try {
-			const current = editing()
+	function submit(e: Event) {
+		return crud.submit(e, async () => {
+			const f = form()
+			const openingBalanceCents = parseEuroToCents(f.openingBalance)
+			if (openingBalanceCents !== null && Number.isNaN(openingBalanceCents)) {
+				throw new Error('Invalid opening balance')
+			}
+			const payload: Omit<Account, 'id' | 'createdAt'> = {
+				name: f.name,
+				type: f.type,
+				institution: f.institution.trim() || null,
+				openingDate: f.openingDate || null,
+				openingBalanceCents,
+				iban: f.iban.trim() || null,
+				notes: f.notes || null,
+			}
+			const current = crud.editing()
 			if (current) {
 				await api.accounts.update(current.id, payload)
 			} else {
 				await api.accounts.create(payload)
 			}
-			setShowForm(false)
 			await refetch()
-		} catch (err) {
-			setError((err as Error).message)
-		}
+		})
 	}
 
-	async function remove(id: string) {
-		if (!confirm('Really delete?')) {
-			return
-		}
-		await api.accounts.remove(id)
-		await refetch()
+	function remove(id: string) {
+		return removeWithConfirm('Really delete?', () => api.accounts.remove(id), refetch)
 	}
 
 	return (
@@ -111,8 +107,13 @@ export default function Accounts() {
 				</button>
 			</div>
 
-			<Show when={showForm()}>
-				<form onSubmit={submit} class="form-card">
+			<CrudForm
+				open={crud.showForm()}
+				error={crud.error()}
+				editing={crud.editing()}
+				onSubmit={submit}
+				onCancel={crud.close}
+			>
 					<div class="form-grid">
 						<label class="field">
 							Name{' '}
@@ -199,19 +200,7 @@ export default function Accounts() {
 							class="input"
 						/>
 					</label>
-					<Show when={error()}>
-						<p class="form-error">{error()}</p>
-					</Show>
-					<div class="form-actions">
-						<button type="button" onClick={() => setShowForm(false)} class="btn-ghost">
-							Cancel
-						</button>
-						<button type="submit" class="btn-primary">
-							{editing() ? 'Save' : 'Create'}
-						</button>
-					</div>
-				</form>
-			</Show>
+			</CrudForm>
 
 			<Show when={accounts.loading}>
 				<p class="muted">Loading…</p>
