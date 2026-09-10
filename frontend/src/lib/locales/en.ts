@@ -39,19 +39,15 @@ export const en = {
 	accountType: {
 		checking: 'Checking',
 		savings: 'Savings',
-		broker: 'Brokerage',
-		cash: 'Cash',
+		broker: 'Broker',
 		crypto: 'Crypto',
-		festgeld: 'Fixed-term',
 		other: 'Other',
 	},
 	accountTypeDesc: {
 		checking: 'Everyday account for income, bills and daily spending.',
-		savings: 'Long-term savings with moderate interest and flexible access.',
-		broker: 'Brokerage account for stocks, ETFs and other securities.',
-		cash: 'Physical cash outside a bank account.',
+		savings: 'Savings with flexible access or as fixed-term deposit.',
+		broker: 'Broker account for stocks, ETFs and other securities.',
 		crypto: 'Digital assets in a wallet or on an exchange.',
-		festgeld: 'Fixed-term deposit with locked interest until maturity.',
 		other: 'Any other account that fits no category.',
 	},
 	riskLevel: {
@@ -88,7 +84,6 @@ export const en = {
 	},
 	accounts: {
 		title: 'Accounts',
-		subtitleSuffix: 'accounts · checking, savings, brokerages and more at a glance.',
 		add: '+ Account',
 		name: 'Name',
 		type: 'Type',
@@ -181,7 +176,6 @@ export const en = {
 			'Delete category? Transactions keep their history (category set to none).',
 	},
 	pools: {
-		subtitleSuffix: 'pools · targets, risk and expected return at a glance.',
 		add: '+ Pool',
 		basics: 'Basics',
 		name: 'Name',
@@ -216,7 +210,6 @@ export const en = {
 	},
 	allocations: {
 		title: 'Allocations',
-		subtitleSuffix: 'allocations · link account balances to pools.',
 		add: '+ Allocation',
 		needFirst: 'Create accounts and pools first, then link allocations.',
 		pool: 'Pool',
@@ -235,7 +228,6 @@ export const en = {
 	},
 	events: {
 		title: 'Events',
-		subtitleSuffix: 'events · newest first, grouped by month.',
 		add: '+ Event',
 		titleField: 'Title',
 		amount: 'Amount (€)',

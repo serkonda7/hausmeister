@@ -42,18 +42,14 @@ export const de: Dictionary = {
 		checking: 'Girokonto',
 		savings: 'Sparkonto',
 		broker: 'Depot',
-		cash: 'Bargeld',
 		crypto: 'Krypto',
-		festgeld: 'Festgeld',
 		other: 'Sonstiges',
 	},
 	accountTypeDesc: {
 		checking: 'Alltagskonto für Einnahmen, Rechnungen und tägliche Ausgaben.',
-		savings: 'Langfristige Ersparnisse mit moderaten Zinsen und flexiblem Zugriff.',
+		savings: 'Ersparnisse mit flexiblem Zugriff oder als Festgeld.',
 		broker: 'Wertpapierdepot für Aktien, ETFs und andere Anlagen.',
-		cash: 'Physisches Bargeld außerhalb eines Bankkontos.',
 		crypto: 'Digitale Vermögenswerte in einer Wallet oder auf einer Börse.',
-		festgeld: 'Festgeld mit gebundenen Zinsen bis zur Fälligkeit.',
 		other: 'Jedes andere Konto, das in keine Kategorie passt.',
 	},
 	riskLevel: {
@@ -90,7 +86,6 @@ export const de: Dictionary = {
 	},
 	accounts: {
 		title: 'Konten',
-		subtitleSuffix: 'Konten · Giro, Sparkonten, Depots und mehr im Überblick.',
 		add: '+ Konto',
 		name: 'Name',
 		type: 'Typ',
@@ -183,7 +178,6 @@ export const de: Dictionary = {
 			'Kategorie löschen? Buchungen behalten ihren Verlauf (Kategorie wird auf keine gesetzt).',
 	},
 	pools: {
-		subtitleSuffix: 'Pools · Ziele, Risiko und Rendite im Überblick.',
 		add: '+ Pool',
 		basics: 'Grundlagen',
 		name: 'Name',
@@ -218,7 +212,6 @@ export const de: Dictionary = {
 	},
 	allocations: {
 		title: 'Zuordnungen',
-		subtitleSuffix: 'Zuordnungen · verknüpfe Kontostände mit Pools.',
 		add: '+ Zuordnung',
 		needFirst: 'Lege zuerst Konten und Pools an, dann verknüpfe Zuordnungen.',
 		pool: 'Pool',
@@ -237,7 +230,6 @@ export const de: Dictionary = {
 	},
 	events: {
 		title: 'Ereignisse',
-		subtitleSuffix: 'Ereignisse · neueste zuerst, nach Monat gruppiert.',
 		add: '+ Ereignis',
 		titleField: 'Titel',
 		amount: 'Betrag (€)',

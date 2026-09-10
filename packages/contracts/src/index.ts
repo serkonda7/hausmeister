@@ -5,15 +5,7 @@
 export const liquidityTierEnum = ['instant', 'days', 'weeks', 'months', 'locked'] as const
 export type LiquidityTier = (typeof liquidityTierEnum)[number]
 
-export const accountTypeEnum = [
-	'checking',
-	'savings',
-	'broker',
-	'cash',
-	'crypto',
-	'festgeld',
-	'other',
-] as const
+export const accountTypeEnum = ['checking', 'savings', 'broker', 'crypto', 'other'] as const
 export type AccountType = (typeof accountTypeEnum)[number]
 
 export const directionEnum = ['inflow', 'outflow'] as const

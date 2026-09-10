@@ -97,9 +97,6 @@ export default function Allocations() {
 			<div class="page-header">
 				<div>
 					<h2 class="page-title">{t().allocations.title}</h2>
-					<p class="page-subtitle">
-						{(allocations() ?? []).length} {t().allocations.subtitleSuffix}
-					</p>
 				</div>
 				<button
 					type="button"

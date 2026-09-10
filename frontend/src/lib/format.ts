@@ -136,10 +136,8 @@ export const liquidityLabels: Record<LiquidityTier, string> & Record<string, str
 export const accountTypeLabels: Record<AccountType, string> & Record<string, string> = {
 	checking: 'Checking',
 	savings: 'Savings',
-	broker: 'Brokerage',
-	cash: 'Cash',
+	broker: 'Broker',
 	crypto: 'Crypto',
-	festgeld: 'Fixed-term',
 	other: 'Other',
 }
 
@@ -148,11 +146,10 @@ export const accountTypeLabels: Record<AccountType, string> & Record<string, str
  */
 export const accountTypeDescriptions: Record<AccountType, string> & Record<string, string> = {
 	checking: 'Everyday account for income, bills and daily spending.',
-	savings: 'Long-term savings with moderate interest and flexible access.',
-	broker: 'Brokerage account for stocks, ETFs and other securities.',
-	cash: 'Physical cash outside a bank account.',
+	savings:
+		'Savings with flexible access or as fixed-term deposit with locked interest until maturity.',
+	broker: 'Broker account for stocks, ETFs and other securities.',
 	crypto: 'Digital assets in a wallet or on an exchange.',
-	festgeld: 'Fixed-term deposit with locked interest until maturity.',
 	other: 'Any other account that fits no category.',
 }
 

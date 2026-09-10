@@ -157,9 +157,6 @@ export default function Events() {
 			<div class="page-header">
 				<div>
 					<h2 class="page-title">{t().events.title}</h2>
-					<p class="page-subtitle">
-						{(events() ?? []).length} {t().events.subtitleSuffix}
-					</p>
 				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					{t().events.add}

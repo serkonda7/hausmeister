@@ -168,9 +168,6 @@ export default function Pools() {
 			<div class="page-header">
 				<div>
 					<h2 class="page-title">{t().nav.pools}</h2>
-					<p class="page-subtitle">
-						{(pools() ?? []).length} {t().pools.subtitleSuffix}
-					</p>
 				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					{t().pools.add}

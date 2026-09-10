@@ -18,7 +18,7 @@ function now() {
 	return new Date().toISOString()
 }
 
-// ---------- Accounts (total 53.000 €) ----------
+// ---------- Accounts (total 51.500 €) ----------
 const accGiro = {
 	id: id(),
 	name: 'Girokonto ING',
@@ -55,7 +55,7 @@ const accDepot = {
 const accFestgeld = {
 	id: id(),
 	name: 'Festgeld Weltsparen',
-	type: 'festgeld' as const,
+	type: 'savings' as const,
 	institution: 'Weltsparen',
 	openingDate: '2025-09-01',
 	openingBalanceCents: 1_000_000, // 10.000 €
@@ -63,18 +63,7 @@ const accFestgeld = {
 	notes: '2 Jahre, 3,1 % p.a., fällig 2027-09-01',
 	createdAt: now(),
 }
-const accCash = {
-	id: id(),
-	name: 'Bargeld Reserve',
-	type: 'cash' as const,
-	institution: null,
-	openingDate: '2025-01-01',
-	openingBalanceCents: 150_000, // 1.500 €
-	iban: null,
-	notes: 'Haushaltskasse',
-	createdAt: now(),
-}
-await db.insert(accounts).values([accGiro, accTagesgeld, accDepot, accFestgeld, accCash])
+await db.insert(accounts).values([accGiro, accTagesgeld, accDepot, accFestgeld])
 
 // ---------- Pools ----------
 const poolNotgroschen = {
@@ -212,15 +201,6 @@ await db.insert(allocations).values([
 		poolId: poolSpass.id,
 		accountId: accGiro.id,
 		amountCents: 80_000,
-		liquidityOverride: 'instant' as const,
-		unlockAt: null,
-		createdAt: now(),
-	},
-	{
-		id: id(),
-		poolId: poolSpass.id,
-		accountId: accCash.id,
-		amountCents: 50_000,
 		liquidityOverride: 'instant' as const,
 		unlockAt: null,
 		createdAt: now(),
@@ -451,7 +431,7 @@ await db
 
 // ---------- Transactions (actuals ledger) ----------
 // Balances stay above allocations: Giro 9670 €, Tagesgeld 12192 €,
-// Depot 24150 €, Festgeld 10310 €, Cash 1531 €.
+// Depot 24150 €, Festgeld 10310 €.
 function txn(
 	accountId: string,
 	date: string,
@@ -647,10 +627,6 @@ await db.insert(transactions).values([
 		'inflow',
 		'3,1 % auf 10.000 €',
 	),
-	// Cash: Kiosk & Bäcker out
-	txn(accCash.id, '2026-02-03', 'Kiosk Hauptstraße', catLebensmittel.id, 1_200, 'outflow'),
-	txn(accCash.id, '2026-02-21', 'Wochenmarkt', catLebensmittel.id, 3_200, 'outflow'),
-	txn(accCash.id, '2026-03-07', 'Bäckerei Schmidt', catLebensmittel.id, 2_500, 'outflow'),
 	// Transfers (paired legs share a transferId)
 	...transferLegs(
 		accGiro.id,
@@ -688,18 +664,9 @@ await db.insert(transactions).values([
 		catSparen.id,
 		'Steuerrückzahlung investiert',
 	),
-	...transferLegs(
-		accGiro.id,
-		accCash.id,
-		'2026-01-20',
-		10_000,
-		'Bargeld abgehoben',
-		null,
-		'Haushaltskasse auffüllen',
-	),
 ])
 
 console.log(
-	'Demo seed done: 5 accounts, 5 pools, 8 allocations, 10 events, 9 categories, 35 transactions (incl. 5 transfers)',
+	'Demo seed done: 4 accounts, 5 pools, 7 allocations, 10 events, 9 categories, 30 transactions (incl. 4 transfers)',
 )
 sqlite.close()

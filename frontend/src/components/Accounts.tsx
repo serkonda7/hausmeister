@@ -116,9 +116,7 @@ export default function Accounts() {
 		'checking',
 		'savings',
 		'broker',
-		'cash',
 		'crypto',
-		'festgeld',
 		'other',
 	]
 
@@ -127,9 +125,6 @@ export default function Accounts() {
 			<div class="page-header">
 				<div>
 					<h2 class="page-title">{t().accounts.title}</h2>
-					<p class="page-subtitle">
-						{(accounts() ?? []).length} {t().accounts.subtitleSuffix}
-					</p>
 				</div>
 				<button type="button" onClick={openCreate} class="btn-primary">
 					{t().accounts.add}
