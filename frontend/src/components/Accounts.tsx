@@ -2,9 +2,10 @@ import { createMemo, createResource, For, Show } from 'solid-js'
 import { type Account, api } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { accountTypeDescription, accountTypeLabel, formatDateISO, formatEUR } from '../lib/format'
+import { accountTypeDescription, accountTypeLabel, formatEUR } from '../lib/format'
 import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import './Accounts.css'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
@@ -234,76 +235,66 @@ export default function Accounts() {
 				<p class="muted">{t().common.loading}</p>
 			</Show>
 
-			<div class="list">
-				<For each={accounts() ?? []}>
-					{(a) => {
-						const b = () => balances().get(a.id)
-						return (
-							<div class="card card-row">
-								<div>
-									<div class="strong">
-										{a.name}{' '}
-										<span class="subtle" title={accountTypeDescription(a.type)}>
-											· {accountTypeLabel(a.type)}
-										</span>
-									</div>
-									<div class="muted text-sm">
-										{a.institution ?? '—'}
-										<Show when={a.iban}> · {a.iban}</Show>
-										<Show when={a.openingDate}>
-											{' '}
-											· {t().accounts.opened}{' '}
-											{formatDateISO(a.openingDate ?? '')}
-										</Show>
-									</div>
-								</div>
-								<div class="card-actions">
-									<div style={{ 'text-align': 'right' }}>
-										<div
-											class="strong--bold"
-											style={{ 'white-space': 'nowrap' }}
-										>
-											<Show
-												when={b()}
-												fallback={
-													a.openingBalanceCents != null
-														? formatEUR(a.openingBalanceCents)
-														: '—'
-												}
-											>
-												{(bal) => formatEUR(bal().currentCents)}
-											</Show>
-										</div>
-										<Show when={b()}>
-											{(bal) => (
-												<div
-													class="muted text-sm"
-													style={{ 'white-space': 'nowrap' }}
+			<Show when={(accounts() ?? []).length > 0 && !accounts.loading}>
+				<div class="table-wrap">
+					<table class="table">
+						<thead>
+							<tr>
+								<th scope="col">{t().accounts.name}</th>
+								<th scope="col">{t().accounts.type}</th>
+								<th scope="col">{t().accounts.institution}</th>
+								<th scope="col">{t().accounts.iban}</th>
+								<th scope="col" class="num">
+									{t().accounts.balance}
+								</th>
+								<th scope="col" class="cell-actions">
+									<span class="sr-only">
+										{t().common.edit} / {t().common.delete}
+									</span>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<For each={accounts() ?? []}>
+								{(a) => {
+									const b = () => balances().get(a.id)
+									return (
+										<tr>
+											<td class="cell-main">{a.name}</td>
+											<td title={accountTypeDescription(a.type)}>
+												{accountTypeLabel(a.type)}
+											</td>
+											<td>{a.institution ?? t().common.dash}</td>
+											<td>{a.iban ?? t().common.dash}</td>
+											<td class="num strong--bold">
+												<Show
+													when={b()}
+													fallback={
+														a.openingBalanceCents != null
+															? formatEUR(a.openingBalanceCents)
+															: t().common.dash
+													}
 												>
-													{t().accounts.free}{' '}
-													{formatEUR(bal().unallocatedCents)}
-													<Show when={a.openingBalanceCents != null}>
-														{' '}
-														· {t().accounts.start}{' '}
-														{formatEUR(a.openingBalanceCents ?? 0)}
-													</Show>
-												</div>
-											)}
-										</Show>
-									</div>
-									<CrudRow
-										onEdit={() => openEdit(a)}
-										onDelete={() => remove(a.id)}
-									/>
-								</div>
-							</div>
-						)
-					}}
-				</For>
-				<Show when={(accounts() ?? []).length === 0 && !accounts.loading}>
-					<EmptyState>{t().accounts.empty}</EmptyState>
-				</Show>
-			</div>
+													{(bal) => formatEUR(bal().currentCents)}
+												</Show>
+											</td>
+											<td class="cell-actions">
+												<CrudRow
+													onEdit={() => openEdit(a)}
+													onDelete={() => remove(a.id)}
+												/>
+											</td>
+										</tr>
+									)
+								}}
+							</For>
+						</tbody>
+					</table>
+				</div>
+			</Show>
+			<Show when={(accounts() ?? []).length === 0 && !accounts.loading}>
+				<EmptyState>{t().accounts.empty}</EmptyState>
+			</Show>
 		</div>
 	)
 }

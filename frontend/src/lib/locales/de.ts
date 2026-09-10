@@ -99,6 +99,7 @@ export const de: Dictionary = {
 		openingDate: 'Eröffnungsdatum',
 		openingBalance: 'Anfangssaldo (€)',
 		iban: 'IBAN',
+		balance: 'Saldo',
 		notes: 'Notizen',
 		opened: 'eröffnet',
 		free: 'Frei',

@@ -97,6 +97,7 @@ export const en = {
 		openingDate: 'Opening date',
 		openingBalance: 'Opening balance (€)',
 		iban: 'IBAN',
+		balance: 'Balance',
 		notes: 'Notes',
 		opened: 'opened',
 		free: 'Free',
