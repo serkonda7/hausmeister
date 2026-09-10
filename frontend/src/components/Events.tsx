@@ -10,6 +10,36 @@ import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import Field, { SelectField, TextField } from './Field'
+import PageHeader from './PageHeader'
+
+type EventForm = {
+	title: string
+	amount: string
+	direction: 'inflow' | 'outflow'
+	date: string
+	isRecurring: boolean
+	frequency: string
+	recurringUntil: string
+	poolId: string
+	accountId: string
+	notes: string
+}
+
+function emptyEventForm(): EventForm {
+	return {
+		title: '',
+		amount: '',
+		direction: 'outflow',
+		date: todayISO(),
+		isRecurring: false,
+		frequency: '',
+		recurringUntil: '',
+		poolId: '',
+		accountId: '',
+		notes: '',
+	}
+}
 
 export default function Events() {
 	const [events, { refetch }] = createResource(() => api.events.list())
@@ -39,48 +69,12 @@ export default function Events() {
 		return groups
 	})
 
-	const crud = useCrudForm<
-		{
-			title: string
-			amount: string
-			direction: 'inflow' | 'outflow'
-			date: string
-			isRecurring: boolean
-			frequency: string
-			recurringUntil: string
-			poolId: string
-			accountId: string
-			notes: string
-		},
-		string
-	>({
-		title: '',
-		amount: '',
-		direction: 'outflow',
-		date: todayISO(),
-		isRecurring: false,
-		frequency: '',
-		recurringUntil: '',
-		poolId: '',
-		accountId: '',
-		notes: '',
-	})
+	const crud = useCrudForm<EventForm, string>(emptyEventForm())
 	const form = crud.form
 	const setForm = crud.setForm
 
 	function openCreate() {
-		crud.openCreate({
-			title: '',
-			amount: '',
-			direction: 'outflow',
-			date: todayISO(),
-			isRecurring: false,
-			frequency: '',
-			recurringUntil: '',
-			poolId: '',
-			accountId: '',
-			notes: '',
-		})
+		crud.openCreate(emptyEventForm())
 	}
 	function openEdit(id: string) {
 		const ev = events()?.find((x) => x.id === id)
@@ -135,33 +129,19 @@ export default function Events() {
 	}
 
 	function frequencyLabel(value: string): string {
-		const d = t().events
-		switch (value) {
-			case 'weekly':
-				return d.weekly
-			case 'biweekly':
-				return d.biweekly
-			case 'monthly':
-				return d.monthly
-			case 'quarterly':
-				return d.quarterly
-			case 'yearly':
-				return d.yearly
-			default:
-				return value
-		}
+		return (t().events as Record<string, string>)[value] ?? value
 	}
 
 	return (
 		<div class="page">
-			<div class="page-header">
-				<div>
-					<h2 class="page-title">{t().events.title}</h2>
-				</div>
-				<button type="button" onClick={openCreate} class="btn-primary">
-					{t().events.add}
-				</button>
-			</div>
+			<PageHeader
+				title={t().events.title}
+				actions={
+					<button type="button" onClick={openCreate} class="btn-primary">
+						{t().events.add}
+					</button>
+				}
+			/>
 
 			<CrudForm
 				open={crud.showForm()}
@@ -171,141 +151,94 @@ export default function Events() {
 				onCancel={crud.close}
 			>
 				<div class="form-grid">
-					<label class="field">
-						<span class="field-label">
-							{t().events.titleField}{' '}
-							<span class="req" aria-hidden="true">
-								*
-							</span>
-						</span>
-						<input
-							value={form().title}
-							onInput={(e) => patchForm(setForm, 'title', e.currentTarget.value)}
-							required
-							aria-required="true"
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						<span class="field-label">
-							{t().events.amount}{' '}
-							<span class="req" aria-hidden="true">
-								*
-							</span>
-						</span>
-						<input
-							type="number"
-							step="0.01"
-							value={form().amount}
-							onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
-							required
-							aria-required="true"
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						{t().events.direction}
-						<select
-							value={form().direction}
-							onChange={(e) =>
-								patchForm(
-									setForm,
-									'direction',
-									e.currentTarget.value as FinanceEvent['direction'],
-								)
-							}
-							class="input"
-						>
-							<option value="inflow">{t().events.inflow}</option>
-							<option value="outflow">{t().events.outflow}</option>
-						</select>
-					</label>
-					<label class="field" for="ev-date">
-						<span class="field-label">
-							{t().events.date}{' '}
-							<span class="req" aria-hidden="true">
-								*
-							</span>
-						</span>
+					<TextField
+						label={t().events.titleField}
+						required
+						value={form().title}
+						onInput={(v) => patchForm(setForm, 'title', v)}
+					/>
+					<TextField
+						label={t().events.amount}
+						required
+						type="number"
+						step="0.01"
+						value={form().amount}
+						onInput={(v) => patchForm(setForm, 'amount', v)}
+					/>
+					<SelectField
+						label={t().events.direction}
+						value={form().direction}
+						onChange={(v) =>
+							patchForm(setForm, 'direction', v as FinanceEvent['direction'])
+						}
+					>
+						<option value="inflow">{t().events.inflow}</option>
+						<option value="outflow">{t().events.outflow}</option>
+					</SelectField>
+					<Field label={t().events.date} required for="ev-date">
 						<DateInput
 							id="ev-date"
 							value={form().date}
 							onInput={(v) => patchForm(setForm, 'date', v)}
 							required
 						/>
-					</label>
-					<label class="field field--checkbox">
+					</Field>
+					<Field checkbox label={t().events.recurring}>
 						<input
 							type="checkbox"
 							checked={form().isRecurring}
 							onChange={(e) =>
 								patchForm(setForm, 'isRecurring', e.currentTarget.checked)
 							}
-						/>{' '}
-						{t().events.recurring}
-					</label>
+						/>
+					</Field>
 					<Show when={form().isRecurring}>
-						<label class="field">
-							{t().events.frequency}
-							<select
-								value={form().frequency}
-								onChange={(e) =>
-									patchForm(setForm, 'frequency', e.currentTarget.value)
-								}
-								class="input"
-							>
-								<option value="">{t().common.select}</option>
-								<option value="weekly">{t().events.weekly}</option>
-								<option value="biweekly">{t().events.biweekly}</option>
-								<option value="monthly">{t().events.monthly}</option>
-								<option value="quarterly">{t().events.quarterly}</option>
-								<option value="yearly">{t().events.yearly}</option>
-							</select>
-						</label>
-						<label class="field" for="ev-recurring-until">
-							{t().events.until}{' '}
+						<SelectField
+							label={t().events.frequency}
+							value={form().frequency}
+							onChange={(v) => patchForm(setForm, 'frequency', v)}
+						>
+							<option value="">{t().common.select}</option>
+							<option value="weekly">{t().events.weekly}</option>
+							<option value="biweekly">{t().events.biweekly}</option>
+							<option value="monthly">{t().events.monthly}</option>
+							<option value="quarterly">{t().events.quarterly}</option>
+							<option value="yearly">{t().events.yearly}</option>
+						</SelectField>
+						<Field label={t().events.until} for="ev-recurring-until">
 							<DateInput
 								id="ev-recurring-until"
 								value={form().recurringUntil}
 								onInput={(v) => patchForm(setForm, 'recurringUntil', v)}
 							/>
-						</label>
+						</Field>
 					</Show>
-					<label class="field">
-						{t().events.poolOptional}
-						<select
-							value={form().poolId}
-							onChange={(e) => patchForm(setForm, 'poolId', e.currentTarget.value)}
-							class="input"
-						>
-							<option value="">{t().events.noPool}</option>
-							<For each={pools() ?? []}>
-								{(p) => <option value={p.id}>{p.name}</option>}
-							</For>
-						</select>
-					</label>
-					<label class="field">
-						{t().events.accountOptional}
-						<select
-							value={form().accountId}
-							onChange={(e) => patchForm(setForm, 'accountId', e.currentTarget.value)}
-							class="input"
-						>
-							<option value="">{t().events.noAccount}</option>
-							<For each={accounts() ?? []}>
-								{(a) => <option value={a.id}>{a.name}</option>}
-							</For>
-						</select>
-					</label>
+					<SelectField
+						label={t().events.poolOptional}
+						value={form().poolId}
+						onChange={(v) => patchForm(setForm, 'poolId', v)}
+					>
+						<option value="">{t().events.noPool}</option>
+						<For each={pools() ?? []}>
+							{(p) => <option value={p.id}>{p.name}</option>}
+						</For>
+					</SelectField>
+					<SelectField
+						label={t().events.accountOptional}
+						value={form().accountId}
+						onChange={(v) => patchForm(setForm, 'accountId', v)}
+					>
+						<option value="">{t().events.noAccount}</option>
+						<For each={accounts() ?? []}>
+							{(a) => <option value={a.id}>{a.name}</option>}
+						</For>
+					</SelectField>
 				</div>
-				<label class="field">
-					{t().events.notes}{' '}
-					<input
-						value={form().notes}
-						onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
-						class="input"
-					/>
-				</label>
+				<TextField
+					label={t().events.notes}
+					value={form().notes}
+					onInput={(v) => patchForm(setForm, 'notes', v)}
+				/>
 			</CrudForm>
 
 			<div class="list list--tight">

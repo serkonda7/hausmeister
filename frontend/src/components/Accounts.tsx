@@ -10,6 +10,29 @@ import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import Field, { SelectField, TextField } from './Field'
+import ListState from './ListState'
+import PageHeader from './PageHeader'
+
+type AccountForm = {
+	name: string
+	type: Account['type']
+	institution: string
+	openingDate: string
+	openingBalance: string
+	iban: string
+	notes: string
+}
+
+const EMPTY_FORM: AccountForm = {
+	name: '',
+	type: 'checking',
+	institution: '',
+	openingDate: '',
+	openingBalance: '',
+	iban: '',
+	notes: '',
+}
 
 export default function Accounts() {
 	const [accounts, { refetch }] = createResource(() => api.accounts.list())
@@ -25,26 +48,7 @@ export default function Accounts() {
 		}
 		return map
 	})
-	const crud = useCrudForm<
-		{
-			name: string
-			type: Account['type']
-			institution: string
-			openingDate: string
-			openingBalance: string
-			iban: string
-			notes: string
-		},
-		Account
-	>({
-		name: '',
-		type: 'checking',
-		institution: '',
-		openingDate: '',
-		openingBalance: '',
-		iban: '',
-		notes: '',
-	})
+	const crud = useCrudForm<AccountForm, Account>({ ...EMPTY_FORM })
 	const form = crud.form
 	const setForm = crud.setForm
 
@@ -60,15 +64,7 @@ export default function Accounts() {
 	})
 
 	function openCreate() {
-		crud.openCreate({
-			name: '',
-			type: 'checking',
-			institution: '',
-			openingDate: '',
-			openingBalance: '',
-			iban: '',
-			notes: '',
-		})
+		crud.openCreate({ ...EMPTY_FORM })
 	}
 	function openEdit(a: Account) {
 		crud.openEdit(a, {
@@ -122,14 +118,14 @@ export default function Accounts() {
 
 	return (
 		<div class="page">
-			<div class="page-header">
-				<div>
-					<h2 class="page-title">{t().accounts.title}</h2>
-				</div>
-				<button type="button" onClick={openCreate} class="btn-primary">
-					{t().accounts.add}
-				</button>
-			</div>
+			<PageHeader
+				title={t().accounts.title}
+				actions={
+					<button type="button" onClick={openCreate} class="btn-primary">
+						{t().accounts.add}
+					</button>
+				}
+			/>
 
 			<CrudForm
 				open={crud.showForm()}
@@ -139,42 +135,27 @@ export default function Accounts() {
 				onCancel={crud.close}
 			>
 				<div class="form-grid">
-					<label class="field">
-						<span class="field-label">
-							{t().accounts.name}{' '}
-							<span class="req" aria-hidden="true">
-								*
-							</span>
-						</span>
-						<input
-							value={form().name}
-							onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
-							required
-							aria-required="true"
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						{t().accounts.type}
-						<select
-							value={form().type}
-							onChange={(e) =>
-								patchForm(setForm, 'type', e.currentTarget.value as Account['type'])
-							}
-							class="input"
-							title={accountTypeDescription(form().type)}
-						>
-							<For each={accountTypes}>
-								{(k) => (
-									<option value={k} title={accountTypeDescription(k)}>
-										{accountTypeLabel(k)}
-									</option>
-								)}
-							</For>
-						</select>
-					</label>
-					<label class="field">
-						{t().accounts.institution}{' '}
+					<TextField
+						label={t().accounts.name}
+						required
+						value={form().name}
+						onInput={(v) => patchForm(setForm, 'name', v)}
+					/>
+					<SelectField
+						label={t().accounts.type}
+						value={form().type}
+						onChange={(v) => patchForm(setForm, 'type', v as Account['type'])}
+						title={accountTypeDescription(form().type)}
+					>
+						<For each={accountTypes}>
+							{(k) => (
+								<option value={k} title={accountTypeDescription(k)}>
+									{accountTypeLabel(k)}
+								</option>
+							)}
+						</For>
+					</SelectField>
+					<Field label={t().accounts.institution}>
 						<input
 							value={form().institution}
 							onInput={(e) =>
@@ -188,49 +169,35 @@ export default function Accounts() {
 						<datalist id="institution-options">
 							<For each={institutions()}>{(name) => <option value={name} />}</For>
 						</datalist>
-					</label>
-					<label class="field" for="account-opening-date">
-						{t().accounts.openingDate}{' '}
+					</Field>
+					<Field label={t().accounts.openingDate} for="account-opening-date">
 						<DateInput
 							id="account-opening-date"
 							value={form().openingDate}
 							onInput={(v) => patchForm(setForm, 'openingDate', v)}
 						/>
-					</label>
-					<label class="field">
-						{t().accounts.openingBalance}{' '}
-						<input
-							type="number"
-							step="0.01"
-							value={form().openingBalance}
-							onInput={(e) =>
-								patchForm(setForm, 'openingBalance', e.currentTarget.value)
-							}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						{t().accounts.iban}{' '}
-						<input
-							value={form().iban}
-							onInput={(e) => patchForm(setForm, 'iban', e.currentTarget.value)}
-							class="input"
-						/>
-					</label>
-				</div>
-				<label class="field">
-					{t().accounts.notes}{' '}
-					<input
-						value={form().notes}
-						onInput={(e) => patchForm(setForm, 'notes', e.currentTarget.value)}
-						class="input"
+					</Field>
+					<TextField
+						label={t().accounts.openingBalance}
+						type="number"
+						step="0.01"
+						value={form().openingBalance}
+						onInput={(v) => patchForm(setForm, 'openingBalance', v)}
 					/>
-				</label>
+					<TextField
+						label={t().accounts.iban}
+						value={form().iban}
+						onInput={(v) => patchForm(setForm, 'iban', v)}
+					/>
+				</div>
+				<TextField
+					label={t().accounts.notes}
+					value={form().notes}
+					onInput={(v) => patchForm(setForm, 'notes', v)}
+				/>
 			</CrudForm>
 
-			<Show when={accounts.loading}>
-				<p class="muted">{t().common.loading}</p>
-			</Show>
+			<ListState loading={accounts.loading} />
 
 			<Show when={(accounts() ?? []).length > 0 && !accounts.loading}>
 				<div class="table-wrap">

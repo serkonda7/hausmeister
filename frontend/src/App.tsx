@@ -22,28 +22,6 @@ import './App.css'
 import { LOCALES, type Locale, locale, setLocale, t } from './lib/i18n'
 import { initThemeListener, theme, toggleTheme } from './lib/theme'
 
-function viewLabel(id: string): string {
-	const d = t().nav
-	switch (id) {
-		case 'dashboard':
-			return d.dashboard
-		case 'accounts':
-			return d.accounts
-		case 'transactions':
-			return d.transactions
-		case 'pools':
-			return d.pools
-		case 'allocations':
-			return d.allocations
-		case 'events':
-			return d.events
-		case 'currencies':
-			return d.currencies
-		default:
-			return id
-	}
-}
-
 const VIEWS = [
 	{ id: 'dashboard', comp: Dashboard, icon: IconDashboard },
 	{ id: 'accounts', comp: Accounts, icon: IconWallet },
@@ -121,7 +99,7 @@ export default function App(): JSX.Element {
 								aria-current={view() === v.id ? 'page' : undefined}
 							>
 								<Dynamic component={v.icon} size={18} />
-								<span>{viewLabel(v.id)}</span>
+								<span>{(t().nav as Record<string, string>)[v.id] ?? v.id}</span>
 							</button>
 						)}
 					</For>

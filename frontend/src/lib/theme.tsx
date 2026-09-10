@@ -1,27 +1,10 @@
 import { createSignal } from 'solid-js'
+import { safeStorage } from './storage'
 
 export type Theme = 'light' | 'dark'
 
 function isTheme(value: unknown): value is Theme {
 	return value === 'dark' || value === 'light'
-}
-
-/** localStorage access that never throws (private mode, SSR, …). */
-const safeStorage = {
-	get(key: string): string | null {
-		try {
-			return typeof localStorage === 'undefined' ? null : localStorage.getItem(key)
-		} catch {
-			return null
-		}
-	},
-	set(key: string, value: string): void {
-		try {
-			localStorage.setItem(key, value)
-		} catch {
-			// ignore (private mode etc.)
-		}
-	},
 }
 
 function prefersDark(): boolean {

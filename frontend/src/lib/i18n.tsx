@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js'
 import { de } from './locales/de'
 import { type Dictionary, en } from './locales/en'
+import { safeStorage } from './storage'
 
 export type Locale = 'en' | 'de'
 
@@ -13,23 +14,6 @@ export const LOCALES: Array<{ code: Locale; label: string }> = [
 
 function isLocale(value: unknown): value is Locale {
 	return value === 'en' || value === 'de'
-}
-
-const safeStorage = {
-	get(key: string): string | null {
-		try {
-			return typeof localStorage === 'undefined' ? null : localStorage.getItem(key)
-		} catch {
-			return null
-		}
-	},
-	set(key: string, value: string): void {
-		try {
-			localStorage.setItem(key, value)
-		} catch {
-			// ignore (private mode etc.)
-		}
-	},
 }
 
 function getInitialLocale(): Locale {

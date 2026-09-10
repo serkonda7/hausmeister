@@ -9,41 +9,42 @@ import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import Field, { SelectField, TextField } from './Field'
+import PageHeader from './PageHeader'
 import './Allocations.css'
 
 const LIQUIDITY_TIERS = ['instant', 'days', 'weeks', 'months', 'locked']
+
+type AllocationForm = {
+	poolId: string
+	accountId: string
+	amount: string
+	liquidityOverride: string
+	unlockAt: string
+}
+
+const EMPTY_FORM: AllocationForm = {
+	poolId: '',
+	accountId: '',
+	amount: '',
+	liquidityOverride: '',
+	unlockAt: '',
+}
 
 export default function Allocations() {
 	const [allocations, { refetch }] = createResource(() => api.allocations.list())
 	const [accounts] = createResource(() => api.accounts.list())
 	const [pools] = createResource(() => api.pools.list())
 
-	const crud = useCrudForm<
-		{
-			poolId: string
-			accountId: string
-			amount: string
-			liquidityOverride: string
-			unlockAt: string
-		},
-		string
-	>({
-		poolId: '',
-		accountId: '',
-		amount: '',
-		liquidityOverride: '',
-		unlockAt: '',
-	})
+	const crud = useCrudForm<AllocationForm, string>({ ...EMPTY_FORM })
 	const form = crud.form
 	const setForm = crud.setForm
 
 	function openCreate() {
 		crud.openCreate({
+			...EMPTY_FORM,
 			poolId: pools()?.[0]?.id ?? '',
 			accountId: accounts()?.[0]?.id ?? '',
-			amount: '',
-			liquidityOverride: '',
-			unlockAt: '',
 		})
 	}
 	function openEdit(id: string) {
@@ -94,19 +95,19 @@ export default function Allocations() {
 
 	return (
 		<div class="page">
-			<div class="page-header">
-				<div>
-					<h2 class="page-title">{t().allocations.title}</h2>
-				</div>
-				<button
-					type="button"
-					onClick={openCreate}
-					class="btn-primary"
-					disabled={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}
-				>
-					{t().allocations.add}
-				</button>
-			</div>
+			<PageHeader
+				title={t().allocations.title}
+				actions={
+					<button
+						type="button"
+						onClick={openCreate}
+						class="btn-primary"
+						disabled={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}
+					>
+						{t().allocations.add}
+					</button>
+				}
+			/>
 			<Show when={(accounts()?.length ?? 0) === 0 || (pools()?.length ?? 0) === 0}>
 				<p class="muted text-sm">{t().allocations.needFirst}</p>
 			</Show>
@@ -119,84 +120,51 @@ export default function Allocations() {
 				onCancel={crud.close}
 			>
 				<div class="form-grid">
-					<label class="field">
-						<span class="field-label">
-							{t().allocations.pool}{' '}
-							<span class="req" aria-hidden="true">
-								*
-							</span>
-						</span>
-						<select
-							value={form().poolId}
-							onChange={(e) => patchForm(setForm, 'poolId', e.currentTarget.value)}
-							required
-							aria-required="true"
-							class="input"
-						>
-							<For each={pools() ?? []}>
-								{(p) => <option value={p.id}>{p.name}</option>}
-							</For>
-						</select>
-					</label>
-					<label class="field">
-						<span class="field-label">
-							{t().allocations.account}{' '}
-							<span class="req" aria-hidden="true">
-								*
-							</span>
-						</span>
-						<select
-							value={form().accountId}
-							onChange={(e) => patchForm(setForm, 'accountId', e.currentTarget.value)}
-							required
-							aria-required="true"
-							class="input"
-						>
-							<For each={accounts() ?? []}>
-								{(a) => <option value={a.id}>{a.name}</option>}
-							</For>
-						</select>
-					</label>
-					<label class="field">
-						<span class="field-label">
-							{t().allocations.amount}{' '}
-							<span class="req" aria-hidden="true">
-								*
-							</span>
-						</span>
-						<input
-							type="number"
-							step="0.01"
-							value={form().amount}
-							onInput={(e) => patchForm(setForm, 'amount', e.currentTarget.value)}
-							required
-							aria-required="true"
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						{t().allocations.availability}
-						<select
-							value={form().liquidityOverride}
-							onChange={(e) =>
-								patchForm(setForm, 'liquidityOverride', e.currentTarget.value)
-							}
-							class="input"
-						>
-							<option value="">{t().allocations.defaultFromAccount}</option>
-							<For each={LIQUIDITY_TIERS}>
-								{(k) => <option value={k}>{liquidityLabel(k)}</option>}
-							</For>
-						</select>
-					</label>
-					<label class="field" for="allocation-unlock-at">
-						{t().allocations.availableFrom}
+					<SelectField
+						label={t().allocations.pool}
+						required
+						value={form().poolId}
+						onChange={(v) => patchForm(setForm, 'poolId', v)}
+					>
+						<For each={pools() ?? []}>
+							{(p) => <option value={p.id}>{p.name}</option>}
+						</For>
+					</SelectField>
+					<SelectField
+						label={t().allocations.account}
+						required
+						value={form().accountId}
+						onChange={(v) => patchForm(setForm, 'accountId', v)}
+					>
+						<For each={accounts() ?? []}>
+							{(a) => <option value={a.id}>{a.name}</option>}
+						</For>
+					</SelectField>
+					<TextField
+						label={t().allocations.amount}
+						required
+						type="number"
+						step="0.01"
+						value={form().amount}
+						onInput={(v) => patchForm(setForm, 'amount', v)}
+					/>
+					<SelectField
+						label={t().allocations.availability}
+						value={form().liquidityOverride}
+						onChange={(v) => patchForm(setForm, 'liquidityOverride', v)}
+					>
+						<option value="">{t().allocations.defaultFromAccount}</option>
+						<For each={LIQUIDITY_TIERS}>
+							{(k) => <option value={k}>{liquidityLabel(k)}</option>}
+						</For>
+					</SelectField>
+					<Field label={t().allocations.availableFrom} for="allocation-unlock-at">
 						<DateInput
 							id="allocation-unlock-at"
 							value={form().unlockAt}
 							onInput={(v) => patchForm(setForm, 'unlockAt', v)}
 						/>
-					</label>
+					</Field>
 				</div>
 			</CrudForm>
 

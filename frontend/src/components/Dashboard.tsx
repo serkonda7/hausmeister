@@ -14,6 +14,7 @@ import { t } from '../lib/i18n'
 import './Dashboard.css'
 import Amount from './Amount'
 import EmptyState from './EmptyState'
+import ListState from './ListState'
 
 function pct(cents: number, total: number): number {
 	return total ? (cents / total) * 100 : 0
@@ -41,14 +42,7 @@ export default function Dashboard() {
 
 	return (
 		<div class="page page--spacious">
-			<Show when={summary.loading}>
-				<p class="muted">{t().common.loading}</p>
-			</Show>
-			<Show when={summary.error}>
-				<p class="form-error">
-					{t().common.error}: {(summary.error as Error).message}
-				</p>
-			</Show>
+			<ListState loading={summary.loading} error={summary.error} />
 			<Show when={summary()}>
 				{(get) => {
 					const d = get()

@@ -7,6 +7,8 @@ import { t } from '../lib/i18n'
 import CrudForm from './CrudForm'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import ListState from './ListState'
+import PageHeader from './PageHeader'
 import './Currencies.css'
 
 type Pair = 'EURUSD' | 'USDEUR'
@@ -62,10 +64,10 @@ export default function Currencies() {
 	}
 
 	// Manual rate entry (Firefly: "you can set any rate you want, in both directions").
-	const rateCrud = useCrudForm<{ date: string; rate: string }, never>({
-		date: todayISO(),
-		rate: '',
-	})
+	function emptyRateForm(): { date: string; rate: string } {
+		return { date: todayISO(), rate: '' }
+	}
+	const rateCrud = useCrudForm<{ date: string; rate: string }, never>(emptyRateForm())
 
 	async function setDefault(code: CurrencyCode) {
 		setCurrError('')
@@ -147,20 +149,11 @@ export default function Currencies() {
 
 	return (
 		<div class="page page--spacious currencies-page">
-			<div class="page-header">
-				<div>
-					<h2 class="page-title">{t().currencies.title}</h2>
-				</div>
-			</div>
+			<PageHeader title={t().currencies.title} />
 
 			<section class="card" aria-label={t().currencies.listTitle}>
 				<h3 class="curr-heading">{t().currencies.listTitle}</h3>
-				<Show when={currencies.loading}>
-					<p class="muted">{t().common.loading}</p>
-				</Show>
-				<Show when={currError()}>
-					<p class="form-error">{currError()}</p>
-				</Show>
+				<ListState loading={currencies.loading} error={currError()} />
 				<Show when={(currencies() ?? []).length > 0}>
 					<div class="curr-table-wrap">
 						<table class="curr-table">
@@ -237,7 +230,7 @@ export default function Currencies() {
 						<button
 							type="button"
 							class="btn-ghost"
-							onClick={() => rateCrud.openCreate({ date: todayISO(), rate: '' })}
+							onClick={() => rateCrud.openCreate(emptyRateForm())}
 						>
 							{t().currencies.addRate}
 						</button>
@@ -348,9 +341,7 @@ export default function Currencies() {
 					</p>
 				</CrudForm>
 
-				<Show when={rates.loading}>
-					<p class="muted">{t().common.loading}</p>
-				</Show>
+				<ListState loading={rates.loading} />
 				<Show when={(rates() ?? []).length > 0 && !rates.loading}>
 					<div class="curr-table-wrap curr-table-wrap--scroll">
 						<table class="curr-table">

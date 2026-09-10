@@ -11,6 +11,8 @@ import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import ListState from './ListState'
+import PageHeader from './PageHeader'
 import './Transactions.css'
 
 type Mode = 'transaction' | 'transfer'
@@ -55,10 +57,9 @@ export default function Transactions() {
 	const [transferForm, setTransferForm] = createSignal({ ...EMPTY_TRANSFER })
 
 	// Categories manager state (shared CRUD shell)
+	const EMPTY_CAT = { name: '', kind: '', color: '#22c55e' }
 	const catCrud = useCrudForm<{ name: string; kind: string; color: string }, Category>({
-		name: '',
-		kind: '',
-		color: '#22c55e',
+		...EMPTY_CAT,
 	})
 
 	const filtered = createMemo(() => {
@@ -249,7 +250,7 @@ export default function Transactions() {
 
 	// ---- Categories ----
 	function openCatCreate() {
-		catCrud.openCreate({ name: '', kind: '', color: '#22c55e' })
+		catCrud.openCreate({ ...EMPTY_CAT })
 	}
 	function openCatEdit(c: Category) {
 		catCrud.openEdit(c, { name: c.name, kind: c.kind ?? '', color: c.color ?? '#22c55e' })
@@ -290,44 +291,42 @@ export default function Transactions() {
 		return f.fromAccountId !== '' && f.fromAccountId === f.toAccountId
 	}
 
+	const CATEGORY_KIND_KEYS: Record<string, string> = {
+		income: 'incomeKind',
+		expense: 'expenseKind',
+	}
+
 	function categoryKindLabel(kind: string | null | undefined): string {
-		const d = t().transactions
-		switch (kind) {
-			case 'income':
-				return d.incomeKind
-			case 'expense':
-				return d.expenseKind
-			default:
-				return d.both
-		}
+		const d = t().transactions as Record<string, string>
+		return d[CATEGORY_KIND_KEYS[kind ?? ''] ?? 'both'] ?? d.both
 	}
 
 	return (
 		<div class="page">
-			<div class="page-header">
-				<div>
-					<h2 class="page-title">{t().transactions.title}</h2>
-					<p class="page-subtitle">{t().transactions.subtitle}</p>
-				</div>
-				<div class="inline-row">
-					<button
-						type="button"
-						onClick={openTransfer}
-						class="btn-ghost"
-						disabled={(accounts()?.length ?? 0) < 2}
-					>
-						{t().transactions.transferBtn}
-					</button>
-					<button
-						type="button"
-						onClick={openCreate}
-						class="btn-primary"
-						disabled={(accounts()?.length ?? 0) === 0}
-					>
-						{t().transactions.addBtn}
-					</button>
-				</div>
-			</div>
+			<PageHeader
+				title={t().transactions.title}
+				subtitle={t().transactions.subtitle}
+				actions={
+					<div class="inline-row">
+						<button
+							type="button"
+							onClick={openTransfer}
+							class="btn-ghost"
+							disabled={(accounts()?.length ?? 0) < 2}
+						>
+							{t().transactions.transferBtn}
+						</button>
+						<button
+							type="button"
+							onClick={openCreate}
+							class="btn-primary"
+							disabled={(accounts()?.length ?? 0) === 0}
+						>
+							{t().transactions.addBtn}
+						</button>
+					</div>
+				}
+			/>
 
 			<Show when={(accounts()?.length ?? 0) === 0}>
 				<p class="muted text-sm">{t().transactions.needAccountHint}</p>
@@ -705,14 +704,7 @@ export default function Transactions() {
 				</div>
 			</Show>
 
-			<Show when={transactions.loading}>
-				<p class="muted">{t().common.loading}</p>
-			</Show>
-			<Show when={transactions.error}>
-				<p class="form-error">
-					{t().common.error}: {(transactions.error as Error).message}
-				</p>
-			</Show>
+			<ListState loading={transactions.loading} error={transactions.error} />
 
 			{/* Medium audit: `ledger` tightens rows on desktop via CSS only. */}
 			<div class="list list--tight ledger">
@@ -793,12 +785,15 @@ export default function Transactions() {
 			</div>
 
 			{/* Categories */}
-			<div class="page-header" style={{ 'margin-top': '1rem' }}>
-				<h2 class="page-title">{t().transactions.categoriesTitle}</h2>
-				<button type="button" onClick={openCatCreate} class="btn-ghost">
-					{t().transactions.addCategory}
-				</button>
-			</div>
+			<PageHeader
+				style={{ 'margin-top': '1rem' }}
+				title={t().transactions.categoriesTitle}
+				actions={
+					<button type="button" onClick={openCatCreate} class="btn-ghost">
+						{t().transactions.addCategory}
+					</button>
+				}
+			/>
 
 			<CrudForm
 				open={catCrud.showForm()}

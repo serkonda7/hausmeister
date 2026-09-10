@@ -8,51 +8,43 @@ import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
 import EmptyState from './EmptyState'
+import Field, { SelectField, TextField } from './Field'
+import PageHeader from './PageHeader'
+
+type PoolForm = {
+	name: string
+	purpose: string
+	targetMin: string
+	targetMax: string
+	targetPercent: string
+	expectedReturn: string
+	riskLevel: string
+	volatility: string
+	horizonMonths: string
+	color: string
+}
+
+const EMPTY_FORM: PoolForm = {
+	name: '',
+	purpose: '',
+	targetMin: '',
+	targetMax: '',
+	targetPercent: '',
+	expectedReturn: '',
+	riskLevel: '',
+	volatility: '',
+	horizonMonths: '',
+	color: '#22c55e',
+}
 
 export default function Pools() {
 	const [pools, { refetch }] = createResource(() => api.pools.list())
-	const crud = useCrudForm<
-		{
-			name: string
-			purpose: string
-			targetMin: string
-			targetMax: string
-			targetPercent: string
-			expectedReturn: string
-			riskLevel: string
-			volatility: string
-			horizonMonths: string
-			color: string
-		},
-		Pool
-	>({
-		name: '',
-		purpose: '',
-		targetMin: '',
-		targetMax: '',
-		targetPercent: '',
-		expectedReturn: '',
-		riskLevel: '',
-		volatility: '',
-		horizonMonths: '',
-		color: '#22c55e',
-	})
+	const crud = useCrudForm<PoolForm, Pool>({ ...EMPTY_FORM })
 	const form = crud.form
 	const setForm = crud.setForm
 
 	function openCreate() {
-		crud.openCreate({
-			name: '',
-			purpose: '',
-			targetMin: '',
-			targetMax: '',
-			targetPercent: '',
-			expectedReturn: '',
-			riskLevel: '',
-			volatility: '',
-			horizonMonths: '',
-			color: '#22c55e',
-		})
+		crud.openCreate({ ...EMPTY_FORM })
 	}
 	function openEdit(p: Pool) {
 		crud.openEdit(p, {
@@ -165,14 +157,14 @@ export default function Pools() {
 
 	return (
 		<div class="page">
-			<div class="page-header">
-				<div>
-					<h2 class="page-title">{t().nav.pools}</h2>
-				</div>
-				<button type="button" onClick={openCreate} class="btn-primary">
-					{t().pools.add}
-				</button>
-			</div>
+			<PageHeader
+				title={t().nav.pools}
+				actions={
+					<button type="button" onClick={openCreate} class="btn-primary">
+						{t().pools.add}
+					</button>
+				}
+			/>
 
 			<CrudForm
 				open={crud.showForm()}
@@ -184,34 +176,19 @@ export default function Pools() {
 				<fieldset class="form-group">
 					<legend>{t().pools.basics}</legend>
 					<div class="form-grid">
-						<label class="field">
-							<span class="field-label">
-								{t().pools.name}{' '}
-								<span class="req" aria-hidden="true">
-									*
-								</span>
-							</span>
-							<input
-								value={form().name}
-								onInput={(e) => patchForm(setForm, 'name', e.currentTarget.value)}
-								required
-								aria-required="true"
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							{t().pools.purpose}
-							<input
-								value={form().purpose}
-								onInput={(e) =>
-									patchForm(setForm, 'purpose', e.currentTarget.value)
-								}
-								class="input"
-								placeholder={t().pools.purposePlaceholder}
-							/>
-						</label>
-						<label class="field">
-							{t().pools.color}
+						<TextField
+							label={t().pools.name}
+							required
+							value={form().name}
+							onInput={(v) => patchForm(setForm, 'name', v)}
+						/>
+						<TextField
+							label={t().pools.purpose}
+							placeholder={t().pools.purposePlaceholder}
+							value={form().purpose}
+							onInput={(v) => patchForm(setForm, 'purpose', v)}
+						/>
+						<Field label={t().pools.color}>
 							<input
 								type="color"
 								value={form().color}
@@ -219,51 +196,36 @@ export default function Pools() {
 								class="color-swatch"
 								aria-label={t().pools.colorAria}
 							/>
-						</label>
+						</Field>
 					</div>
 				</fieldset>
 				<fieldset class="form-group">
 					<legend>{t().pools.targets}</legend>
 					<div class="form-grid">
-						<label class="field">
-							{t().pools.targetMin}{' '}
-							<input
-								type="number"
-								step="1"
-								value={form().targetMin}
-								onInput={(e) =>
-									patchForm(setForm, 'targetMin', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							{t().pools.targetMax}{' '}
-							<input
-								type="number"
-								step="1"
-								value={form().targetMax}
-								onInput={(e) =>
-									patchForm(setForm, 'targetMax', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							{t().pools.targetPct}{' '}
-							<input
-								type="number"
-								min="0"
-								max="100"
-								step="1"
-								value={form().targetPercent}
-								onInput={(e) =>
-									patchForm(setForm, 'targetPercent', e.currentTarget.value)
-								}
-								class="input"
-								aria-describedby="pool-target-hints"
-							/>
-						</label>
+						<TextField
+							label={t().pools.targetMin}
+							type="number"
+							step="1"
+							value={form().targetMin}
+							onInput={(v) => patchForm(setForm, 'targetMin', v)}
+						/>
+						<TextField
+							label={t().pools.targetMax}
+							type="number"
+							step="1"
+							value={form().targetMax}
+							onInput={(v) => patchForm(setForm, 'targetMax', v)}
+						/>
+						<TextField
+							label={t().pools.targetPct}
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							value={form().targetPercent}
+							onInput={(v) => patchForm(setForm, 'targetPercent', v)}
+							ariaDescribedBy="pool-target-hints"
+						/>
 					</div>
 					<div id="pool-target-hints">
 						<Show when={minMaxInvalid()}>
@@ -284,60 +246,40 @@ export default function Pools() {
 				<fieldset class="form-group">
 					<legend>{t().pools.riskReturn}</legend>
 					<div class="form-grid">
-						<label class="field">
-							{t().pools.expectedReturn}{' '}
-							<input
-								type="number"
-								step="0.1"
-								value={form().expectedReturn}
-								onInput={(e) =>
-									patchForm(setForm, 'expectedReturn', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							{t().pools.risk}{' '}
-							<select
-								value={form().riskLevel}
-								onChange={(e) =>
-									patchForm(setForm, 'riskLevel', e.currentTarget.value)
-								}
-								class="input"
-							>
-								<option value="">{t().common.dash}</option>
-								<For each={[1, 2, 3, 4, 5]}>
-									{(level) => (
-										<option value={level.toString()}>
-											{level} – {riskLevelLabel(level)}
-										</option>
-									)}
-								</For>
-							</select>
-						</label>
-						<label class="field">
-							{t().pools.volatility}{' '}
-							<input
-								type="number"
-								step="0.1"
-								value={form().volatility}
-								onInput={(e) =>
-									patchForm(setForm, 'volatility', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
-						<label class="field">
-							{t().pools.horizon}{' '}
-							<input
-								type="number"
-								value={form().horizonMonths}
-								onInput={(e) =>
-									patchForm(setForm, 'horizonMonths', e.currentTarget.value)
-								}
-								class="input"
-							/>
-						</label>
+						<TextField
+							label={t().pools.expectedReturn}
+							type="number"
+							step="0.1"
+							value={form().expectedReturn}
+							onInput={(v) => patchForm(setForm, 'expectedReturn', v)}
+						/>
+						<SelectField
+							label={t().pools.risk}
+							value={form().riskLevel}
+							onChange={(v) => patchForm(setForm, 'riskLevel', v)}
+						>
+							<option value="">{t().common.dash}</option>
+							<For each={[1, 2, 3, 4, 5]}>
+								{(level) => (
+									<option value={level.toString()}>
+										{level} – {riskLevelLabel(level)}
+									</option>
+								)}
+							</For>
+						</SelectField>
+						<TextField
+							label={t().pools.volatility}
+							type="number"
+							step="0.1"
+							value={form().volatility}
+							onInput={(v) => patchForm(setForm, 'volatility', v)}
+						/>
+						<TextField
+							label={t().pools.horizon}
+							type="number"
+							value={form().horizonMonths}
+							onInput={(v) => patchForm(setForm, 'horizonMonths', v)}
+						/>
 					</div>
 				</fieldset>
 			</CrudForm>
