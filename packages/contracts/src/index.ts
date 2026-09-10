@@ -16,3 +16,9 @@ export type Frequency = (typeof frequencyEnum)[number]
 
 export const categoryKindEnum = ['income', 'expense'] as const
 export type CategoryKind = (typeof categoryKindEnum)[number]
+
+// Currencies (Firefly III inspired). Only EUR + USD are supported for now;
+// the enum is the single gate: backend validators and frontend selectors
+// import from here so adding a code later is a one-line change.
+export const currencyCodeEnum = ['EUR', 'USD'] as const
+export type CurrencyCode = (typeof currencyCodeEnum)[number]

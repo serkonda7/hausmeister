@@ -1,6 +1,7 @@
 import {
 	IconCalendarEvent,
 	IconCoins,
+	IconCurrencyEuro,
 	IconDashboard,
 	IconExchange,
 	IconMoon,
@@ -12,6 +13,7 @@ import { createSignal, For, type JSX, onCleanup, onMount } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 import Accounts from './components/Accounts'
 import Allocations from './components/Allocations'
+import Currencies from './components/Currencies'
 import Dashboard from './components/Dashboard'
 import Events from './components/Events'
 import Pools from './components/Pools'
@@ -35,6 +37,8 @@ function viewLabel(id: string): string {
 			return d.allocations
 		case 'events':
 			return d.events
+		case 'currencies':
+			return d.currencies
 		default:
 			return id
 	}
@@ -47,6 +51,7 @@ const VIEWS = [
 	{ id: 'pools', comp: Pools, icon: IconCoins },
 	{ id: 'allocations', comp: Allocations, icon: IconExchange },
 	{ id: 'events', comp: Events, icon: IconCalendarEvent },
+	{ id: 'currencies', comp: Currencies, icon: IconCurrencyEuro },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']

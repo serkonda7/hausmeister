@@ -1,8 +1,22 @@
 // All amounts in cents, dates as ISO strings (YYYY-MM-DD or ISO)
-import type { AccountType, CategoryKind, Direction, Frequency, LiquidityTier } from './enums'
+import type {
+	AccountType,
+	CategoryKind,
+	CurrencyCode,
+	Direction,
+	Frequency,
+	LiquidityTier,
+} from './enums'
 
 // Re-export for backward compat (components may import these from './api')
-export type { AccountType, CategoryKind, Direction, Frequency, LiquidityTier } from './enums'
+export type {
+	AccountType,
+	CategoryKind,
+	CurrencyCode,
+	Direction,
+	Frequency,
+	LiquidityTier,
+} from './enums'
 
 export interface Account {
 	id: string
@@ -85,6 +99,42 @@ export interface AccountBalance {
 	currentCents: number
 	allocatedCents: number
 	unallocatedCents: number
+}
+
+// Currencies + exchange rates (Firefly III inspired, EUR + USD only)
+export interface Currency {
+	code: CurrencyCode
+	name: string
+	symbol: string
+	decimalPlaces: number
+	enabled: boolean
+	isDefault: boolean
+	createdAt: string
+}
+
+export interface ExchangeRate {
+	date: string
+	rate: number
+}
+
+export interface Conversion {
+	fromCode: CurrencyCode
+	toCode: CurrencyCode
+	date: string | null
+	rate: number
+	rateDate: string | null
+	amount: number | null
+	result: number | null
+}
+
+export interface DownloadResult {
+	source: string
+	from: CurrencyCode
+	to: CurrencyCode
+	fetched: number
+	inserted: number
+	updated: number
+	rates: Array<{ date: string; eurUsd: number }>
 }
 
 export interface Summary {
@@ -193,5 +243,41 @@ export const api = {
 	balances: {
 		account: (id: string) =>
 			req<AccountBalance & { transactionCount: number }>(`/api/accounts/${id}/balance`),
+	},
+	currencies: {
+		list: () => req<Currency[]>('/api/currencies'),
+		update: (code: CurrencyCode, d: { isDefault?: boolean }) =>
+			req<Currency>(`/api/currencies/${code}`, {
+				method: 'PUT',
+				body: JSON.stringify(d),
+			}),
+	},
+	exchangeRates: {
+		list: (from?: CurrencyCode, to?: CurrencyCode, limit = 90) => {
+			const q = new URLSearchParams()
+			if (from) {
+				q.set('from', from)
+			}
+			if (to) {
+				q.set('to', to)
+			}
+			q.set('limit', String(limit))
+			return req<ExchangeRate[]>(`/api/exchange-rates?${q}`)
+		},
+		latest: (from: CurrencyCode, to: CurrencyCode) =>
+			req<ExchangeRate>(`/api/exchange-rates/latest?from=${from}&to=${to}`),
+		convert: (from: CurrencyCode, to: CurrencyCode, date?: string) => {
+			const q = new URLSearchParams({ from, to })
+			if (date) {
+				q.set('date', date)
+			}
+			return req<Conversion>(`/api/exchange-rates/convert?${q}`)
+		},
+		create: (d: { fromCode: CurrencyCode; toCode: CurrencyCode; date: string; rate: number }) =>
+			req<ExchangeRate>('/api/exchange-rates', { method: 'POST', body: JSON.stringify(d) }),
+		download: (days = 90) =>
+			req<DownloadResult>(`/api/exchange-rates/download?days=${days}`, { method: 'POST' }),
+		remove: (date: string) =>
+			req<{ ok: true }>(`/api/exchange-rates/${date}`, { method: 'DELETE' }),
 	},
 }

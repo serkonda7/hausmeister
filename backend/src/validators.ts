@@ -2,6 +2,7 @@ import * as v from 'valibot'
 import {
 	accountTypeEnum,
 	categoryKindEnum,
+	currencyCodeEnum,
 	directionEnum,
 	frequencyEnum,
 	liquidityTierEnum,
@@ -106,4 +107,18 @@ export const transferCreateSchema = v.object({
 	payee: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(200)))),
 	categoryId: v.optional(v.nullable(v.pipe(v.string(), v.minLength(1)))),
 	notes: v.optional(v.nullable(v.string())),
+})
+
+// ---- Currencies / exchange rates (Firefly III inspired, EUR+USD only) ----
+export const currencyCodeSchema = v.picklist([...currencyCodeEnum])
+
+export const currencyUpdateSchema = v.object({
+	isDefault: v.optional(v.boolean()),
+})
+
+export const exchangeRateCreateSchema = v.object({
+	fromCode: currencyCodeSchema,
+	toCode: currencyCodeSchema,
+	date: isoDateSchema,
+	rate: v.pipe(v.number(), v.minValue(0)),
 })

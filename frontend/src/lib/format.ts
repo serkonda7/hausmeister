@@ -19,6 +19,43 @@ export function formatEUR(cents: number): string {
 	}).format(cents / 100)
 }
 
+/**
+ * Currency-aware money formatting for the Currencies page (EUR + USD only
+ * for now). Falls back to EUR formatting for unknown codes.
+ */
+export function formatMoney(cents: number, code: string): string {
+	try {
+		return new Intl.NumberFormat(FIXED_TAG, {
+			style: 'currency',
+			currency: code,
+		}).format(cents / 100)
+	} catch {
+		return formatEUR(cents)
+	}
+}
+
+/** Exchange-rate formatting (4 decimals, ALWAYS de-DE): `1,1616`. */
+export function formatRate(rate: number, digits = 4): string {
+	if (!Number.isFinite(rate)) {
+		return '—'
+	}
+	return new Intl.NumberFormat(FIXED_TAG, {
+		minimumFractionDigits: digits,
+		maximumFractionDigits: digits,
+	}).format(rate)
+}
+
+/** Fallback symbols when a currency row is not loaded yet. */
+export function currencySymbol(code: string): string {
+	if (code === 'EUR') {
+		return '€'
+	}
+	if (code === 'USD') {
+		return '$'
+	}
+	return code
+}
+
 export function formatPercent(bps: number | null | undefined): string {
 	if (bps == null) {
 		return '—'

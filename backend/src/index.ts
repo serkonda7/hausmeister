@@ -1,9 +1,20 @@
 import { vValidator } from '@hono/valibot-validator'
-import { eq } from 'drizzle-orm'
+import { desc, eq, lte } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { db } from './db/index'
-import { accounts, allocations, categories, events, pools, transactions } from './db/schema'
+import {
+	accounts,
+	allocations,
+	type CurrencyCode,
+	categories,
+	currencies,
+	events,
+	exchangeRates,
+	pools,
+	transactions,
+} from './db/schema'
+import { downloadEurUsdRates, normalizeCode } from './exchange'
 import {
 	accountCreateSchema,
 	accountUpdateSchema,
@@ -11,8 +22,10 @@ import {
 	allocationUpdateSchema,
 	categoryCreateSchema,
 	categoryUpdateSchema,
+	currencyUpdateSchema,
 	eventCreateSchema,
 	eventUpdateSchema,
+	exchangeRateCreateSchema,
 	poolCreateSchema,
 	poolUpdateSchema,
 	transactionCreateSchema,
@@ -675,6 +688,249 @@ app.post('/transfers', vValidator('json', transferCreateSchema), async (c) => {
 	}
 	await db.insert(transactions).values([outLeg, inLeg])
 	return c.json({ transferId, legs: [outLeg, inLeg] }, 201)
+})
+
+// ============ CURRENCIES (Firefly III inspired, EUR + USD only) ============
+// Both currencies are always enabled; only the default (primary) can be
+// switched. Codes are gated through `currencyCodeEnum` so only EUR + USD
+// exist for now.
+const CURRENCY_SEEDS = [
+	{ code: 'EUR', name: 'Euro', symbol: '€', decimalPlaces: 2 },
+	{ code: 'USD', name: 'US Dollar', symbol: '$', decimalPlaces: 2 },
+] as const
+
+type CurrencyRow = typeof currencies.$inferSelect
+type ExchangeRateRow = typeof exchangeRates.$inferSelect
+
+async function findCurrency(code: CurrencyCode): Promise<CurrencyRow | null> {
+	const rows = await db.select().from(currencies).where(eq(currencies.code, code)).limit(1)
+	return rows[0] ?? null
+}
+
+// Idempotent seed so fresh DBs (and the demo seed) always list EUR + USD.
+async function ensureCurrencies(): Promise<void> {
+	const rows = await db.select().from(currencies)
+	const byCode = new Set(rows.map((r) => r.code))
+	if (CURRENCY_SEEDS.every((s) => byCode.has(s.code))) {
+		return
+	}
+	const hasDefault = rows.some((r) => r.isDefault)
+	for (const seed of CURRENCY_SEEDS) {
+		if (byCode.has(seed.code)) {
+			continue
+		}
+		await db.insert(currencies).values({
+			code: seed.code,
+			name: seed.name,
+			symbol: seed.symbol,
+			decimalPlaces: seed.decimalPlaces,
+			enabled: true,
+			isDefault: seed.code === 'EUR' && !hasDefault,
+			createdAt: now(),
+		})
+	}
+}
+
+app.get('/currencies', async (c) => {
+	await ensureCurrencies()
+	const rows = await db.select().from(currencies).orderBy(currencies.code)
+	return c.json(rows)
+})
+
+app.put('/currencies/:code', vValidator('json', currencyUpdateSchema), async (c) => {
+	const code = normalizeCode(c.req.param('code'))
+	if (!code) {
+		return c.json({ error: 'Unsupported currency (only EUR and USD are supported)' }, 400)
+	}
+	await ensureCurrencies()
+	const existing = await findCurrency(code)
+	if (!existing) {
+		return c.json({ error: 'Currency not found' }, 404)
+	}
+	const data = c.req.valid('json')
+
+	if (data.isDefault === true) {
+		// New primary currency (Firefly: administrations have one primary).
+		// The previous default is unset.
+		await db.update(currencies).set({ isDefault: false })
+		await db
+			.update(currencies)
+			.set({ isDefault: true, enabled: true })
+			.where(eq(currencies.code, code))
+		return c.json({ ...existing, isDefault: true, enabled: true })
+	}
+	if (data.isDefault === false && existing.isDefault) {
+		return c.json({ error: 'Set another default currency first' }, 422)
+	}
+	return c.json(existing)
+})
+
+// ============ EXCHANGE RATES ============
+// One row per fixing date: EUR→USD from frankfurter.app (ECB-backed JSON
+// API). USD→EUR is derived as the inverse on read. Manual entries share the
+// same row — downloads are last-write-wins.
+async function findRate(date: string): Promise<ExchangeRateRow | null> {
+	const rows = await db.select().from(exchangeRates).where(eq(exchangeRates.date, date)).limit(1)
+	return rows[0] ?? null
+}
+
+async function upsertRate(
+	date: string,
+	eurUsd: number,
+): Promise<'inserted' | 'updated' | 'unchanged'> {
+	const existing = await findRate(date)
+	if (!existing) {
+		await db.insert(exchangeRates).values({ date, rate: eurUsd, createdAt: now() })
+		return 'inserted'
+	}
+	if (existing.rate !== eurUsd) {
+		await db.update(exchangeRates).set({ rate: eurUsd }).where(eq(exchangeRates.date, date))
+		return 'updated'
+	}
+	return 'unchanged'
+}
+
+/** Stored rate is always EUR→USD; orient it to the requested direction. */
+function oriented(eurUsd: number, from: CurrencyCode, to: CurrencyCode): number {
+	return from === 'EUR' && to === 'USD' ? eurUsd : 1 / eurUsd
+}
+
+app.get('/exchange-rates', async (c) => {
+	const from = normalizeCode(c.req.query('from') ?? '')
+	const to = normalizeCode(c.req.query('to') ?? '')
+	if ((c.req.query('from') && !from) || (c.req.query('to') && !to)) {
+		return c.json({ error: 'Unsupported currency (only EUR and USD are supported)' }, 400)
+	}
+	const f = from ?? 'EUR'
+	const t = to ?? 'USD'
+	if (f === t) {
+		return c.json({ error: 'from and to must differ' }, 422)
+	}
+	const limit = Math.min(
+		Math.max(Number.parseInt(c.req.query('limit') ?? '90', 10) || 90, 1),
+		500,
+	)
+	const order = c.req.query('order') === 'asc' ? 'asc' : 'desc'
+	const rows = await db
+		.select()
+		.from(exchangeRates)
+		.orderBy(order === 'asc' ? exchangeRates.date : desc(exchangeRates.date))
+		.limit(limit)
+	return c.json(rows.map((r) => ({ date: r.date, rate: oriented(r.rate, f, t) })))
+})
+
+// Latest known fixing for a pair (Firefly: "list the exchange rate … on the requested date").
+app.get('/exchange-rates/latest', async (c) => {
+	const f = normalizeCode(c.req.query('from') ?? 'EUR') ?? 'EUR'
+	const t = normalizeCode(c.req.query('to') ?? 'USD') ?? 'USD'
+	if (f === t) {
+		return c.json({ fromCode: f, toCode: t, date: null, rate: 1 })
+	}
+	const rows = await db.select().from(exchangeRates).orderBy(desc(exchangeRates.date)).limit(1)
+	const row = rows[0] ?? null
+	if (!row) {
+		return c.json({ error: `No exchange rate for ${f}→${t} yet. Download rates first.` }, 404)
+	}
+	return c.json({ fromCode: f, toCode: t, date: row.date, rate: oriented(row.rate, f, t) })
+})
+
+// Convert an amount at the latest fixing on/before `date` (Firefly falls back to rate 1).
+app.get('/exchange-rates/convert', async (c) => {
+	const f = normalizeCode(c.req.query('from') ?? 'EUR') ?? 'EUR'
+	const t = normalizeCode(c.req.query('to') ?? 'USD') ?? 'USD'
+	const date = c.req.query('date') ?? null
+	const rawAmount = c.req.query('amount')
+	const amount = rawAmount == null || rawAmount === '' ? null : Number(rawAmount)
+	if (date != null && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+		return c.json({ error: 'Expected ISO date YYYY-MM-DD' }, 400)
+	}
+	if (f === t) {
+		return c.json({
+			fromCode: f,
+			toCode: t,
+			date,
+			rate: 1,
+			rateDate: date,
+			amount,
+			result: amount,
+		})
+	}
+	const base = db.select().from(exchangeRates)
+	const rows = await (date ? base.where(lte(exchangeRates.date, date)) : base)
+		.orderBy(desc(exchangeRates.date))
+		.limit(1)
+	const row = rows[0] ?? null
+	const rate = row ? oriented(row.rate, f, t) : 1
+	return c.json({
+		fromCode: f,
+		toCode: t,
+		date,
+		rate,
+		rateDate: row?.date ?? null,
+		amount,
+		result: amount == null || !Number.isFinite(amount) ? null : amount * rate,
+	})
+})
+
+app.post('/exchange-rates', vValidator('json', exchangeRateCreateSchema), async (c) => {
+	const data = c.req.valid('json')
+	if (data.fromCode === data.toCode) {
+		return c.json({ error: 'fromCode and toCode must differ' }, 422)
+	}
+	if (!Number.isFinite(data.rate) || data.rate <= 0) {
+		return c.json({ error: 'rate must be a number > 0' }, 422)
+	}
+	// Normalize to the stored EUR→USD basis.
+	const eurUsd = data.fromCode === 'EUR' ? data.rate : 1 / data.rate
+	await upsertRate(data.date, eurUsd)
+	return c.json({ date: data.date, rate: data.rate }, 201)
+})
+
+// On-demand download (no cron): frankfurter.app EUR→USD fixings.
+// Only days that have transactions are stored — days without transactions
+// are skipped to keep the table lean.
+app.post('/exchange-rates/download', async (c) => {
+	const days = Number.parseInt(c.req.query('days') ?? '90', 10) || 90
+	let downloaded: Awaited<ReturnType<typeof downloadEurUsdRates>>
+	try {
+		downloaded = await downloadEurUsdRates(days)
+	} catch {
+		return c.json(
+			{ error: 'Could not download exchange rates (frankfurter.app unreachable)' },
+			502,
+		)
+	}
+	const txDates = await db.select({ date: transactions.date }).from(transactions)
+	const datesWithTransactions = new Set(txDates.map((t) => t.date))
+	const wanted = downloaded.rates.filter((r) => datesWithTransactions.has(r.date))
+	let inserted = 0
+	let updated = 0
+	for (const r of wanted) {
+		const outcome = await upsertRate(r.date, r.eurUsd)
+		if (outcome === 'inserted') {
+			inserted++
+		} else if (outcome === 'updated') {
+			updated++
+		}
+	}
+	return c.json({
+		source: downloaded.source,
+		from: 'EUR',
+		to: 'USD',
+		fetched: wanted.length,
+		inserted,
+		updated,
+		rates: wanted,
+	})
+})
+
+app.delete('/exchange-rates/:date', async (c) => {
+	const date = c.req.param('date')
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+		return c.json({ error: 'Expected ISO date YYYY-MM-DD' }, 400)
+	}
+	await db.delete(exchangeRates).where(eq(exchangeRates.date, date))
+	return c.json({ ok: true })
 })
 
 // ============ SUMMARY / DASHBOARD ============

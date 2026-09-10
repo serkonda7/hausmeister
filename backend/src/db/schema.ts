@@ -1,6 +1,7 @@
 import type {
 	AccountType,
 	CategoryKind,
+	CurrencyCode,
 	Direction,
 	Frequency,
 	LiquidityTier,
@@ -8,16 +9,24 @@ import type {
 import {
 	accountTypeEnum,
 	categoryKindEnum,
+	currencyCodeEnum,
 	directionEnum,
 	frequencyEnum,
 	liquidityTierEnum,
 } from '@homie/contracts'
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-export type { AccountType, CategoryKind, Direction, Frequency, LiquidityTier }
+export type { AccountType, CategoryKind, CurrencyCode, Direction, Frequency, LiquidityTier }
 // Single source of truth lives in `@homie/contracts`; re-exported here so
 // existing `from './db/schema'` imports keep working.
-export { accountTypeEnum, categoryKindEnum, directionEnum, frequencyEnum, liquidityTierEnum }
+export {
+	accountTypeEnum,
+	categoryKindEnum,
+	currencyCodeEnum,
+	directionEnum,
+	frequencyEnum,
+	liquidityTierEnum,
+}
 export const riskLevelEnum = [1, 2, 3, 4, 5] as const
 
 export const accounts = sqliteTable('accounts', {
@@ -124,3 +133,28 @@ export type Category = typeof categories.$inferSelect
 export type NewCategory = typeof categories.$inferInsert
 export type Transaction = typeof transactions.$inferSelect
 export type NewTransaction = typeof transactions.$inferInsert
+
+// ---- Currencies (Firefly III inspired: code/name/symbol/decimals + default; always enabled) ----
+export const currencies = sqliteTable('currencies', {
+	code: text('code').primaryKey().$type<CurrencyCode>(),
+	name: text('name').notNull(),
+	symbol: text('symbol').notNull(),
+	decimalPlaces: integer('decimal_places').notNull().default(2),
+	enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+	isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+	createdAt: text('created_at').notNull(),
+})
+
+export type Currency = typeof currencies.$inferSelect
+export type NewCurrency = typeof currencies.$inferInsert
+
+// ---- Exchange rates (one row per fixing date, EUR→USD from frankfurter.app;
+// USD→EUR is derived as the inverse on read) ----
+export const exchangeRates = sqliteTable('exchange_rates', {
+	date: text('date').primaryKey(), // ISO date (YYYY-MM-DD), fixing date
+	rate: real('rate').notNull(), // USD per 1 EUR, > 0
+	createdAt: text('created_at').notNull(),
+})
+
+export type ExchangeRate = typeof exchangeRates.$inferSelect
+export type NewExchangeRate = typeof exchangeRates.$inferInsert
