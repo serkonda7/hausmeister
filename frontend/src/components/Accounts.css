@@ -35,8 +35,12 @@
 	border-bottom: none;
 }
 
-.table tbody tr:hover {
+.table tbody tr:nth-child(even) {
 	background: var(--surface-2);
+}
+
+.table tbody tr:hover {
+	background: color-mix(in srgb, var(--surface-2) 50%, var(--border));
 }
 
 .table .num {

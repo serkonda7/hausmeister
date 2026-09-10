@@ -1,8 +1,8 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
+import { createResource, createSignal, For, Show } from 'solid-js'
 import { api, type CurrencyCode } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { currencySymbol, formatDateISO, formatMoney, formatRate, todayISO } from '../lib/format'
+import { currencySymbol, formatDateISO, formatRate, todayISO } from '../lib/format'
 import { t } from '../lib/i18n'
 import CrudForm from './CrudForm'
 import DateInput from './DateInput'
@@ -31,31 +31,35 @@ export default function Currencies() {
 	const [downloading, setDownloading] = createSignal(false)
 	const [downloadMsg, setDownloadMsg] = createSignal('')
 	const [ratesError, setRatesError] = createSignal('')
+	const [showDownload, setShowDownload] = createSignal(false)
+	const [dlFrom, setDlFrom] = createSignal('')
+	const [dlTo, setDlTo] = createSignal('')
+	const [dlStoreAll, setDlStoreAll] = createSignal(false)
 
-	// Converter (Firefly converts back to the base currency; we convert either way).
-	const [convFrom, setConvFrom] = createSignal<CurrencyCode>('EUR')
-	const [convTo, setConvTo] = createSignal<CurrencyCode>('USD')
-	const [convAmount, setConvAmount] = createSignal('100')
-	const [convDate, setConvDate] = createSignal('')
-	const [conversion] = createResource(
-		() => ({ f: convFrom(), t: convTo(), d: convDate() || undefined }),
-		async (k) => {
-			try {
-				return await api.exchangeRates.convert(k.f, k.t, k.d)
-			} catch {
-				return null
-			}
-		},
-	)
+	function shiftISO(iso: string, deltaDays: number): string {
+		const [y, m, d] = iso.split('-').map(Number)
+		const dt = new Date(y, (m || 1) - 1, d || 1)
+		dt.setDate(dt.getDate() + deltaDays)
+		return todayISO(dt)
+	}
 
-	const convResult = createMemo(() => {
-		const amount = Number.parseFloat(convAmount())
-		const rate = conversion()?.rate
-		if (!Number.isFinite(amount) || rate == null) {
-			return null
+	function openDownload() {
+		const today = todayISO()
+		if (!dlTo()) {
+			setDlTo(today)
 		}
-		return amount * rate
-	})
+		if (!dlFrom()) {
+			setDlFrom(shiftISO(dlTo() || today, -30))
+		}
+		setRatesError('')
+		setShowDownload(true)
+	}
+
+	function closeDownload() {
+		if (!downloading()) {
+			setShowDownload(false)
+		}
+	}
 
 	// Manual rate entry (Firefly: "you can set any rate you want, in both directions").
 	const rateCrud = useCrudForm<{ date: string; rate: string }, never>({
@@ -73,15 +77,43 @@ export default function Currencies() {
 		}
 	}
 
-	async function download() {
+	async function download(e?: Event) {
+		e?.preventDefault()
+		const dic = t().currencies
+		const rangeFrom = dlFrom()
+		const rangeTo = dlTo()
+		if (!rangeFrom || !rangeTo) {
+			setRatesError(dic.downloadRangeRequired)
+			return
+		}
+		if (rangeFrom > rangeTo) {
+			setRatesError(dic.downloadRangeOrder)
+			return
+		}
+		const spanDays =
+			Math.round(
+				(new Date(`${rangeTo}T00:00:00Z`).getTime() -
+					new Date(`${rangeFrom}T00:00:00Z`).getTime()) /
+					86_400_000,
+			) + 1
+		if (spanDays > 365) {
+			setRatesError(dic.downloadRangeTooLong)
+			return
+		}
 		setDownloading(true)
 		setRatesError('')
 		setDownloadMsg('')
 		try {
-			const res = await api.exchangeRates.download(90)
+			const res = await api.exchangeRates.download({
+				from: rangeFrom,
+				to: rangeTo,
+				storeAll: dlStoreAll(),
+			})
 			await refetchRates()
+			const start = res.start ?? rangeFrom
+			const end = res.end ?? rangeTo
 			setDownloadMsg(
-				`${res.fetched} ${t().currencies.downloadedSummary} ${res.source} (${res.inserted} new, ${res.updated} updated)`,
+				`${res.fetched} ${dic.downloadedSummary} ${res.source} (${res.inserted} ${dic.downloadedNew}, ${res.updated} ${dic.downloadedUpdated}) · ${formatDateISO(start)} → ${formatDateISO(end)}`,
 			)
 		} catch (err) {
 			setRatesError((err as Error).message)
@@ -114,7 +146,7 @@ export default function Currencies() {
 	}
 
 	return (
-		<div class="page page--spacious">
+		<div class="page page--spacious currencies-page">
 			<div class="page-header">
 				<div>
 					<h2 class="page-title">{t().currencies.title}</h2>
@@ -184,74 +216,7 @@ export default function Currencies() {
 				</Show>
 			</section>
 
-			<section class="card" aria-label={t().currencies.converterTitle}>
-				<h3 class="curr-heading">{t().currencies.converterTitle}</h3>
-				<p class="muted text-sm">{t().currencies.converterHint}</p>
-				<div class="converter-grid">
-					<label class="field">
-						{t().currencies.amount}
-						<input
-							type="number"
-							min="0"
-							step="0.01"
-							value={convAmount()}
-							onInput={(e) => setConvAmount(e.currentTarget.value)}
-							class="input"
-						/>
-					</label>
-					<label class="field">
-						{t().currencies.from}
-						<select
-							value={convFrom()}
-							onChange={(e) => setConvFrom(e.currentTarget.value as CurrencyCode)}
-							class="input"
-						>
-							<option value="EUR">EUR (€)</option>
-							<option value="USD">USD ($)</option>
-						</select>
-					</label>
-					<label class="field">
-						{t().currencies.to}
-						<select
-							value={convTo()}
-							onChange={(e) => setConvTo(e.currentTarget.value as CurrencyCode)}
-							class="input"
-						>
-							<option value="EUR">EUR (€)</option>
-							<option value="USD">USD ($)</option>
-						</select>
-					</label>
-					<label class="field" for="conv-date">
-						{t().currencies.date} ({t().currencies.latest})
-						<DateInput id="conv-date" value={convDate()} onInput={setConvDate} />
-					</label>
-				</div>
-				<Show when={conversion.loading}>
-					<p class="muted text-sm">{t().common.loading}</p>
-				</Show>
-				<Show when={!conversion.loading && conversion()}>
-					{(c) => {
-						const conv = c()
-						const rateDate = conv.rateDate
-						return (
-							<p class="converter-result">
-								<span class="strong--bold">
-									{formatMoney(Math.round((convResult() ?? 0) * 100), convTo())}
-								</span>{' '}
-								<span class="muted text-sm">
-									1 {conv.fromCode} = {formatRate(conv.rate)} {conv.toCode}
-									{rateDate ? ` · ${formatDateISO(rateDate)}` : ''}
-								</span>
-							</p>
-						)
-					}}
-				</Show>
-				<Show when={!conversion.loading && !conversion()}>
-					<p class="muted text-sm">{t().currencies.noRate}</p>
-				</Show>
-			</section>
-
-			<section class="card" aria-label={t().currencies.ratesTitle}>
+			<section class="card rates-card" aria-label={t().currencies.ratesTitle}>
 				<div class="rates-toolbar">
 					<h3 class="curr-heading">{t().currencies.ratesTitle}</h3>
 					<div class="inline-row">
@@ -266,13 +231,8 @@ export default function Currencies() {
 								<option value="USDEUR">USD → EUR</option>
 							</select>
 						</label>
-						<button
-							type="button"
-							class="btn-primary"
-							disabled={downloading()}
-							onClick={download}
-						>
-							{downloading() ? t().currencies.downloading : t().currencies.download}
+						<button type="button" class="btn-primary" onClick={openDownload}>
+							{t().currencies.download}
 						</button>
 						<button
 							type="button"
@@ -283,12 +243,62 @@ export default function Currencies() {
 						</button>
 					</div>
 				</div>
-				<p class="muted text-sm">{t().currencies.sourceNote}</p>
-				<Show when={downloadMsg()}>
-					<p class="text-sm download-msg">{downloadMsg()}</p>
-				</Show>
-				<Show when={ratesError()}>
-					<p class="form-error">{ratesError()}</p>
+				<Show when={showDownload()}>
+					<div
+						class="form-card"
+						role="dialog"
+						aria-label={t().currencies.downloadDialogTitle}
+						onKeyDown={(e) => {
+							if (e.key === 'Escape') {
+								e.stopPropagation()
+								closeDownload()
+							}
+						}}
+					>
+						<h4 class="curr-heading">{t().currencies.downloadDialogTitle}</h4>
+						<form onSubmit={download}>
+							<div class="form-grid">
+								<label class="field" for="dl-from">
+									<span class="field-label">{t().currencies.downloadFrom}</span>
+									<DateInput id="dl-from" value={dlFrom()} onInput={setDlFrom} />
+								</label>
+								<label class="field" for="dl-to">
+									<span class="field-label">{t().currencies.downloadTo}</span>
+									<DateInput id="dl-to" value={dlTo()} onInput={setDlTo} />
+								</label>
+							</div>
+							<p class="form-hint">{t().currencies.downloadSource}</p>
+							<label class="field field--checkbox">
+								<input
+									type="checkbox"
+									checked={dlStoreAll()}
+									onChange={(e) => setDlStoreAll(e.currentTarget.checked)}
+								/>{' '}
+								{t().currencies.downloadStoreAll}
+							</label>
+							<Show when={downloadMsg()}>
+								<p class="text-sm download-msg">{downloadMsg()}</p>
+							</Show>
+							<Show when={ratesError()}>
+								<p class="form-error">{ratesError()}</p>
+							</Show>
+							<div class="form-actions">
+								<button
+									type="button"
+									class="btn-ghost"
+									onClick={closeDownload}
+									disabled={downloading()}
+								>
+									{t().common.cancel}
+								</button>
+								<button type="submit" class="btn-primary" disabled={downloading()}>
+									{downloading()
+										? t().currencies.downloading
+										: t().currencies.download}
+								</button>
+							</div>
+						</form>
+					</div>
 				</Show>
 
 				<CrudForm
@@ -384,7 +394,10 @@ export default function Currencies() {
 					</div>
 				</Show>
 				<Show when={(rates() ?? []).length === 0 && !rates.loading}>
-					<EmptyState actionLabel={t().currencies.emptyRatesAction} onAction={download}>
+					<EmptyState
+						actionLabel={t().currencies.emptyRatesAction}
+						onAction={openDownload}
+					>
 						{t().currencies.emptyRates}
 					</EmptyState>
 				</Show>

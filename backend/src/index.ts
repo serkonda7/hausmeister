@@ -14,7 +14,7 @@ import {
 	pools,
 	transactions,
 } from './db/schema'
-import { downloadEurUsdRates, normalizeCode } from './exchange'
+import { downloadEurUsdRates, downloadEurUsdRatesRange, normalizeCode } from './exchange'
 import {
 	accountCreateSchema,
 	accountUpdateSchema,
@@ -887,22 +887,52 @@ app.post('/exchange-rates', vValidator('json', exchangeRateCreateSchema), async 
 })
 
 // On-demand download (no cron): frankfurter.app EUR→USD fixings.
-// Only days that have transactions are stored — days without transactions
-// are skipped to keep the table lean.
+// Accepts either an explicit `?from=YYYY-MM-DD&to=YYYY-MM-DD` range or a
+// legacy `?days=N` window (defaults to 30). By default only days that have
+// transactions are stored — days without transactions are skipped to keep
+// the table lean — unless `?storeAll=1` is passed.
 app.post('/exchange-rates/download', async (c) => {
-	const days = Number.parseInt(c.req.query('days') ?? '90', 10) || 90
-	let downloaded: Awaited<ReturnType<typeof downloadEurUsdRates>>
+	const fromParam = c.req.query('from')
+	const toParam = c.req.query('to')
+	const storeAllParam = c.req.query('storeAll')
+	const storeAll = storeAllParam === '1' || storeAllParam === 'true'
+	const ISO_RE = /^\d{4}-\d{2}-\d{2}$/
+	type Downloaded = Awaited<ReturnType<typeof downloadEurUsdRatesRange>>
+	let downloaded: Downloaded
 	try {
-		downloaded = await downloadEurUsdRates(days)
+		if (fromParam != null || toParam != null) {
+			if (!fromParam || !ISO_RE.test(fromParam) || !toParam || !ISO_RE.test(toParam)) {
+				return c.json({ error: 'Expected ISO dates YYYY-MM-DD for from and to' }, 400)
+			}
+			if (fromParam > toParam) {
+				return c.json({ error: 'from must not be after to' }, 422)
+			}
+			const spanDays =
+				Math.round(
+					(new Date(`${toParam}T00:00:00Z`).getTime() -
+						new Date(`${fromParam}T00:00:00Z`).getTime()) /
+						86_400_000,
+				) + 1
+			if (spanDays > 365) {
+				return c.json({ error: 'Date range must not exceed 365 days' }, 422)
+			}
+			downloaded = await downloadEurUsdRatesRange(fromParam, toParam)
+		} else {
+			const days = Number.parseInt(c.req.query('days') ?? '30', 10) || 30
+			downloaded = await downloadEurUsdRates(days)
+		}
 	} catch {
 		return c.json(
 			{ error: 'Could not download exchange rates (frankfurter.app unreachable)' },
 			502,
 		)
 	}
-	const txDates = await db.select({ date: transactions.date }).from(transactions)
-	const datesWithTransactions = new Set(txDates.map((t) => t.date))
-	const wanted = downloaded.rates.filter((r) => datesWithTransactions.has(r.date))
+	let wanted = downloaded.rates
+	if (!storeAll) {
+		const txDates = await db.select({ date: transactions.date }).from(transactions)
+		const datesWithTransactions = new Set(txDates.map((t) => t.date))
+		wanted = downloaded.rates.filter((r) => datesWithTransactions.has(r.date))
+	}
 	let inserted = 0
 	let updated = 0
 	for (const r of wanted) {
@@ -917,6 +947,9 @@ app.post('/exchange-rates/download', async (c) => {
 		source: downloaded.source,
 		from: 'EUR',
 		to: 'USD',
+		start: downloaded.start,
+		end: downloaded.end,
+		storeAll,
 		fetched: wanted.length,
 		inserted,
 		updated,

@@ -131,6 +131,9 @@ export interface DownloadResult {
 	source: string
 	from: CurrencyCode
 	to: CurrencyCode
+	start: string
+	end: string
+	storeAll: boolean
 	fetched: number
 	inserted: number
 	updated: number
@@ -275,8 +278,23 @@ export const api = {
 		},
 		create: (d: { fromCode: CurrencyCode; toCode: CurrencyCode; date: string; rate: number }) =>
 			req<ExchangeRate>('/api/exchange-rates', { method: 'POST', body: JSON.stringify(d) }),
-		download: (days = 90) =>
-			req<DownloadResult>(`/api/exchange-rates/download?days=${days}`, { method: 'POST' }),
+		download: (
+			opts:
+				| { from: string; to: string; storeAll?: boolean }
+				| { days?: number; storeAll?: boolean } = {},
+		) => {
+			const q = new URLSearchParams()
+			if ('from' in opts && opts.from && 'to' in opts && opts.to) {
+				q.set('from', opts.from)
+				q.set('to', opts.to)
+			} else {
+				q.set('days', String(('days' in opts && opts.days) || 30))
+			}
+			if (opts.storeAll) {
+				q.set('storeAll', '1')
+			}
+			return req<DownloadResult>(`/api/exchange-rates/download?${q}`, { method: 'POST' })
+		},
 		remove: (date: string) =>
 			req<{ ok: true }>(`/api/exchange-rates/${date}`, { method: 'DELETE' }),
 	},

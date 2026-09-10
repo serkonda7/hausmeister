@@ -37,14 +37,18 @@ function isoDaysAgo(days: number): string {
 	return d.toISOString().slice(0, 10)
 }
 
-/** Download the last `days` EUR→USD ECB fixings via frankfurter v2. */
-export async function downloadEurUsdRates(days: number): Promise<{
+export const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Download EUR→USD ECB fixings for an explicit inclusive `start..end` range via frankfurter v2. */
+export async function downloadEurUsdRatesRange(
+	start: string,
+	end: string,
+): Promise<{
 	rates: DownloadedRate[]
 	source: string
+	start: string
+	end: string
 }> {
-	const windowDays = Number.isFinite(days) ? Math.min(Math.max(Math.trunc(days), 1), 365) : 90
-	const end = isoDaysAgo(0)
-	const start = isoDaysAgo(windowDays)
 	const res = await fetch(
 		`${FRANKFURTER_API}/providers/ecb/rates?from=${start}&to=${end}&quotes=usd`,
 		{
@@ -81,5 +85,18 @@ export async function downloadEurUsdRates(days: number): Promise<{
 	if (rates.length === 0) {
 		throw new Error('frankfurter.app response contained no USD rates')
 	}
-	return { rates, source: RATE_SOURCE }
+	return { rates, source: RATE_SOURCE, start, end }
+}
+
+/** Download the last `days` EUR→USD ECB fixings via frankfurter v2. */
+export async function downloadEurUsdRates(days: number): Promise<{
+	rates: DownloadedRate[]
+	source: string
+	start: string
+	end: string
+}> {
+	const windowDays = Number.isFinite(days) ? Math.min(Math.max(Math.trunc(days), 1), 365) : 30
+	const end = isoDaysAgo(0)
+	const start = isoDaysAgo(windowDays)
+	return downloadEurUsdRatesRange(start, end)
 }
