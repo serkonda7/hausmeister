@@ -175,9 +175,11 @@ export default function Events() {
 			>
 				<div class="form-grid">
 					<label class="field">
-						{t().events.titleField}{' '}
-						<span class="req" aria-hidden="true">
-							*
+						<span class="field-label">
+							{t().events.titleField}{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
 						</span>
 						<input
 							value={form().title}
@@ -188,9 +190,11 @@ export default function Events() {
 						/>
 					</label>
 					<label class="field">
-						{t().events.amount}{' '}
-						<span class="req" aria-hidden="true">
-							*
+						<span class="field-label">
+							{t().events.amount}{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
 						</span>
 						<input
 							type="number"
@@ -220,9 +224,11 @@ export default function Events() {
 						</select>
 					</label>
 					<label class="field" for="ev-date">
-						{t().events.date}{' '}
-						<span class="req" aria-hidden="true">
-							*
+						<span class="field-label">
+							{t().events.date}{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
 						</span>
 						<DateInput
 							id="ev-date"

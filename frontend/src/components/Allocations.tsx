@@ -123,9 +123,11 @@ export default function Allocations() {
 			>
 				<div class="form-grid">
 					<label class="field">
-						{t().allocations.pool}{' '}
-						<span class="req" aria-hidden="true">
-							*
+						<span class="field-label">
+							{t().allocations.pool}{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
 						</span>
 						<select
 							value={form().poolId}
@@ -140,9 +142,11 @@ export default function Allocations() {
 						</select>
 					</label>
 					<label class="field">
-						{t().allocations.account}{' '}
-						<span class="req" aria-hidden="true">
-							*
+						<span class="field-label">
+							{t().allocations.account}{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
 						</span>
 						<select
 							value={form().accountId}
@@ -157,9 +161,11 @@ export default function Allocations() {
 						</select>
 					</label>
 					<label class="field">
-						{t().allocations.amount}{' '}
-						<span class="req" aria-hidden="true">
-							*
+						<span class="field-label">
+							{t().allocations.amount}{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
 						</span>
 						<input
 							type="number"

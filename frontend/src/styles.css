@@ -309,6 +309,12 @@ input[type="color"] {
 	font-size: 0.875rem;
 }
 
+.field-label {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.25rem;
+}
+
 .field--checkbox {
 	display: flex;
 	align-items: center;

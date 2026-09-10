@@ -145,9 +145,11 @@ export default function Accounts() {
 			>
 				<div class="form-grid">
 					<label class="field">
-						{t().accounts.name}{' '}
-						<span class="req" aria-hidden="true">
-							*
+						<span class="field-label">
+							{t().accounts.name}{' '}
+							<span class="req" aria-hidden="true">
+								*
+							</span>
 						</span>
 						<input
 							value={form().name}

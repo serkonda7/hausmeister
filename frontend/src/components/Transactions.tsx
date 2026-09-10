@@ -554,9 +554,11 @@ export default function Transactions() {
 						<form onSubmit={submitTransfer} class="txn-subform">
 							<div class="form-grid">
 								<label class="field">
-									{t().transactions.fromAccount}{' '}
-									<span class="req" aria-hidden="true">
-										*
+									<span class="field-label">
+										{t().transactions.fromAccount}{' '}
+										<span class="req" aria-hidden="true">
+											*
+										</span>
 									</span>
 									<select
 										value={transferForm().fromAccountId}
@@ -577,9 +579,11 @@ export default function Transactions() {
 									</select>
 								</label>
 								<label class="field">
-									{t().transactions.toAccount}{' '}
-									<span class="req" aria-hidden="true">
-										*
+									<span class="field-label">
+										{t().transactions.toAccount}{' '}
+										<span class="req" aria-hidden="true">
+											*
+										</span>
 									</span>
 									<select
 										value={transferForm().toAccountId}

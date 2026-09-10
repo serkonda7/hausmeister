@@ -188,9 +188,11 @@ export default function Pools() {
 					<legend>{t().pools.basics}</legend>
 					<div class="form-grid">
 						<label class="field">
-							{t().pools.name}{' '}
-							<span class="req" aria-hidden="true">
-								*
+							<span class="field-label">
+								{t().pools.name}{' '}
+								<span class="req" aria-hidden="true">
+									*
+								</span>
 							</span>
 							<input
 								value={form().name}
