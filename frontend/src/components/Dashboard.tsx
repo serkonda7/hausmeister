@@ -13,8 +13,12 @@ import {
 import { t } from '../lib/i18n'
 import './Dashboard.css'
 import Amount from './Amount'
+import Bar from './Bar'
+import Dot from './Dot'
 import EmptyState from './EmptyState'
 import ListState from './ListState'
+import Row from './Row'
+import StatusBadge from './StatusBadge'
 
 function pct(cents: number, total: number): number {
 	return total ? (cents / total) * 100 : 0
@@ -78,17 +82,10 @@ export default function Dashboard() {
 															{formatShare(share)} %
 														</span>
 													</div>
-													<div class="bar-track">
-														<div
-															class="bar-fill"
-															style={{
-																width: `${share}%`,
-																background:
-																	liquidityColors[tier] ??
-																	'#9ca3af',
-															}}
-														/>
-													</div>
+													<Bar
+														value={share}
+														color={liquidityColors[tier] ?? '#9ca3af'}
+													/>
 												</div>
 											)
 										}}
@@ -119,14 +116,7 @@ export default function Dashboard() {
 													<div class="pool-head">
 														<div>
 															<div class="pool-name">
-																<span
-																	class="dot dot--sm"
-																	style={{
-																		background:
-																			pt.pool.color ??
-																			'#9ca3af',
-																	}}
-																/>
+																<Dot color={pt.pool.color} small />
 																{pt.pool.name}
 															</div>
 															<Show when={pt.pool.purpose}>
@@ -179,31 +169,17 @@ export default function Dashboard() {
 																? `${pt.pool.horizonMonths} ${t().dashboard.months}`
 																: '—'}
 														</span>
-														<span
-															class="pool-status status-badge"
-															classList={{
-																'status-badge--ok': ok,
-																'status-badge--warn': !ok,
-															}}
-														>
+														<StatusBadge ok={ok} class="pool-status">
 															{ok
 																? t().dashboard.onTarget
 																: t().dashboard.deviation}
-														</span>
+														</StatusBadge>
 													</div>
-													<div class="bar-track bar-track--thin">
-														<div
-															class="bar-fill"
-															classList={{
-																'bar-fill--ok': ok,
-																'bar-fill--warn': !ok,
-															}}
-															style={{
-																// Same 0–100 % scale as the target
-																// marker below so bar and marker align.
-																width: `${Math.min(100, share)}%`,
-															}}
-														/>
+													<Bar
+														value={share}
+														tone={ok ? 'ok' : 'warn'}
+														thin
+													>
 														<Show when={targetPct != null}>
 															<div
 																class="pool-target"
@@ -213,7 +189,7 @@ export default function Dashboard() {
 																title={`${t().dashboard.targetTooltip} ${formatTargetPercent(targetPct ?? 0)}`}
 															/>
 														</Show>
-													</div>
+													</Bar>
 												</div>
 											)
 										}}
@@ -234,23 +210,25 @@ export default function Dashboard() {
 											{(ev) => {
 												const date = ev.projectedDate ?? ev.date
 												return (
-													<div class="row-between">
-														<div>
-															<div class="row-title">{ev.title}</div>
-															<div class="pool-sub">
+													<Row
+														title={ev.title}
+														sub={
+															<>
 																{formatDateISO(date)}
 																<Show when={ev.isRecurring}>
 																	{' '}
 																	· {ev.frequency} ↻
 																</Show>
-															</div>
-														</div>
-														<Amount
-															cents={ev.amountCents}
-															direction={ev.direction}
-															class="row-amount"
-														/>
-													</div>
+															</>
+														}
+														right={
+															<Amount
+																cents={ev.amountCents}
+																direction={ev.direction}
+																class="row-amount"
+															/>
+														}
+													/>
 												)
 											}}
 										</For>
@@ -267,17 +245,15 @@ export default function Dashboard() {
 									<div class="list list--tight">
 										<For each={d.unlocks}>
 											{(u) => (
-												<div class="row-between">
-													<div>
-														<div class="row-title">{u.name}</div>
-														<div class="pool-sub">
-															{formatDateISO(u.unlockAt)}
+												<Row
+													title={u.name}
+													sub={formatDateISO(u.unlockAt)}
+													right={
+														<div class="row-amount">
+															{formatEUR(u.amountCents)}
 														</div>
-													</div>
-													<div class="row-amount">
-														{formatEUR(u.amountCents)}
-													</div>
-												</div>
+													}
+												/>
 											)}
 										</For>
 									</div>

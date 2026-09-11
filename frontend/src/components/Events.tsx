@@ -7,9 +7,9 @@ import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import Amount from './Amount'
 import CrudForm from './CrudForm'
-import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import EntityCard from './EntityCard'
 import Field, { SelectField, TextField } from './Field'
 import PageHeader from './PageHeader'
 
@@ -248,10 +248,10 @@ export default function Events() {
 							<h3 class="month-heading">{g.label}</h3>
 							<For each={g.items}>
 								{(ev) => (
-									<div class="card card--compact card-row">
-										<div>
-											<div class="title">{ev.title}</div>
-											<div class="muted text-sm">
+									<EntityCard
+										title={ev.title}
+										meta={
+											<>
 												{formatDateISO(ev.date)}{' '}
 												<Show when={ev.isRecurring}>
 													·{' '}
@@ -267,19 +267,17 @@ export default function Events() {
 														? formatDateISO(ev.recurringUntil)
 														: ''}
 												</Show>
-											</div>
-										</div>
-										<div class="card-actions">
+											</>
+										}
+										amount={
 											<Amount
 												cents={ev.amountCents}
 												direction={ev.direction}
 											/>
-											<CrudRow
-												onEdit={() => openEdit(ev.id)}
-												onDelete={() => remove(ev.id)}
-											/>
-										</div>
-									</div>
+										}
+										onEdit={() => openEdit(ev.id)}
+										onDelete={() => remove(ev.id)}
+									/>
 								)}
 							</For>
 						</>

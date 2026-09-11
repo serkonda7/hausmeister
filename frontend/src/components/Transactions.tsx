@@ -8,9 +8,10 @@ import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import { accountName, categoryOf } from '../lib/names'
 import Amount from './Amount'
 import CrudForm from './CrudForm'
-import CrudRow from './CrudRow'
 import DateInput from './DateInput'
+import Dot from './Dot'
 import EmptyState from './EmptyState'
+import EntityCard from './EntityCard'
 import ListState from './ListState'
 import PageHeader from './PageHeader'
 import './Transactions.css'
@@ -381,11 +382,7 @@ export default function Transactions() {
 						{filtered().length} {t().transactions.results} · {t().transactions.income}{' '}
 						{formatEUR(totals().inflow)} · {t().transactions.expenses}{' '}
 						{formatEUR(totals().outflow)} · {t().transactions.net}{' '}
-						<Amount
-							cents={totals().net}
-							direction={totals().net >= 0 ? 'inflow' : 'outflow'}
-							showSign={false}
-						/>
+						<Amount cents={totals().net} showSign={false} />
 					</span>
 				</span>
 				<Show when={hasActiveFilters()}>
@@ -711,14 +708,15 @@ export default function Transactions() {
 				<For each={filtered()}>
 					{(txn) => {
 						const cat = () => categoryOf(categories(), txn.categoryId)
+						const transfer = isTransferLeg(txn)
 						return (
-							<div class="card card--compact card-row">
-								<div>
-									<div class="title">
+							<EntityCard
+								title={
+									<>
 										{txn.payee || (
 											<span class="subtle">{t().transactions.noPayee}</span>
 										)}{' '}
-										<Show when={isTransferLeg(txn)}>
+										<Show when={transfer}>
 											<span
 												class="subtle text-sm"
 												title={`${t().transactions.transferPrefix} ${txn.transferId}`}
@@ -726,8 +724,10 @@ export default function Transactions() {
 												{t().transactions.transferBadge}
 											</span>
 										</Show>
-									</div>
-									<div class="muted text-sm">
+									</>
+								}
+								meta={
+									<>
 										{formatDateISO(txn.date)} ·{' '}
 										{accountName(accounts(), txn.accountId)}
 										<Show when={cat()}>
@@ -738,42 +738,33 @@ export default function Transactions() {
 												style={{ display: 'inline-flex' }}
 											>
 												<Show when={cat()?.color}>
-													<span
-														class="dot dot--sm"
-														style={{
-															background: cat()?.color ?? '#9ca3af',
-														}}
-													/>
+													<Dot color={cat()?.color} small />
 												</Show>
 												{cat()?.name}
 											</span>
 										</Show>
 										<Show when={txn.notes}> · {txn.notes}</Show>
-									</div>
-								</div>
-								<div class="card-actions">
+									</>
+								}
+								amount={
 									<Amount cents={txn.amountCents} direction={txn.direction} />
-									<Show
-										when={!isTransferLeg(txn)}
-										fallback={
-											<button
-												type="button"
-												onClick={() => remove(txn)}
-												class="btn-icon btn-icon--danger"
-												aria-label={t().transactions.deleteTransfer}
-												title={t().transactions.deleteTransferTitle}
-											>
-												✕
-											</button>
-										}
-									>
-										<CrudRow
-											onEdit={() => openEdit(txn)}
-											onDelete={() => remove(txn)}
-										/>
-									</Show>
-								</div>
-							</div>
+								}
+								onEdit={transfer ? undefined : () => openEdit(txn)}
+								onDelete={() => remove(txn)}
+								actions={
+									transfer ? (
+										<button
+											type="button"
+											onClick={() => remove(txn)}
+											class="btn-icon btn-icon--danger"
+											aria-label={t().transactions.deleteTransfer}
+											title={t().transactions.deleteTransferTitle}
+										>
+											✕
+										</button>
+									) : undefined
+								}
+							/>
 						)
 					}}
 				</For>
@@ -841,17 +832,17 @@ export default function Transactions() {
 			<div class="list list--tight">
 				<For each={categories() ?? []}>
 					{(c) => (
-						<div class="card card--compact card-row">
-							<div class="inline-row">
-								<span class="dot" style={{ background: c.color ?? '#9ca3af' }} />
-								<span class="strong">{c.name}</span>
-								<span class="muted text-sm">· {categoryKindLabel(c.kind)}</span>
-							</div>
-							<CrudRow
-								onEdit={() => openCatEdit(c)}
-								onDelete={() => removeCat(c.id)}
-							/>
-						</div>
+						<EntityCard
+							title={
+								<span class="inline-row">
+									<Dot color={c.color} />
+									<span class="strong">{c.name}</span>
+									<span class="muted text-sm">· {categoryKindLabel(c.kind)}</span>
+								</span>
+							}
+							onEdit={() => openCatEdit(c)}
+							onDelete={() => removeCat(c.id)}
+						/>
 					)}
 				</For>
 				<Show when={(categories() ?? []).length === 0 && !categories.loading}>

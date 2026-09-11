@@ -7,6 +7,7 @@ import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
 import CrudForm from './CrudForm'
 import CrudRow from './CrudRow'
+import Dot from './Dot'
 import EmptyState from './EmptyState'
 import Field, { SelectField, TextField } from './Field'
 import PageHeader from './PageHeader'
@@ -290,10 +291,7 @@ export default function Pools() {
 						<div class="card">
 							<div class="card-row">
 								<div class="inline-row">
-									<span
-										class="dot"
-										style={{ background: p.color ?? '#9ca3af' }}
-									/>
+									<Dot color={p.color} />
 									<span class="strong">{p.name}</span>
 									<Show when={p.purpose}>
 										<span class="muted text-sm">· {p.purpose}</span>

@@ -2,13 +2,14 @@ import { createResource, For, Show } from 'solid-js'
 import { type Allocation, api } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { formatDateISO, formatEUR, liquidityLabel } from '../lib/format'
+import { formatDateISO, liquidityLabel } from '../lib/format'
 import { t } from '../lib/i18n'
 import { centsToEuroInput, parseEuroToCents } from '../lib/money'
+import Amount from './Amount'
 import CrudForm from './CrudForm'
-import CrudRow from './CrudRow'
 import DateInput from './DateInput'
 import EmptyState from './EmptyState'
+import EntityCard from './EntityCard'
 import Field, { SelectField, TextField } from './Field'
 import PageHeader from './PageHeader'
 import './Allocations.css'
@@ -174,9 +175,9 @@ export default function Allocations() {
 						const pool = () => pools()?.find((p) => p.id === a.poolId)
 						const account = () => accounts()?.find((x) => x.id === a.accountId)
 						return (
-							<div class="card card--compact card-row">
-								<div>
-									<div class="title">
+							<EntityCard
+								title={
+									<>
 										{pool()?.name ?? (
 											<span class="unknown-ref" title={a.poolId}>
 												{t().allocations.unknownRef}
@@ -190,8 +191,10 @@ export default function Allocations() {
 												</span>
 											)}
 										</span>
-									</div>
-									<div class="muted text-sm">
+									</>
+								}
+								meta={
+									<>
 										{a.liquidityOverride
 											? `${t().allocations.overridePrefix}: ${liquidityLabel(a.liquidityOverride)}`
 											: t().allocations.defaultFrom}{' '}
@@ -199,16 +202,12 @@ export default function Allocations() {
 											{t().allocations.fromPrefix}
 											{a.unlockAt ? formatDateISO(a.unlockAt) : ''}
 										</Show>
-									</div>
-								</div>
-								<div class="card-actions">
-									<span class="strong--bold">{formatEUR(a.amountCents)}</span>
-									<CrudRow
-										onEdit={() => openEdit(a.id)}
-										onDelete={() => remove(a.id)}
-									/>
-								</div>
-							</div>
+									</>
+								}
+								amount={<Amount cents={a.amountCents} showSign={false} />}
+								onEdit={() => openEdit(a.id)}
+								onDelete={() => remove(a.id)}
+							/>
 						)
 					}}
 				</For>
