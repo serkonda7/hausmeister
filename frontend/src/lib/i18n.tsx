@@ -45,9 +45,16 @@ export function setLocale(next: Locale) {
 	setLocaleSignal(next)
 }
 
-/** BCP 47 tag used for `Intl` formatting. Always returns `de-DE`. */
+/**
+ * BCP 47 tag used for `Intl` formatting. Single canonical definition —
+ * `lib/format.ts` imports this instead of keeping its own copy. Always
+ * `de-DE`, independent of the UI language.
+ */
+export const FIXED_LOCALE_TAG = 'de-DE'
+
+/** BCP 47 tag used for `Intl` formatting. Always returns {@link FIXED_LOCALE_TAG}. */
 export function localeTag(): string {
-	return 'de-DE'
+	return FIXED_LOCALE_TAG
 }
 
 /** Non-reactive lookup (e.g. inside event handlers / validation). */

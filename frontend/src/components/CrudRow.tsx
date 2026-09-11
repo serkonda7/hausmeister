@@ -3,7 +3,8 @@ import type { JSX } from 'solid-js'
 import { t } from '../lib/i18n'
 
 interface CrudRowProps {
-	onEdit: () => void
+	/** Omit for rows that cannot be edited (e.g. transfer legs). */
+	onEdit?: () => void
 	onDelete: () => void
 	editLabel?: string
 	deleteLabel?: string
@@ -12,15 +13,17 @@ interface CrudRowProps {
 export default function CrudRow(props: CrudRowProps): JSX.Element {
 	return (
 		<>
-			<button
-				type="button"
-				onClick={props.onEdit}
-				class="btn-icon"
-				aria-label={props.editLabel ?? t().common.edit}
-				title={props.editLabel ?? t().common.edit}
-			>
-				<IconPencil size={18} />
-			</button>
+			{props.onEdit ? (
+				<button
+					type="button"
+					onClick={props.onEdit}
+					class="btn-icon"
+					aria-label={props.editLabel ?? t().common.edit}
+					title={props.editLabel ?? t().common.edit}
+				>
+					<IconPencil size={18} />
+				</button>
+			) : null}
 			<button
 				type="button"
 				onClick={props.onDelete}

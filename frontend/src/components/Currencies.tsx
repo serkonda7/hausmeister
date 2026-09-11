@@ -2,10 +2,18 @@ import { createResource, createSignal, For, Show } from 'solid-js'
 import { api, type CurrencyCode } from '../lib/api'
 import { removeWithConfirm, useCrudForm } from '../lib/crud'
 import { patchForm } from '../lib/form'
-import { currencySymbol, formatDateISO, formatRate, todayISO } from '../lib/format'
+import {
+	addDaysISO,
+	currencySymbol,
+	diffDaysISO,
+	formatDateISO,
+	formatRate,
+	todayISO,
+} from '../lib/format'
 import { t } from '../lib/i18n'
 import CrudForm from './CrudForm'
 import DateInput from './DateInput'
+import Dialog from './Dialog'
 import EmptyState from './EmptyState'
 import ListState from './ListState'
 import PageHeader from './PageHeader'
@@ -13,8 +21,9 @@ import './Currencies.css'
 
 type Pair = 'EURUSD' | 'USDEUR'
 
-function pairLegs(pair: Pair): { from: CurrencyCode; to: CurrencyCode } {
-	return pair === 'EURUSD' ? { from: 'EUR', to: 'USD' } : { from: 'USD', to: 'EUR' }
+const PAIR_LEGS: Record<Pair, { from: CurrencyCode; to: CurrencyCode }> = {
+	EURUSD: { from: 'EUR', to: 'USD' },
+	USDEUR: { from: 'USD', to: 'EUR' },
 }
 
 export default function Currencies() {
@@ -22,11 +31,11 @@ export default function Currencies() {
 	const [currError, setCurrError] = createSignal('')
 
 	const [pair, setPair] = createSignal<Pair>('EURUSD')
-	const from = () => pairLegs(pair()).from
-	const to = () => pairLegs(pair()).to
+	const from = () => PAIR_LEGS[pair()].from
+	const to = () => PAIR_LEGS[pair()].to
 
 	const [rates, { refetch: refetchRates }] = createResource(pair, async () => {
-		const { from: f, to: tt } = pairLegs(pair())
+		const { from: f, to: tt } = PAIR_LEGS[pair()]
 		return api.exchangeRates.list(f, tt, 180)
 	})
 
@@ -38,20 +47,13 @@ export default function Currencies() {
 	const [dlTo, setDlTo] = createSignal('')
 	const [dlStoreAll, setDlStoreAll] = createSignal(false)
 
-	function shiftISO(iso: string, deltaDays: number): string {
-		const [y, m, d] = iso.split('-').map(Number)
-		const dt = new Date(y, (m || 1) - 1, d || 1)
-		dt.setDate(dt.getDate() + deltaDays)
-		return todayISO(dt)
-	}
-
 	function openDownload() {
 		const today = todayISO()
 		if (!dlTo()) {
 			setDlTo(today)
 		}
 		if (!dlFrom()) {
-			setDlFrom(shiftISO(dlTo() || today, -30))
+			setDlFrom(addDaysISO(dlTo() || today, -30))
 		}
 		setRatesError('')
 		setShowDownload(true)
@@ -92,12 +94,7 @@ export default function Currencies() {
 			setRatesError(dic.downloadRangeOrder)
 			return
 		}
-		const spanDays =
-			Math.round(
-				(new Date(`${rangeTo}T00:00:00Z`).getTime() -
-					new Date(`${rangeFrom}T00:00:00Z`).getTime()) /
-					86_400_000,
-			) + 1
+		const spanDays = diffDaysISO(rangeFrom, rangeTo)
 		if (spanDays > 365) {
 			setRatesError(dic.downloadRangeTooLong)
 			return
@@ -236,63 +233,55 @@ export default function Currencies() {
 						</button>
 					</div>
 				</div>
-				<Show when={showDownload()}>
-					<div
-						class="form-card"
-						role="dialog"
-						aria-label={t().currencies.downloadDialogTitle}
-						onKeyDown={(e) => {
-							if (e.key === 'Escape') {
-								e.stopPropagation()
-								closeDownload()
-							}
-						}}
-					>
-						<h4 class="curr-heading">{t().currencies.downloadDialogTitle}</h4>
-						<form onSubmit={download}>
-							<div class="form-grid">
-								<label class="field" for="dl-from">
-									<span class="field-label">{t().currencies.downloadFrom}</span>
-									<DateInput id="dl-from" value={dlFrom()} onInput={setDlFrom} />
-								</label>
-								<label class="field" for="dl-to">
-									<span class="field-label">{t().currencies.downloadTo}</span>
-									<DateInput id="dl-to" value={dlTo()} onInput={setDlTo} />
-								</label>
-							</div>
-							<p class="form-hint">{t().currencies.downloadSource}</p>
-							<label class="field field--checkbox">
-								<input
-									type="checkbox"
-									checked={dlStoreAll()}
-									onChange={(e) => setDlStoreAll(e.currentTarget.checked)}
-								/>{' '}
-								{t().currencies.downloadStoreAll}
+				<Dialog
+					open={showDownload()}
+					onCancel={closeDownload}
+					label={t().currencies.downloadDialogTitle}
+				>
+					<h4 class="curr-heading">{t().currencies.downloadDialogTitle}</h4>
+					<form onSubmit={download}>
+						<div class="form-grid">
+							<label class="field" for="dl-from">
+								<span class="field-label">{t().currencies.downloadFrom}</span>
+								<DateInput id="dl-from" value={dlFrom()} onInput={setDlFrom} />
 							</label>
-							<Show when={downloadMsg()}>
-								<p class="text-sm download-msg">{downloadMsg()}</p>
-							</Show>
-							<Show when={ratesError()}>
-								<p class="form-error">{ratesError()}</p>
-							</Show>
-							<div class="form-actions">
-								<button
-									type="button"
-									class="btn-ghost"
-									onClick={closeDownload}
-									disabled={downloading()}
-								>
-									{t().common.cancel}
-								</button>
-								<button type="submit" class="btn-primary" disabled={downloading()}>
-									{downloading()
-										? t().currencies.downloading
-										: t().currencies.download}
-								</button>
-							</div>
-						</form>
-					</div>
-				</Show>
+							<label class="field" for="dl-to">
+								<span class="field-label">{t().currencies.downloadTo}</span>
+								<DateInput id="dl-to" value={dlTo()} onInput={setDlTo} />
+							</label>
+						</div>
+						<p class="form-hint">{t().currencies.downloadSource}</p>
+						<label class="field field--checkbox">
+							<input
+								type="checkbox"
+								checked={dlStoreAll()}
+								onChange={(e) => setDlStoreAll(e.currentTarget.checked)}
+							/>{' '}
+							{t().currencies.downloadStoreAll}
+						</label>
+						<Show when={downloadMsg()}>
+							<p class="text-sm download-msg">{downloadMsg()}</p>
+						</Show>
+						<Show when={ratesError()}>
+							<p class="form-error">{ratesError()}</p>
+						</Show>
+						<div class="form-actions">
+							<button
+								type="button"
+								class="btn-ghost"
+								onClick={closeDownload}
+								disabled={downloading()}
+							>
+								{t().common.cancel}
+							</button>
+							<button type="submit" class="btn-primary" disabled={downloading()}>
+								{downloading()
+									? t().currencies.downloading
+									: t().currencies.download}
+							</button>
+						</div>
+					</form>
+				</Dialog>
 
 				<CrudForm
 					open={rateCrud.showForm()}

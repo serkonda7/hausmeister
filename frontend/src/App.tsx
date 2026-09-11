@@ -9,7 +9,7 @@ import {
 	IconSun,
 	IconWallet,
 } from '@tabler/icons-solidjs'
-import { createSignal, For, type JSX, onCleanup, onMount } from 'solid-js'
+import { type Component, createSignal, For, type JSX, onCleanup, onMount } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 import Accounts from './components/Accounts'
 import Allocations from './components/Allocations'
@@ -33,6 +33,16 @@ const VIEWS = [
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
+
+const VIEW_MAP: Record<View, Component> = {
+	dashboard: Dashboard,
+	accounts: Accounts,
+	transactions: Transactions,
+	pools: Pools,
+	allocations: Allocations,
+	events: Events,
+	currencies: Currencies,
+}
 
 const VIEW_IDS = new Set<string>(VIEWS.map((v) => v.id))
 
@@ -132,8 +142,7 @@ export default function App(): JSX.Element {
 
 			<div class="app-content">
 				<main class="app-main">
-					{/* biome-ignore lint/style/noNonNullAssertion: ids only come from VIEWS */}
-					<Dynamic component={VIEWS.find((v) => v.id === view())!.comp} />
+					<Dynamic component={VIEW_MAP[view()]} />
 				</main>
 			</div>
 		</div>

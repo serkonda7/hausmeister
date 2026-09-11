@@ -24,6 +24,20 @@ export function parseEuroToCents(s: string): number | null {
 }
 
 /**
+ * Parse a decimal euro input to integer cents, accepting only positive
+ * amounts. Returns `null` for blank / non-numeric / zero / negative input —
+ * the shared "date + amount" validation used by the transaction and transfer
+ * submit handlers (both report the same `dateAmountRequired` error).
+ */
+export function parsePositiveCents(s: string): number | null {
+	const cents = parseEuroToCents(s)
+	if (cents == null || Number.isNaN(cents) || cents <= 0) {
+		return null
+	}
+	return cents
+}
+
+/**
  * Format integer cents (`1234`) for a decimal euro input (`"12.34"`).
  * `null` / `undefined` → `''` (empty input).
  */

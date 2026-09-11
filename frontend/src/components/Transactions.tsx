@@ -1,42 +1,21 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js'
-import { api, type Category, type Transaction } from '../lib/api'
-import { removeWithConfirm, useCrudForm } from '../lib/crud'
-import { patchForm } from '../lib/form'
-import { formatDateISO, formatEUR, todayISO } from '../lib/format'
+import { createMemo, createResource, createSignal, Show } from 'solid-js'
+import { api, type Transaction } from '../lib/api'
+import { useCrudForm } from '../lib/crud'
 import { t } from '../lib/i18n'
-import { centsToEuroInput, parseEuroToCents } from '../lib/money'
-import { accountName, categoryOf } from '../lib/names'
-import Amount from './Amount'
+import { centsToEuroInput, parsePositiveCents } from '../lib/money'
+import CategoriesSection from './CategoriesSection'
 import CrudForm from './CrudForm'
-import DateInput from './DateInput'
-import Dot from './Dot'
-import EmptyState from './EmptyState'
-import EntityCard from './EntityCard'
-import ListState from './ListState'
 import PageHeader from './PageHeader'
+import TransactionFormFields, { emptyTxnForm, type TxnForm } from './TransactionForm'
+import TransactionsList from './TransactionsList'
+import TransferFormFields, {
+	emptyTransferForm,
+	isSameAccountTransfer,
+	type TransferForm,
+} from './TransferForm'
 import './Transactions.css'
 
 type Mode = 'transaction' | 'transfer'
-
-const EMPTY_TXN = {
-	accountId: '',
-	date: todayISO(),
-	payee: '',
-	categoryId: '',
-	amount: '',
-	direction: 'outflow' as 'inflow' | 'outflow',
-	notes: '',
-}
-
-const EMPTY_TRANSFER = {
-	fromAccountId: '',
-	toAccountId: '',
-	amount: '',
-	date: todayISO(),
-	payee: '',
-	categoryId: '',
-	notes: '',
-}
 
 export default function Transactions() {
 	const [accountFilter, setAccountFilter] = createSignal('')
@@ -51,17 +30,11 @@ export default function Transactions() {
 	const [categories, { refetch: refetchCats }] = createResource(() => api.categories.list())
 
 	const [mode, setMode] = createSignal<Mode>('transaction')
-	const [showForm, setShowForm] = createSignal(false)
-	const [editingId, setEditingId] = createSignal<string | null>(null)
-	const [error, setError] = createSignal('')
-	const [form, setForm] = createSignal({ ...EMPTY_TXN })
-	const [transferForm, setTransferForm] = createSignal({ ...EMPTY_TRANSFER })
-
-	// Categories manager state (shared CRUD shell)
-	const EMPTY_CAT = { name: '', kind: '', color: '#22c55e' }
-	const catCrud = useCrudForm<{ name: string; kind: string; color: string }, Category>({
-		...EMPTY_CAT,
-	})
+	// Main form state (show/editing/error shell + field values) via the
+	// shared CRUD hook; the transfer field values live alongside and share
+	// the same dialog shell + error slot.
+	const txnCrud = useCrudForm<TxnForm, Transaction>(emptyTxnForm())
+	const [transferForm, setTransferForm] = createSignal<TransferForm>(emptyTransferForm())
 
 	const filtered = createMemo(() => {
 		const q = query().trim().toLowerCase()
@@ -103,55 +76,29 @@ export default function Transactions() {
 		setQuery('')
 	}
 
-	// Autofocus the first field whenever the create/edit form opens.
-	let txnFormWrap: HTMLDivElement | undefined
-	createEffect(() => {
-		if (showForm() && txnFormWrap) {
-			txnFormWrap
-				.querySelector<HTMLElement>(
-					'input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
-				)
-				?.focus()
-		}
-	})
-
-	function handleFormKeyDown(e: KeyboardEvent): void {
-		if (e.key === 'Escape') {
-			setShowForm(false)
-		}
-	}
-
-	const catForm = catCrud.form
-	const setCatForm = catCrud.setForm
+	const sameAccount = () => isSameAccountTransfer(transferForm())
 
 	function openCreate() {
-		setEditingId(null)
 		setMode('transaction')
-		setForm({
-			...EMPTY_TXN,
-			accountId: accountFilter() || accounts()?.[0]?.id || '',
-		})
-		setError('')
-		setShowForm(true)
+		txnCrud.openCreate(emptyTxnForm(accountFilter() || accounts()?.[0]?.id || ''))
 	}
+
 	function openTransfer() {
 		setMode('transfer')
+		txnCrud.setEditing(null)
 		const list = accounts() ?? []
-		setTransferForm({
-			...EMPTY_TRANSFER,
-			fromAccountId: accountFilter() || list[0]?.id || '',
-			toAccountId: list.find((a) => a.id !== (accountFilter() || list[0]?.id))?.id || '',
-		})
-		setError('')
-		setShowForm(true)
+		const fromId = accountFilter() || list[0]?.id || ''
+		setTransferForm(emptyTransferForm(fromId, list.find((a) => a.id !== fromId)?.id || ''))
+		txnCrud.setError('')
+		txnCrud.setShowForm(true)
 	}
+
 	function openEdit(txn: Transaction) {
 		if (txn.transferId != null) {
 			return
 		}
-		setEditingId(txn.id)
 		setMode('transaction')
-		setForm({
+		txnCrud.openEdit(txn, {
 			accountId: txn.accountId,
 			date: txn.date,
 			payee: txn.payee ?? '',
@@ -160,64 +107,50 @@ export default function Transactions() {
 			direction: txn.direction,
 			notes: txn.notes ?? '',
 		})
-		setError('')
-		setShowForm(true)
 	}
 
-	async function submitTxn(e: Event) {
-		e.preventDefault()
-		setError('')
-		const f = form()
-		const amountCents = parseEuroToCents(f.amount)
-		if (!f.accountId) {
-			setError(t().transactions.accountRequired)
-			return
-		}
-		if (!f.date || amountCents == null || Number.isNaN(amountCents) || amountCents <= 0) {
-			setError(t().transactions.dateAmountRequired)
-			return
-		}
-		const payload = {
-			accountId: f.accountId,
-			date: f.date,
-			payee: f.payee.trim() || null,
-			categoryId: f.categoryId || null,
-			amountCents,
-			direction: f.direction,
-			notes: f.notes.trim() || null,
-		}
-		try {
-			const eid = editingId()
+	function submitTxn(e: Event) {
+		return txnCrud.submit(e, async () => {
+			const f = txnCrud.form()
+			const amountCents = parsePositiveCents(f.amount)
+			if (!f.accountId) {
+				throw new Error(t().transactions.accountRequired)
+			}
+			if (!f.date || amountCents == null) {
+				throw new Error(t().transactions.dateAmountRequired)
+			}
+			const payload = {
+				accountId: f.accountId,
+				date: f.date,
+				payee: f.payee.trim() || null,
+				categoryId: f.categoryId || null,
+				amountCents,
+				direction: f.direction,
+				notes: f.notes.trim() || null,
+			}
+			const eid = txnCrud.editing()
 			if (eid) {
-				await api.transactions.update(eid, payload)
+				await api.transactions.update(eid.id, payload)
 			} else {
 				await api.transactions.create(payload)
 			}
-			setShowForm(false)
 			await refetch()
-		} catch (err) {
-			setError((err as Error).message)
-		}
+		})
 	}
 
-	async function submitTransfer(e: Event) {
-		e.preventDefault()
-		setError('')
-		const f = transferForm()
-		const amountCents = parseEuroToCents(f.amount)
-		if (!f.fromAccountId || !f.toAccountId) {
-			setError(t().transactions.srcDstRequired)
-			return
-		}
-		if (f.fromAccountId === f.toAccountId) {
-			setError(t().transactions.srcDstDiffer)
-			return
-		}
-		if (!f.date || amountCents == null || Number.isNaN(amountCents) || amountCents <= 0) {
-			setError(t().transactions.dateAmountRequired)
-			return
-		}
-		try {
+	function submitTransfer(e: Event) {
+		return txnCrud.submit(e, async () => {
+			const f = transferForm()
+			const amountCents = parsePositiveCents(f.amount)
+			if (!f.fromAccountId || !f.toAccountId) {
+				throw new Error(t().transactions.srcDstRequired)
+			}
+			if (f.fromAccountId === f.toAccountId) {
+				throw new Error(t().transactions.srcDstDiffer)
+			}
+			if (!f.date || amountCents == null) {
+				throw new Error(t().transactions.dateAmountRequired)
+			}
 			await api.transfers.create({
 				fromAccountId: f.fromAccountId,
 				toAccountId: f.toAccountId,
@@ -227,11 +160,8 @@ export default function Transactions() {
 				categoryId: f.categoryId || null,
 				notes: f.notes.trim() || null,
 			})
-			setShowForm(false)
 			await refetch()
-		} catch (err) {
-			setError((err as Error).message)
-		}
+		})
 	}
 
 	async function remove(txn: Transaction) {
@@ -247,59 +177,6 @@ export default function Transactions() {
 		} catch (err) {
 			alert((err as Error).message)
 		}
-	}
-
-	// ---- Categories ----
-	function openCatCreate() {
-		catCrud.openCreate({ ...EMPTY_CAT })
-	}
-	function openCatEdit(c: Category) {
-		catCrud.openEdit(c, { name: c.name, kind: c.kind ?? '', color: c.color ?? '#22c55e' })
-	}
-	function submitCat(e: Event) {
-		return catCrud.submit(e, async () => {
-			const f = catForm()
-			if (!f.name.trim()) {
-				throw new Error(t().transactions.nameRequired)
-			}
-			const payload = {
-				name: f.name.trim(),
-				kind: (f.kind || null) as Category['kind'],
-				color: f.color || null,
-			}
-			const cur = catCrud.editing()
-			if (cur) {
-				await api.categories.update(cur.id, payload)
-			} else {
-				await api.categories.create(payload)
-			}
-			await refetchCats()
-		})
-	}
-	function removeCat(id: string) {
-		return removeWithConfirm(
-			t().transactions.deleteCategoryConfirm,
-			() => api.categories.remove(id),
-			refetchCats,
-		)
-	}
-
-	const isTransferLeg = (txn: Transaction) => txn.transferId != null
-
-	// Medium audit: live client-side hint when source == destination.
-	const transferSameAccount = () => {
-		const f = transferForm()
-		return f.fromAccountId !== '' && f.fromAccountId === f.toAccountId
-	}
-
-	const CATEGORY_KIND_KEYS: Record<string, string> = {
-		income: 'incomeKind',
-		expense: 'expenseKind',
-	}
-
-	function categoryKindLabel(kind: string | null | undefined): string {
-		const d = t().transactions as Record<string, string>
-		return d[CATEGORY_KIND_KEYS[kind ?? ''] ?? 'both'] ?? d.both
 	}
 
 	return (
@@ -333,524 +210,93 @@ export default function Transactions() {
 				<p class="muted text-sm">{t().transactions.needAccountHint}</p>
 			</Show>
 
-			{/* Filters + totals */}
-			<div class="card card--compact">
-				<div class="form-grid">
-					<label class="field">
-						{t().transactions.account}
-						<select
-							value={accountFilter()}
-							onChange={(e) => setAccountFilter(e.currentTarget.value)}
-							class="input"
-						>
-							<option value="">{t().transactions.allAccounts}</option>
-							<For each={accounts() ?? []}>
-								{(a) => <option value={a.id}>{a.name}</option>}
-							</For>
-						</select>
-					</label>
-					<label class="field">
-						{t().transactions.direction}
-						<select
-							value={directionFilter()}
-							onChange={(e) => setDirectionFilter(e.currentTarget.value)}
-							class="input"
-						>
-							<option value="">{t().transactions.all}</option>
-							<option value="inflow">{t().transactions.inflows}</option>
-							<option value="outflow">{t().transactions.outflows}</option>
-						</select>
-					</label>
-				</div>
-				<div class="form-grid" style={{ 'margin-top': '0.75rem' }}>
-					<label class="field">
-						{t().transactions.search}
-						<input
-							value={query()}
-							onInput={(e) => setQuery(e.currentTarget.value)}
-							class="input"
-							placeholder={t().transactions.searchPlaceholder}
-						/>
-					</label>
-				</div>
-			</div>
-
-			{/* Sticky summary bar: hits + totals + clear-filters */}
-			<div class="txn-summary" role="status">
-				<span class="txn-summary-stats">
-					<span>
-						{filtered().length} {t().transactions.results} · {t().transactions.income}{' '}
-						{formatEUR(totals().inflow)} · {t().transactions.expenses}{' '}
-						{formatEUR(totals().outflow)} · {t().transactions.net}{' '}
-						<Amount cents={totals().net} showSign={false} />
-					</span>
-				</span>
-				<Show when={hasActiveFilters()}>
-					<button type="button" onClick={clearFilters} class="btn-ghost">
-						{t().transactions.clearFilters}
-					</button>
-				</Show>
-			</div>
-
-			{/* Create / edit form */}
-			<Show when={showForm()}>
-				<div
-					class="form-card"
-					ref={txnFormWrap}
-					onKeyDown={handleFormKeyDown}
-					role="dialog"
-					aria-label={t().transactions.dialogLabel}
-				>
-					<div class="segmented" role="tablist" aria-label={t().transactions.entryType}>
-						<button
-							type="button"
-							role="tab"
-							aria-selected={mode() === 'transaction'}
-							onClick={() => setMode('transaction')}
-							class="segmented-tab"
-							disabled={editingId() != null && mode() !== 'transaction'}
-						>
-							{t().transactions.tabTransaction}
-						</button>
-						<button
-							type="button"
-							role="tab"
-							aria-selected={mode() === 'transfer'}
-							onClick={() => setMode('transfer')}
-							class="segmented-tab"
-							disabled={editingId() != null}
-							title={
-								editingId() != null
-									? t().transactions.transferEditDisabledTitle
-									: t().transactions.transferCreateTitle
-							}
-						>
-							{t().transactions.tabTransfer}
-						</button>
-					</div>
-					<Show when={editingId() != null}>
-						<p class="muted text-sm">{t().transactions.editingHint}</p>
-					</Show>
-
-					<Show when={mode() === 'transaction'}>
-						<form onSubmit={submitTxn} class="txn-subform">
-							<div class="form-grid">
-								<label class="field">
-									{t().transactions.account}
-									<select
-										value={form().accountId}
-										onChange={(e) =>
-											patchForm(setForm, 'accountId', e.currentTarget.value)
-										}
-										required
-										class="input"
-									>
-										<option value="">{t().common.select}</option>
-										<For each={accounts() ?? []}>
-											{(a) => <option value={a.id}>{a.name}</option>}
-										</For>
-									</select>
-								</label>
-								<label class="field" for="txn-date">
-									{t().transactions.date}
-									<DateInput
-										id="txn-date"
-										value={form().date}
-										onInput={(v) => patchForm(setForm, 'date', v)}
-										required
-									/>
-								</label>
-								<label class="field">
-									{t().transactions.payee}
-									<input
-										value={form().payee}
-										onInput={(e) =>
-											patchForm(setForm, 'payee', e.currentTarget.value)
-										}
-										class="input"
-										placeholder={t().transactions.payeePlaceholder}
-									/>
-								</label>
-								<label class="field">
-									{t().transactions.category}
-									<select
-										value={form().categoryId}
-										onChange={(e) =>
-											patchForm(setForm, 'categoryId', e.currentTarget.value)
-										}
-										class="input"
-									>
-										<option value="">{t().common.none}</option>
-										<For each={categories() ?? []}>
-											{(c) => <option value={c.id}>{c.name}</option>}
-										</For>
-									</select>
-								</label>
-								<label class="field">
-									{t().transactions.amount}
-									<input
-										type="number"
-										step="0.01"
-										min="0.01"
-										value={form().amount}
-										onInput={(e) =>
-											patchForm(setForm, 'amount', e.currentTarget.value)
-										}
-										required
-										class="input"
-									/>
-								</label>
-								<label class="field">
-									{t().transactions.direction}
-									<select
-										value={form().direction}
-										onChange={(e) =>
-											patchForm(
-												setForm,
-												'direction',
-												e.currentTarget.value as 'inflow' | 'outflow',
-											)
-										}
-										class="input"
-									>
-										<option value="inflow">{t().transactions.inflow}</option>
-										<option value="outflow">{t().transactions.outflow}</option>
-									</select>
-								</label>
-							</div>
-							<label class="field">
-								{t().transactions.notesField}
-								<input
-									value={form().notes}
-									onInput={(e) =>
-										patchForm(setForm, 'notes', e.currentTarget.value)
-									}
-									class="input"
-								/>
-							</label>
-							<Show when={error()}>
-								<p class="form-error">{error()}</p>
-							</Show>
-							<div class="form-actions">
-								<button
-									type="button"
-									onClick={() => setShowForm(false)}
-									class="btn-ghost"
-								>
-									{t().common.cancel}
-								</button>
-								<button type="submit" class="btn-primary">
-									{editingId() ? t().common.save : t().common.create}
-								</button>
-							</div>
-						</form>
-					</Show>
-
-					<Show when={mode() === 'transfer'}>
-						<form onSubmit={submitTransfer} class="txn-subform">
-							<div class="form-grid">
-								<label class="field">
-									<span class="field-label">
-										{t().transactions.fromAccount}{' '}
-										<span class="req" aria-hidden="true">
-											*
-										</span>
-									</span>
-									<select
-										value={transferForm().fromAccountId}
-										onChange={(e) =>
-											setTransferForm((p) => ({
-												...p,
-												fromAccountId: e.currentTarget.value,
-											}))
-										}
-										required
-										aria-required="true"
-										class="input"
-									>
-										<option value="">{t().common.select}</option>
-										<For each={accounts() ?? []}>
-											{(a) => <option value={a.id}>{a.name}</option>}
-										</For>
-									</select>
-								</label>
-								<label class="field">
-									<span class="field-label">
-										{t().transactions.toAccount}{' '}
-										<span class="req" aria-hidden="true">
-											*
-										</span>
-									</span>
-									<select
-										value={transferForm().toAccountId}
-										onChange={(e) =>
-											setTransferForm((p) => ({
-												...p,
-												toAccountId: e.currentTarget.value,
-											}))
-										}
-										required
-										aria-required="true"
-										aria-describedby="transfer-accounts-hint"
-										class="input"
-									>
-										<option value="">{t().common.select}</option>
-										<For each={accounts() ?? []}>
-											{(a) => <option value={a.id}>{a.name}</option>}
-										</For>
-									</select>
-								</label>
-								<label class="field">
-									{t().transactions.amount}
-									<input
-										type="number"
-										step="0.01"
-										min="0.01"
-										value={transferForm().amount}
-										onInput={(e) =>
-											setTransferForm((p) => ({
-												...p,
-												amount: e.currentTarget.value,
-											}))
-										}
-										required
-										class="input"
-									/>
-								</label>
-								<label class="field" for="transfer-date">
-									{t().transactions.date}
-									<DateInput
-										id="transfer-date"
-										value={transferForm().date}
-										onInput={(v) => setTransferForm((p) => ({ ...p, date: v }))}
-										required
-									/>
-								</label>
-								<label class="field">
-									{t().transactions.payeeOptional}
-									<input
-										value={transferForm().payee}
-										onInput={(e) =>
-											setTransferForm((p) => ({
-												...p,
-												payee: e.currentTarget.value,
-											}))
-										}
-										class="input"
-									/>
-								</label>
-								<label class="field">
-									{t().transactions.categoryOptional}
-									<select
-										value={transferForm().categoryId}
-										onChange={(e) =>
-											setTransferForm((p) => ({
-												...p,
-												categoryId: e.currentTarget.value,
-											}))
-										}
-										class="input"
-									>
-										<option value="">{t().common.none}</option>
-										<For each={categories() ?? []}>
-											{(c) => <option value={c.id}>{c.name}</option>}
-										</For>
-									</select>
-								</label>
-							</div>
-							<Show when={transferSameAccount()}>
-								<p id="transfer-accounts-hint" class="form-hint form-hint--error">
-									{t().transactions.sameAccountHint}
-								</p>
-							</Show>
-							<label class="field">
-								{t().transactions.notesField}
-								<input
-									value={transferForm().notes}
-									onInput={(e) =>
-										setTransferForm((p) => ({
-											...p,
-											notes: e.currentTarget.value,
-										}))
-									}
-									class="input"
-								/>
-							</label>
-							<p class="muted text-sm">{t().transactions.transferExplainer}</p>
-							<Show when={error()}>
-								<p class="form-error">{error()}</p>
-							</Show>
-							<div class="form-actions">
-								<button
-									type="button"
-									onClick={() => setShowForm(false)}
-									class="btn-ghost"
-								>
-									{t().common.cancel}
-								</button>
-								<button
-									type="submit"
-									class="btn-primary"
-									disabled={transferSameAccount()}
-								>
-									{t().transactions.submitTransfer}
-								</button>
-							</div>
-						</form>
-					</Show>
-				</div>
-			</Show>
-
-			<ListState loading={transactions.loading} error={transactions.error} />
-
-			{/* Medium audit: `ledger` tightens rows on desktop via CSS only. */}
-			<div class="list list--tight ledger">
-				<For each={filtered()}>
-					{(txn) => {
-						const cat = () => categoryOf(categories(), txn.categoryId)
-						const transfer = isTransferLeg(txn)
-						return (
-							<EntityCard
-								title={
-									<>
-										{txn.payee || (
-											<span class="subtle">{t().transactions.noPayee}</span>
-										)}{' '}
-										<Show when={transfer}>
-											<span
-												class="subtle text-sm"
-												title={`${t().transactions.transferPrefix} ${txn.transferId}`}
-											>
-												{t().transactions.transferBadge}
-											</span>
-										</Show>
-									</>
-								}
-								meta={
-									<>
-										{formatDateISO(txn.date)} ·{' '}
-										{accountName(accounts(), txn.accountId)}
-										<Show when={cat()}>
-											{' '}
-											·{' '}
-											<span
-												class="inline-row"
-												style={{ display: 'inline-flex' }}
-											>
-												<Show when={cat()?.color}>
-													<Dot color={cat()?.color} small />
-												</Show>
-												{cat()?.name}
-											</span>
-										</Show>
-										<Show when={txn.notes}> · {txn.notes}</Show>
-									</>
-								}
-								amount={
-									<Amount cents={txn.amountCents} direction={txn.direction} />
-								}
-								onEdit={transfer ? undefined : () => openEdit(txn)}
-								onDelete={() => remove(txn)}
-								actions={
-									transfer ? (
-										<button
-											type="button"
-											onClick={() => remove(txn)}
-											class="btn-icon btn-icon--danger"
-											aria-label={t().transactions.deleteTransfer}
-											title={t().transactions.deleteTransferTitle}
-										>
-											✕
-										</button>
-									) : undefined
-								}
-							/>
-						)
-					}}
-				</For>
-				<Show when={filtered().length === 0 && !transactions.loading}>
-					<EmptyState actionLabel={t().transactions.emptyAction} onAction={openCreate}>
-						{t().transactions.emptyText}
-					</EmptyState>
-				</Show>
-			</div>
-
-			{/* Categories */}
-			<PageHeader
-				style={{ 'margin-top': '1rem' }}
-				title={t().transactions.categoriesTitle}
-				actions={
-					<button type="button" onClick={openCatCreate} class="btn-ghost">
-						{t().transactions.addCategory}
-					</button>
-				}
-			/>
-
+			{/* Create / edit dialog: shared CrudForm shell (autofocus + Esc +
+			    error + actions) with the mode tabs + both subforms inside. */}
 			<CrudForm
-				open={catCrud.showForm()}
-				error={catCrud.error()}
-				editing={catCrud.editing()}
-				onSubmit={submitCat}
-				onCancel={catCrud.close}
+				open={txnCrud.showForm()}
+				error={txnCrud.error()}
+				editing={mode() === 'transaction' ? txnCrud.editing() : null}
+				onSubmit={mode() === 'transaction' ? submitTxn : submitTransfer}
+				onCancel={txnCrud.close}
+				submitDisabled={mode() === 'transfer' && sameAccount()}
 			>
-				<div class="form-grid">
-					<label class="field">
-						{t().transactions.nameField}
-						<input
-							value={catForm().name}
-							onInput={(e) => patchForm(setCatForm, 'name', e.currentTarget.value)}
-							required
-							class="input"
-							placeholder={t().transactions.categoryPlaceholder}
-						/>
-					</label>
-					<label class="field">
-						{t().transactions.kind}
-						<select
-							value={catForm().kind}
-							onChange={(e) => patchForm(setCatForm, 'kind', e.currentTarget.value)}
-							class="input"
-						>
-							<option value="">{t().transactions.both}</option>
-							<option value="income">{t().transactions.incomeKind}</option>
-							<option value="expense">{t().transactions.expenseKind}</option>
-						</select>
-					</label>
-					<label class="field">
-						{t().transactions.color}
-						<input
-							type="color"
-							value={catForm().color}
-							onInput={(e) => patchForm(setCatForm, 'color', e.currentTarget.value)}
-							class="color-swatch"
-							aria-label={t().transactions.categoryColorLabel}
-						/>
-					</label>
+				<div class="segmented" role="tablist" aria-label={t().transactions.entryType}>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={mode() === 'transaction'}
+						onClick={() => setMode('transaction')}
+						class="segmented-tab"
+						disabled={txnCrud.editing() != null && mode() !== 'transaction'}
+					>
+						{t().transactions.tabTransaction}
+					</button>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={mode() === 'transfer'}
+						onClick={() => setMode('transfer')}
+						class="segmented-tab"
+						disabled={txnCrud.editing() != null}
+						title={
+							txnCrud.editing() != null
+								? t().transactions.transferEditDisabledTitle
+								: t().transactions.transferCreateTitle
+						}
+					>
+						{t().transactions.tabTransfer}
+					</button>
 				</div>
+				<Show when={txnCrud.editing() != null}>
+					<p class="muted text-sm">{t().transactions.editingHint}</p>
+				</Show>
+
+				<Show when={mode() === 'transaction'}>
+					<TransactionFormFields
+						form={txnCrud.form}
+						setForm={txnCrud.setForm}
+						accounts={accounts}
+						categories={categories}
+					/>
+				</Show>
+
+				<Show when={mode() === 'transfer'}>
+					<TransferFormFields
+						form={transferForm}
+						setForm={setTransferForm}
+						accounts={accounts}
+						categories={categories}
+					/>
+				</Show>
 			</CrudForm>
 
-			<div class="list list--tight">
-				<For each={categories() ?? []}>
-					{(c) => (
-						<EntityCard
-							title={
-								<span class="inline-row">
-									<Dot color={c.color} />
-									<span class="strong">{c.name}</span>
-									<span class="muted text-sm">· {categoryKindLabel(c.kind)}</span>
-								</span>
-							}
-							onEdit={() => openCatEdit(c)}
-							onDelete={() => removeCat(c.id)}
-						/>
-					)}
-				</For>
-				<Show when={(categories() ?? []).length === 0 && !categories.loading}>
-					<EmptyState actionLabel={t().transactions.addCategory} onAction={openCatCreate}>
-						{t().transactions.emptyText}
-					</EmptyState>
-				</Show>
-			</div>
+			<TransactionsList
+				accounts={accounts}
+				categories={categories}
+				filtered={filtered}
+				totals={totals}
+				accountFilter={accountFilter}
+				setAccountFilter={setAccountFilter}
+				directionFilter={directionFilter}
+				setDirectionFilter={setDirectionFilter}
+				query={query}
+				setQuery={setQuery}
+				hasActiveFilters={hasActiveFilters}
+				onClearFilters={clearFilters}
+				loading={transactions.loading}
+				error={transactions.error}
+				onEdit={openEdit}
+				onDelete={remove}
+				onCreate={openCreate}
+			/>
+
+			<CategoriesSection
+				categories={categories}
+				loading={categories.loading}
+				onChanged={() => {
+					void refetchCats()
+				}}
+			/>
 		</div>
 	)
 }

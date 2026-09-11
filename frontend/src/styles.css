@@ -290,6 +290,13 @@ input[type="color"] {
 	gap: 0.75rem;
 }
 
+/* Inner `<form>` inside a dialog card (see `Dialog.tsx`): same grid rhythm
+   as `.form-card` so wrapped fields keep their spacing. */
+.form-card > form {
+	display: grid;
+	gap: 0.75rem;
+}
+
 .form-grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;

@@ -1,5 +1,6 @@
 import { createResource, For, onCleanup, onMount, Show } from 'solid-js'
-import { api, type LiquidityTier, type Summary } from '../lib/api'
+import { api, type LiquidityTier } from '../lib/api'
+import { isOnTarget, pct } from '../lib/dashboard'
 import {
 	formatDateISO,
 	formatEUR,
@@ -19,21 +20,6 @@ import EmptyState from './EmptyState'
 import ListState from './ListState'
 import Row from './Row'
 import StatusBadge from './StatusBadge'
-
-function pct(cents: number, total: number): number {
-	return total ? (cents / total) * 100 : 0
-}
-
-type PoolTotal = Summary['poolTotals'][number]
-
-function isOnTarget(pt: PoolTotal, sharePct: number): boolean {
-	const targetPct = pt.targetPercent
-	return (
-		(pt.targetMin == null || pt.currentCents >= pt.targetMin) &&
-		(pt.targetMax == null || pt.currentCents <= pt.targetMax) &&
-		(targetPct == null || Math.abs(sharePct - targetPct) < 5)
-	)
-}
 
 export default function Dashboard() {
 	const [summary, { refetch }] = createResource(() => api.summary())

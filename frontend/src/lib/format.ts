@@ -1,11 +1,11 @@
 import type { AccountType, LiquidityTier } from './enums'
-import { t } from './i18n'
+import { FIXED_LOCALE_TAG, t } from './i18n'
 
 /**
  * Number/currency formatting is ALWAYS de-DE, independent of the UI
  * language. Dates are ALWAYS ISO `YYYY-MM-DD` (see {@link formatDateISO}).
  */
-const FIXED_TAG = 'de-DE'
+const FIXED_TAG = FIXED_LOCALE_TAG
 
 /**
  * Label/color maps below are keyed by the shared enum types (`./enums`).
@@ -123,6 +123,31 @@ export function todayISO(d = new Date()): string {
 	const m = String(d.getMonth() + 1).padStart(2, '0')
 	const day = String(d.getDate()).padStart(2, '0')
 	return `${y}-${m}-${day}`
+}
+
+/**
+ * Shift an ISO `YYYY-MM-DD` date by `deltaDays` (local time, no UTC shift).
+ * Shared with {@link todayISO} so callers never hand-roll `Date` math.
+ */
+export function addDaysISO(iso: string, deltaDays: number): string {
+	const [y, m, d] = iso.split('-').map(Number)
+	const dt = new Date(y, (m || 1) - 1, d || 1)
+	dt.setDate(dt.getDate() + deltaDays)
+	return todayISO(dt)
+}
+
+/**
+ * Inclusive day count between two ISO `YYYY-MM-DD` dates
+ * (`2024-01-01` → `2024-01-01` is `1`). Used to validate download ranges.
+ */
+export function diffDaysISO(fromISO: string, toISO: string): number {
+	return (
+		Math.round(
+			(new Date(`${toISO}T00:00:00Z`).getTime() -
+				new Date(`${fromISO}T00:00:00Z`).getTime()) /
+				86_400_000,
+		) + 1
+	)
 }
 
 export const liquidityColors: Record<LiquidityTier, string> & Record<string, string> = {

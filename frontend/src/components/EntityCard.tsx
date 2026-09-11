@@ -6,11 +6,14 @@ interface EntityCardProps {
 	meta?: JSX.Element
 	/** Right-side amount slot (usually `<Amount>`). Omit for rows without one. */
 	amount?: JSX.Element
+	/** Omit `onEdit` for rows that cannot be edited (delete-only `<CrudRow>`). */
 	onEdit?: () => void
 	onDelete?: () => void
+	editLabel?: string
+	deleteLabel?: string
 	/**
-	 * Custom right-side actions (e.g. the transfer-leg delete fallback).
-	 * Overrides the default `<CrudRow>` when provided.
+	 * Custom right-side actions. Overrides the default `<CrudRow>` when
+	 * provided.
 	 */
 	actions?: JSX.Element
 }
@@ -34,8 +37,13 @@ export default function EntityCard(props: EntityCardProps): JSX.Element {
 				<Show
 					when={props.actions ?? null}
 					fallback={
-						props.onEdit && props.onDelete ? (
-							<CrudRow onEdit={props.onEdit} onDelete={props.onDelete} />
+						props.onDelete ? (
+							<CrudRow
+								onEdit={props.onEdit}
+								onDelete={props.onDelete}
+								editLabel={props.editLabel}
+								deleteLabel={props.deleteLabel}
+							/>
 						) : null
 					}
 				>
