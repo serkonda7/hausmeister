@@ -22,3 +22,9 @@ export type CategoryKind = (typeof categoryKindEnum)[number]
 // import from here so adding a code later is a one-line change.
 export const currencyCodeEnum = ['EUR', 'USD'] as const
 export type CurrencyCode = (typeof currencyCodeEnum)[number]
+
+// ---- Inventory + asset management (separate domain from finance) ----
+// Lifecycle of a single tracked asset. Stock quantities live on inventory
+// items; this enum only describes individually tracked assets.
+export const assetStatusEnum = ['in_use', 'stored', 'lent', 'maintenance', 'retired'] as const
+export type AssetStatus = (typeof assetStatusEnum)[number]

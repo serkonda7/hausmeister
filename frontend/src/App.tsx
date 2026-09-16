@@ -1,4 +1,5 @@
 import {
+	IconArchive,
 	IconCalendarEvent,
 	IconCoins,
 	IconCurrencyEuro,
@@ -18,6 +19,7 @@ import Dashboard from './components/Dashboard'
 import Events from './components/Events'
 import Pools from './components/Pools'
 import Transactions from './components/Transactions'
+import Inventory from './inventory/Inventory'
 import './App.css'
 import { LOCALES, type Locale, locale, setLocale, t } from './lib/i18n'
 import { initThemeListener, theme, toggleTheme } from './lib/theme'
@@ -30,6 +32,7 @@ const VIEWS = [
 	{ id: 'allocations', comp: Allocations, icon: IconExchange },
 	{ id: 'events', comp: Events, icon: IconCalendarEvent },
 	{ id: 'currencies', comp: Currencies, icon: IconCurrencyEuro },
+	{ id: 'inventory', comp: Inventory, icon: IconArchive },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
@@ -42,6 +45,7 @@ const VIEW_MAP: Record<View, Component> = {
 	allocations: Allocations,
 	events: Events,
 	currencies: Currencies,
+	inventory: Inventory,
 }
 
 const VIEW_IDS = new Set<string>(VIEWS.map((v) => v.id))

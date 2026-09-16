@@ -15,6 +15,7 @@ import {
 	transactions,
 } from './db/schema'
 import { downloadEurUsdRates, downloadEurUsdRatesRange, normalizeCode } from './exchange'
+import { inventoryApp } from './inventory/routes'
 import {
 	accountCreateSchema,
 	accountUpdateSchema,
@@ -36,6 +37,12 @@ import {
 const app = new Hono()
 
 app.use(cors())
+
+// ---- Inventory + asset management (separate bounded context) ----
+// All inventory routes live under `/inventory/*` and are implemented in
+// `src/inventory/` + `src/db/schema-inventory.ts`. Finance routes below
+// must not import from those modules and vice versa.
+app.route('/inventory', inventoryApp)
 
 function id() {
 	return crypto.randomUUID()
