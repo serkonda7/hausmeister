@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.turbo/
+*.db
+*.tsbuildinfo
+*.db-journal
+data/
+frontend/dist/
+backend/dist/
+backend/data/
+test-results/

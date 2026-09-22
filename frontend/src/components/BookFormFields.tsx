@@ -1,0 +1,585 @@
+import { createMemo, For, Show } from 'solid-js'
+import type { Author, BookFormState, Language, Location, Publisher, Tag } from '../types'
+import { locationOptions } from '../utils/books'
+
+export type BookMetadataFieldsProps = {
+	form: BookFormState
+	onField: (key: keyof BookFormState, value: string) => void
+	authors: Author[]
+	authorSummary: string
+	selectedAuthorIds: string[]
+	onToggleAuthor: (id: string) => void
+	publishers: Publisher[]
+	selectedPublisherId: string
+	onSelectPublisher: (id: string) => void
+	locations: Location[]
+	selectedLocationId: string
+	onSelectLocation: (id: string) => void
+	tags: Tag[]
+	tagSummary: string
+	selectedTagIds: string[]
+	onToggleTag: (id: string) => void
+	newAuthorName: string
+	onNewAuthorName: (v: string) => void
+	onAddAuthor: () => void
+	newPublisherName: string
+	onNewPublisherName: (v: string) => void
+	onAddPublisher: () => void
+	newLocationName: string
+	onNewLocationName: (v: string) => void
+	onAddLocation: () => void
+	newTagName: string
+	onNewTagName: (v: string) => void
+	onAddTag: () => void
+	languages: Language[]
+	languageSummary: string
+	selectedLanguageIds: string[]
+	onToggleLanguage: (id: string) => void
+	newLanguageName: string
+	onNewLanguageName: (v: string) => void
+	onAddLanguage: () => void
+}
+
+export function BookMetadataFields(props: BookMetadataFieldsProps) {
+	const locationParentHint = (): string | undefined => {
+		const id = props.selectedLocationId
+		if (!id) return undefined
+		const parent = locationOptions(props.locations).find((l) => l.id === id)
+		return parent ? `under “${parent.fullPath ?? parent.name}”` : undefined
+	}
+
+	return (
+		<>
+			<label class="span-2">
+				<span>
+					Title <em>*</em>
+				</span>
+				<input
+					placeholder="e.g. The Left Hand of Darkness"
+					value={props.form.title}
+					onInput={(e) => props.onField('title', e.currentTarget.value)}
+					required
+				/>
+			</label>
+			<label class="span-2">
+				<span>Subtitle</span>
+				<input
+					placeholder="Optional"
+					value={props.form.subtitle}
+					onInput={(e) => props.onField('subtitle', e.currentTarget.value)}
+				/>
+			</label>
+			<div class="span-2 field-group">
+				<span class="field-label">Author(s)</span>
+				<MultiSelect
+					summary={props.authorSummary}
+					items={props.authors}
+					selectedIds={props.selectedAuthorIds}
+					onToggle={props.onToggleAuthor}
+					search={props.newAuthorName}
+					onSearch={props.onNewAuthorName}
+					searchLabel="Search or add author"
+					onCreate={props.onAddAuthor}
+				/>
+			</div>
+			<div class="field-group">
+				<span class="field-label">Publisher</span>
+				<CreatableSingleSelect
+					placeholder="— No publisher —"
+					clearLabel="— No publisher —"
+					options={props.publishers.map((pub) => ({ id: pub.id, label: pub.name }))}
+					value={props.selectedPublisherId}
+					onSelect={props.onSelectPublisher}
+					search={props.newPublisherName}
+					onSearch={props.onNewPublisherName}
+					searchLabel="Search or add publisher"
+					onCreate={props.onAddPublisher}
+				/>
+			</div>
+			<label>
+				<span>Print year</span>
+				<input
+					placeholder="1969"
+					inputmode="numeric"
+					value={props.form.printYear}
+					onInput={(e) => props.onField('printYear', e.currentTarget.value)}
+				/>
+			</label>
+			<label>
+				<span>ISBN</span>
+				<input
+					placeholder="Optional"
+					value={props.form.isbn}
+					onInput={(e) => props.onField('isbn', e.currentTarget.value)}
+				/>
+			</label>
+			<div class="field-group">
+				<span class="field-label">Tag(s)</span>
+				<MultiSelect
+					summary={props.tagSummary}
+					items={props.tags}
+					selectedIds={props.selectedTagIds}
+					onToggle={props.onToggleTag}
+					search={props.newTagName}
+					onSearch={props.onNewTagName}
+					searchLabel="Search or add tag"
+					onCreate={props.onAddTag}
+				/>
+			</div>
+			<div class="field-group">
+				<span class="field-label">Language(s)</span>
+				<MultiSelect
+					summary={props.languageSummary}
+					items={props.languages}
+					selectedIds={props.selectedLanguageIds}
+					onToggle={props.onToggleLanguage}
+					search={props.newLanguageName}
+					onSearch={props.onNewLanguageName}
+					searchLabel="Search or add language"
+					onCreate={props.onAddLanguage}
+				/>
+			</div>
+			<label>
+				<span>Dedications</span>
+				<input
+					placeholder="Inscription inside the cover"
+					value={props.form.dedications}
+					onInput={(e) => props.onField('dedications', e.currentTarget.value)}
+				/>
+			</label>
+			<label>
+				<span>Damages</span>
+				<input
+					placeholder="Torn dust jacket, notes, …"
+					value={props.form.damages}
+					onInput={(e) => props.onField('damages', e.currentTarget.value)}
+				/>
+			</label>
+			<div class="field-group">
+				<span class="field-label">Location</span>
+				<CreatableSingleSelect
+					placeholder="— No location —"
+					clearLabel="— No location —"
+					options={locationOptions(props.locations).map((l) => ({
+						id: l.id,
+						label: l.fullPath ?? l.name,
+					}))}
+					value={props.selectedLocationId}
+					onSelect={props.onSelectLocation}
+					search={props.newLocationName}
+					onSearch={props.onNewLocationName}
+					searchLabel="Search or add location"
+					onCreate={props.onAddLocation}
+					createHint={locationParentHint()}
+				/>
+			</div>
+		</>
+	)
+}
+
+export type ProvenanceDraftFieldsProps = {
+	form: BookFormState
+	onField: (key: keyof BookFormState, value: string) => void
+	gridClass: 'add-book-acquisition-grid' | 'form-grid-4'
+	eventAriaLabel: string
+	includeSell: boolean
+	priceFirst?: boolean
+}
+
+export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
+	const eventField = () => (
+		<label>
+			<span>Event</span>
+			<select
+				value={props.form.provKind}
+				onChange={(e) => props.onField('provKind', e.currentTarget.value)}
+				aria-label={props.eventAriaLabel}
+			>
+				<option value="">— None —</option>
+				<option value="buy">Bought / got it</option>
+				<Show when={props.includeSell}>
+					<option value="sell">Sold / gave away</option>
+				</Show>
+				<option value="other">Other</option>
+			</select>
+		</label>
+	)
+	const priceField = () => (
+		<label>
+			<span>Price (EUR)</span>
+			<input
+				placeholder="0 = free, empty = unknown"
+				inputmode="decimal"
+				value={props.form.provPrice}
+				onInput={(e) => props.onField('provPrice', e.currentTarget.value)}
+			/>
+		</label>
+	)
+	const dateField = () => (
+		<label>
+			<span>Date</span>
+			<input
+				type="date"
+				value={props.form.provDate}
+				onInput={(e) => props.onField('provDate', e.currentTarget.value)}
+			/>
+		</label>
+	)
+	const partyField = () => (
+		<label>
+			<span>From whom / where</span>
+			<input
+				placeholder="Bookstore, Person..."
+				value={props.form.provParty}
+				onInput={(e) => props.onField('provParty', e.currentTarget.value)}
+			/>
+		</label>
+	)
+
+	return (
+		<div class={`form-grid ${props.gridClass}`}>
+			{eventField()}
+			<Show when={props.priceFirst}>{priceField()}</Show>
+			{dateField()}
+			{partyField()}
+			<Show when={!props.priceFirst}>{priceField()}</Show>
+		</div>
+	)
+}
+
+export type MultiSelectProps = {
+	summary: string
+	items: Array<{ id: string; name: string }>
+	selectedIds: string[]
+	onToggle: (id: string) => void
+	search?: string
+	onSearch?: (v: string) => void
+	searchLabel?: string
+	onCreate?: () => void
+}
+
+/** Expandable checkbox list used for authors/tags in the book forms. */
+export function MultiSelect(props: MultiSelectProps) {
+	const selectedItems = createMemo(() =>
+		props.items.filter((item) => props.selectedIds.includes(item.id)),
+	)
+
+	const filtered = createMemo(() => {
+		const q = (props.search ?? '').trim().toLowerCase()
+		if (!q) return props.items
+		return props.items.filter((item) => item.name.toLowerCase().includes(q))
+	})
+
+	const trimmedSearch = createMemo(() => (props.search ?? '').trim())
+
+	const canCreate = createMemo(
+		() =>
+			props.onCreate !== undefined &&
+			trimmedSearch() !== '' &&
+			!props.items.some((item) => item.name.toLowerCase() === trimmedSearch().toLowerCase()),
+	)
+
+	function handleToggle(e: Event): void {
+		if (props.onSearch === undefined) return
+		const details = e.currentTarget as HTMLDetailsElement
+		if (details.open) {
+			details.querySelector('input')?.focus({ preventScroll: true })
+		}
+	}
+
+	function handleDetailsFocusOut(e: FocusEvent): void {
+		const details = e.currentTarget as HTMLDetailsElement
+		const next = e.relatedTarget as Node | null
+		// `focusout` fires before the browser has finished moving focus. In
+		// particular, clicking the create button can report a null relatedTarget
+		// while Solid is updating the list. Closing the details element from that
+		// event can detach the button that is currently handling the click and
+		// cause the dropdown to get stuck in a focus/update loop.
+		if (next === null) return
+		queueMicrotask(() => {
+			if (!details.isConnected) return
+			if (!details.contains(next)) details.open = false
+		})
+	}
+
+	function handleDetailsKeyDown(e: KeyboardEvent): void {
+		const details = e.currentTarget as HTMLDetailsElement
+		if (e.key === 'Escape') {
+			if (!details.open) return
+			e.preventDefault()
+			e.stopPropagation()
+			details.open = false
+			details.querySelector('summary')?.focus({ preventScroll: true })
+			return
+		}
+		// Type-to-search: when the summary has focus (e.g. after tabbing into
+		// the field), a printable key opens the dropdown and forwards the
+		// character to the search input, so no Enter/Space keypress is needed
+		// first. Space is left alone so it keeps its native toggle behaviour.
+		const target = e.target as HTMLElement | null
+		if (target === null || target.closest('summary') === null) return
+		if (props.onSearch === undefined) return
+		if (e.ctrlKey || e.metaKey || e.altKey) return
+		if (e.key.length !== 1 || e.key === ' ') return
+		e.preventDefault()
+		if (!details.open) details.open = true
+		props.onSearch((props.search ?? '') + e.key)
+		queueMicrotask(() => details.querySelector('input')?.focus({ preventScroll: true }))
+	}
+
+	function handleSearchKeyDown(e: KeyboardEvent): void {
+		if (e.key === 'Enter' && canCreate()) {
+			e.preventDefault()
+			createItem((e.currentTarget as HTMLElement).closest('details'))
+		}
+	}
+
+	function focusSearchInput(details: HTMLDetailsElement | null): void {
+		if (!details) return
+		queueMicrotask(() =>
+			details
+				.querySelector<HTMLInputElement>('.multi-select-filter')
+				?.focus({ preventScroll: true }),
+		)
+	}
+
+	function handleItemToggle(e: Event, id: string): void {
+		props.onToggle(id)
+		props.onSearch?.('')
+		focusSearchInput((e.currentTarget as HTMLElement).closest('details'))
+	}
+
+	function createItem(details: HTMLDetailsElement | null): void {
+		props.onCreate?.()
+		props.onSearch?.('')
+		focusSearchInput(details)
+	}
+
+	return (
+		<details
+			class="multi-select"
+			onToggle={handleToggle}
+			onFocusOut={handleDetailsFocusOut}
+			onKeyDown={handleDetailsKeyDown}
+		>
+			<summary>
+				<Show when={selectedItems().length > 0} fallback={<span>{props.summary}</span>}>
+					<For each={selectedItems()}>
+						{(item) => (
+							<span class="multi-select-chip">
+								<span>{item.name}</span>
+								<button
+									type="button"
+									class="multi-select-chip-remove"
+									aria-label={`Remove ${item.name}`}
+									onClick={(e) => {
+										e.preventDefault()
+										e.stopPropagation()
+										props.onToggle(item.id)
+									}}
+								>
+									×
+								</button>
+							</span>
+						)}
+					</For>
+				</Show>
+			</summary>
+			<Show
+				when={props.onSearch !== undefined}
+				fallback={
+					<div class="multi-select-options">
+						<For each={props.items}>
+							{(item) => (
+								<label class="check-item">
+									<input
+										type="checkbox"
+										checked={props.selectedIds.includes(item.id)}
+										onChange={(e) => handleItemToggle(e, item.id)}
+									/>
+									<span>{item.name}</span>
+								</label>
+							)}
+						</For>
+					</div>
+				}
+			>
+				<div class="multi-select-options">
+					<input
+						class="multi-select-filter"
+						placeholder="Search or type a new name…"
+						value={props.search ?? ''}
+						onInput={(e) => props.onSearch?.(e.currentTarget.value)}
+						onKeyDown={handleSearchKeyDown}
+						aria-label={props.searchLabel ?? 'Search'}
+					/>
+					<For each={filtered()}>
+						{(item) => (
+							<label class="check-item">
+								<input
+									type="checkbox"
+									checked={props.selectedIds.includes(item.id)}
+									onChange={(e) => handleItemToggle(e, item.id)}
+								/>
+								<span>{item.name}</span>
+							</label>
+						)}
+					</For>
+					<Show when={canCreate()}>
+						<button
+							type="button"
+							class="create-row"
+							onClick={(e) => createItem((e.currentTarget as HTMLElement).closest('details'))}
+						>
+							+ Create “{trimmedSearch()}”
+						</button>
+					</Show>
+				</div>
+			</Show>
+		</details>
+	)
+}
+
+export type CreatableSingleSelectProps = {
+	placeholder: string
+	clearLabel: string
+	options: Array<{ id: string; label: string }>
+	value: string
+	onSelect: (id: string) => void
+	search: string
+	onSearch: (v: string) => void
+	searchLabel: string
+	onCreate: () => void
+	createHint?: string
+}
+
+/** Filterable single-select with inline create, used for publisher/location. */
+export function CreatableSingleSelect(props: CreatableSingleSelectProps) {
+	const filtered = createMemo(() => {
+		const q = props.search.trim().toLowerCase()
+		if (!q) return props.options
+		return props.options.filter((option) => option.label.toLowerCase().includes(q))
+	})
+
+	const trimmedSearch = createMemo(() => props.search.trim())
+
+	const canCreate = createMemo(
+		() =>
+			trimmedSearch() !== '' &&
+			!props.options.some((option) => option.label.toLowerCase() === trimmedSearch().toLowerCase()),
+	)
+
+	const selectedLabel = createMemo(
+		() => props.options.find((option) => option.id === props.value)?.label,
+	)
+
+	function choose(id: string): void {
+		props.onSelect(id)
+		props.onSearch('')
+	}
+
+	function handleToggle(e: Event): void {
+		const details = e.currentTarget as HTMLDetailsElement
+		if (details.open) {
+			details.querySelector('input')?.focus({ preventScroll: true })
+		}
+	}
+
+	function handleDetailsFocusOut(e: FocusEvent): void {
+		const details = e.currentTarget as HTMLDetailsElement
+		const next = e.relatedTarget as Node | null
+		// Defer the close until focus has settled. A synchronous close here can
+		// race with the click handler for an option/create button and repeatedly
+		// open and close the native details control.
+		if (next === null) return
+		queueMicrotask(() => {
+			if (!details.isConnected) return
+			if (!details.contains(next)) details.open = false
+		})
+	}
+
+	function handleDetailsKeyDown(e: KeyboardEvent): void {
+		const details = e.currentTarget as HTMLDetailsElement
+		if (e.key === 'Escape') {
+			if (!details.open) return
+			e.preventDefault()
+			e.stopPropagation()
+			details.open = false
+			details.querySelector('summary')?.focus({ preventScroll: true })
+			return
+		}
+		// Type-to-search: when the summary has focus (e.g. after tabbing into
+		// the field), a printable key opens the dropdown and forwards the
+		// character to the search input, so no Enter/Space keypress is needed
+		// first. Space is left alone so it keeps its native toggle behaviour.
+		const target = e.target as HTMLElement | null
+		if (target === null || target.closest('summary') === null) return
+		if (e.ctrlKey || e.metaKey || e.altKey) return
+		if (e.key.length !== 1 || e.key === ' ') return
+		e.preventDefault()
+		if (!details.open) details.open = true
+		props.onSearch(props.search + e.key)
+		queueMicrotask(() => details.querySelector('input')?.focus({ preventScroll: true }))
+	}
+
+	function handleSearchKeyDown(e: KeyboardEvent): void {
+		if (e.key === 'Enter' && canCreate()) {
+			e.preventDefault()
+			props.onCreate()
+		}
+	}
+
+	return (
+		<details
+			class="multi-select"
+			onToggle={handleToggle}
+			onFocusOut={handleDetailsFocusOut}
+			onKeyDown={handleDetailsKeyDown}
+		>
+			<summary>{selectedLabel() ?? props.placeholder}</summary>
+			<div class="multi-select-options" role="listbox">
+				<input
+					class="multi-select-filter"
+					placeholder="Search or type a new name…"
+					value={props.search}
+					onInput={(e) => props.onSearch(e.currentTarget.value)}
+					onKeyDown={handleSearchKeyDown}
+					aria-label={props.searchLabel}
+				/>
+				<Show when={props.value !== ''}>
+					<button type="button" class="select-option" onClick={() => choose('')}>
+						{props.clearLabel}
+					</button>
+				</Show>
+				<For each={filtered()}>
+					{(option) => (
+						<button
+							type="button"
+							role="option"
+							aria-selected={option.id === props.value}
+							class="select-option"
+							onClick={() => choose(option.id)}
+						>
+							<Show when={option.id === props.value}>
+								<span aria-hidden="true">✓ </span>
+							</Show>
+							{option.label}
+						</button>
+					)}
+				</For>
+				<Show when={filtered().length === 0}>
+					<p class="multi-select-empty" role="status">
+						{trimmedSearch()
+							? 'No matching options.'
+							: 'No options yet. Type a name to create one.'}
+					</p>
+				</Show>
+				<Show when={canCreate()}>
+					<button type="button" class="create-row" onClick={() => props.onCreate()}>
+						+ Create “{trimmedSearch()}”<Show when={props.createHint}> ({props.createHint})</Show>
+					</button>
+				</Show>
+			</div>
+		</details>
+	)
+}

@@ -1,0 +1,12 @@
+{
+	"name": "shared",
+	"version": "0.0.0-dev",
+	"type": "module",
+	"scripts": {
+		"check": "tsc",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"valibot": "catalog:"
+	}
+}

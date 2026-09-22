@@ -1,0 +1,26 @@
+{
+	"name": "frontend",
+	"version": "0.0.0-dev",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"check": "tsc",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@serkonda7/solid-components": "0.0.4",
+		"@tabler/icons-solidjs": "~3.47.0",
+		"backend": "workspace:*",
+		"better-result": "catalog:",
+		"hono": "catalog:",
+		"shared": "workspace:*",
+		"solid-js": "~1.9.15"
+	},
+	"devDependencies": {
+		"solid-devtools": "~0.34.3",
+		"vite": "~8.3.0",
+		"vite-plugin-entry-shaking": "~0.5.2",
+		"vite-plugin-solid": "~2.11.14"
+	}
+}

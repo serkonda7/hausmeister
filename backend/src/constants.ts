@@ -1,0 +1,10 @@
+// Hardcoded runtime constants. No config file, no env overrides.
+// Frontend dev server: http://localhost:5174
+// Backend API:         http://localhost:3001
+export const BACKEND_HOST = '0.0.0.0'
+export const BACKEND_PORT = 3001
+export const FRONTEND_PORT = 5174
+export const API_URL = `http://localhost:${BACKEND_PORT}`
+
+// SQLite file lives next to the backend package.
+export const DB_PATH = `${import.meta.dir}/../data/hausmeister.db`
