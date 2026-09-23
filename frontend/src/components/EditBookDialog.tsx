@@ -57,7 +57,7 @@ export function EditBookDialog(props: EditBookDialogProps) {
 				</div>
 				<form onSubmit={props.onSubmit}>
 					<div class="form-grid book-form-grid">
-						<BookMetadataFields {...props} />
+						<BookMetadataFields {...props} fieldIdPrefix="edit-book" />
 						<Show when={props.isAdmin}>
 							<div class="field-group">
 								<span class="field-label">Owner (admin only)</span>

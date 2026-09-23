@@ -29,7 +29,7 @@ export function AddBookPanel(props: AddBookPanelProps) {
 			<h2>Add a book</h2>
 			<form onSubmit={handleSubmit}>
 				<div class="form-grid book-form-grid">
-					<BookMetadataFields {...props} />
+					<BookMetadataFields {...props} fieldIdPrefix="add-book" />
 					<div class="span-2 field-group">
 						<span class="field-label">Acquisition (optional)</span>
 						<ProvenanceDraftFields

@@ -1,5 +1,6 @@
 import { IconEdit, IconPlus, IconTrash } from '@tabler/icons-solidjs'
 import { createMemo, For, Show } from 'solid-js'
+import { ClearableInput } from '../components/ClearableInput'
 import type { Author, Language, Publisher, Tag } from '../types'
 
 export type CatalogPageProps = {
@@ -54,7 +55,7 @@ export function CatalogPage(props: CatalogPageProps) {
 				<div>
 					<h2>Data catalog</h2>
 					<p class="muted">
-						Manage the authors, languages, publishers, and tags used in your library.
+						Manage the authors, publishers, tags, and languages used in your library.
 					</p>
 				</div>
 			</section>
@@ -68,7 +69,7 @@ export function CatalogPage(props: CatalogPageProps) {
 						<span class="catalog-count">{props.authors.length}</span>
 					</div>
 					<div class="inline-create">
-						<input
+						<ClearableInput
 							placeholder="Search or add an author…"
 							value={props.manageAuthorName}
 							onInput={(e) => props.onManageAuthorName(e.currentTarget.value)}
@@ -107,54 +108,11 @@ export function CatalogPage(props: CatalogPageProps) {
 				</section>
 				<section class="panel catalog-section">
 					<div class="catalog-section-header">
-						<h3>Languages</h3>
-						<span class="catalog-count">{props.languages.length}</span>
-					</div>
-					<div class="inline-create">
-						<input
-							placeholder="Search or add a language…"
-							value={props.manageLanguageName}
-							onInput={(e) => props.onManageLanguageName(e.currentTarget.value)}
-							onKeyDown={(e) => {
-								if (e.key === 'Enter' && canAddLanguage()) {
-									e.preventDefault()
-									props.onAddLanguage()
-								}
-							}}
-							aria-label="Search or add a language"
-						/>
-						<button
-							type="button"
-							class="primary"
-							onClick={props.onAddLanguage}
-							disabled={!canAddLanguage()}
-						>
-							<IconPlus size={15} /> Add
-						</button>
-					</div>
-					<Show
-						when={!props.languagesLoading && matchingLanguages().length > 0}
-						fallback={
-							<p class="muted small">
-								{props.manageLanguageName.trim() ? 'No matching languages.' : 'No languages yet.'}
-							</p>
-						}
-					>
-						<CatalogTable
-							label="Languages"
-							items={matchingLanguages()}
-							onRename={props.onRenameLanguage}
-							onRemove={props.onRemoveLanguage}
-						/>
-					</Show>
-				</section>
-				<section class="panel catalog-section">
-					<div class="catalog-section-header">
 						<h3>Publishers</h3>
 						<span class="catalog-count">{props.publishers.length}</span>
 					</div>
 					<div class="inline-create">
-						<input
+						<ClearableInput
 							placeholder="Search or add a publisher…"
 							value={props.managePublisherName}
 							onInput={(e) => props.onManagePublisherName(e.currentTarget.value)}
@@ -199,7 +157,7 @@ export function CatalogPage(props: CatalogPageProps) {
 						<span class="catalog-count">{props.tags.length}</span>
 					</div>
 					<div class="inline-create">
-						<input
+						<ClearableInput
 							placeholder="Search or add a tag…"
 							value={props.manageTagName}
 							onInput={(e) => props.onManageTagName(e.currentTarget.value)}
@@ -228,6 +186,49 @@ export function CatalogPage(props: CatalogPageProps) {
 							items={matchingTags()}
 							onRename={props.onRenameTag}
 							onRemove={props.onRemoveTag}
+						/>
+					</Show>
+				</section>
+				<section class="panel catalog-section">
+					<div class="catalog-section-header">
+						<h3>Languages</h3>
+						<span class="catalog-count">{props.languages.length}</span>
+					</div>
+					<div class="inline-create">
+						<ClearableInput
+							placeholder="Search or add a language…"
+							value={props.manageLanguageName}
+							onInput={(e) => props.onManageLanguageName(e.currentTarget.value)}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter' && canAddLanguage()) {
+									e.preventDefault()
+									props.onAddLanguage()
+								}
+							}}
+							aria-label="Search or add a language"
+						/>
+						<button
+							type="button"
+							class="primary"
+							onClick={props.onAddLanguage}
+							disabled={!canAddLanguage()}
+						>
+							<IconPlus size={15} /> Add
+						</button>
+					</div>
+					<Show
+						when={!props.languagesLoading && matchingLanguages().length > 0}
+						fallback={
+							<p class="muted small">
+								{props.manageLanguageName.trim() ? 'No matching languages.' : 'No languages yet.'}
+							</p>
+						}
+					>
+						<CatalogTable
+							label="Languages"
+							items={matchingLanguages()}
+							onRename={props.onRenameLanguage}
+							onRemove={props.onRemoveLanguage}
 						/>
 					</Show>
 				</section>

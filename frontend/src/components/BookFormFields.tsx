@@ -1,8 +1,10 @@
 import { createMemo, For, Show } from 'solid-js'
 import type { Author, BookFormState, Language, Location, Publisher, Tag } from '../types'
 import { locationOptions } from '../utils/books'
+import { ClearableInput } from './ClearableInput'
 
 export type BookMetadataFieldsProps = {
+	fieldIdPrefix?: string
 	form: BookFormState
 	onField: (key: keyof BookFormState, value: string) => void
 	authors: Author[]
@@ -41,6 +43,7 @@ export type BookMetadataFieldsProps = {
 }
 
 export function BookMetadataFields(props: BookMetadataFieldsProps) {
+	const fieldId = (name: string) => `${props.fieldIdPrefix ?? 'book'}-${name}`
 	const locationParentHint = (): string | undefined => {
 		const id = props.selectedLocationId
 		if (!id) return undefined
@@ -50,20 +53,22 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 
 	return (
 		<>
-			<label class="span-2">
+			<label class="span-2" for={fieldId('title')}>
 				<span>
 					Title <em>*</em>
 				</span>
-				<input
+				<ClearableInput
+					id={fieldId('title')}
 					placeholder="e.g. The Left Hand of Darkness"
 					value={props.form.title}
 					onInput={(e) => props.onField('title', e.currentTarget.value)}
 					required
 				/>
 			</label>
-			<label class="span-2">
+			<label class="span-2" for={fieldId('subtitle')}>
 				<span>Subtitle</span>
-				<input
+				<ClearableInput
+					id={fieldId('subtitle')}
 					placeholder="Optional"
 					value={props.form.subtitle}
 					onInput={(e) => props.onField('subtitle', e.currentTarget.value)}
@@ -96,18 +101,21 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 					onCreate={props.onAddPublisher}
 				/>
 			</div>
-			<label>
+			<label for={fieldId('print-year')}>
 				<span>Print year</span>
-				<input
+				<ClearableInput
+					id={fieldId('print-year')}
+					type="number"
+					step="1"
 					placeholder="1969"
-					inputmode="numeric"
 					value={props.form.printYear}
 					onInput={(e) => props.onField('printYear', e.currentTarget.value)}
 				/>
 			</label>
-			<label>
+			<label for={fieldId('isbn')}>
 				<span>ISBN</span>
-				<input
+				<ClearableInput
+					id={fieldId('isbn')}
 					placeholder="Optional"
 					value={props.form.isbn}
 					onInput={(e) => props.onField('isbn', e.currentTarget.value)}
@@ -139,17 +147,19 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 					onCreate={props.onAddLanguage}
 				/>
 			</div>
-			<label>
+			<label for={fieldId('dedications')}>
 				<span>Dedications</span>
-				<input
+				<ClearableInput
+					id={fieldId('dedications')}
 					placeholder="Inscription inside the cover"
 					value={props.form.dedications}
 					onInput={(e) => props.onField('dedications', e.currentTarget.value)}
 				/>
 			</label>
-			<label>
+			<label for={fieldId('damages')}>
 				<span>Damages</span>
-				<input
+				<ClearableInput
+					id={fieldId('damages')}
 					placeholder="Torn dust jacket, notes, …"
 					value={props.form.damages}
 					onInput={(e) => props.onField('damages', e.currentTarget.value)}
@@ -188,7 +198,7 @@ export type ProvenanceDraftFieldsProps = {
 
 export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 	const eventField = () => (
-		<label>
+		<label for={`provenance-price-${props.gridClass}`}>
 			<span>Event</span>
 			<select
 				value={props.form.provKind}
@@ -205,9 +215,10 @@ export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 		</label>
 	)
 	const priceField = () => (
-		<label>
+		<label for={`provenance-price-${props.gridClass}`}>
 			<span>Price (EUR)</span>
-			<input
+			<ClearableInput
+				id={`provenance-price-${props.gridClass}`}
 				placeholder="0 = free, empty = unknown"
 				inputmode="decimal"
 				value={props.form.provPrice}
@@ -216,9 +227,10 @@ export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 		</label>
 	)
 	const dateField = () => (
-		<label>
+		<label for={`provenance-date-${props.gridClass}`}>
 			<span>Date</span>
-			<input
+			<ClearableInput
+				id={`provenance-date-${props.gridClass}`}
 				type="date"
 				value={props.form.provDate}
 				onInput={(e) => props.onField('provDate', e.currentTarget.value)}
@@ -226,9 +238,10 @@ export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 		</label>
 	)
 	const partyField = () => (
-		<label>
+		<label for={`provenance-party-${props.gridClass}`}>
 			<span>From whom / where</span>
-			<input
+			<ClearableInput
+				id={`provenance-party-${props.gridClass}`}
 				placeholder="Bookstore, Person..."
 				value={props.form.provParty}
 				onInput={(e) => props.onField('provParty', e.currentTarget.value)}
@@ -334,6 +347,13 @@ export function MultiSelect(props: MultiSelectProps) {
 		}
 	}
 
+	function handleItemKeyDown(e: KeyboardEvent): void {
+		if (e.key !== 'Enter') return
+		e.preventDefault()
+		const checkbox = e.currentTarget as HTMLInputElement
+		checkbox.click()
+	}
+
 	function focusSearchInput(details: HTMLDetailsElement | null): void {
 		if (!details) return
 		queueMicrotask(() =>
@@ -405,7 +425,7 @@ export function MultiSelect(props: MultiSelectProps) {
 				}
 			>
 				<div class="multi-select-options">
-					<input
+					<ClearableInput
 						class="multi-select-filter"
 						placeholder="Search or type a new name…"
 						value={props.search ?? ''}
@@ -420,6 +440,7 @@ export function MultiSelect(props: MultiSelectProps) {
 									type="checkbox"
 									checked={props.selectedIds.includes(item.id)}
 									onChange={(e) => handleItemToggle(e, item.id)}
+									onKeyDown={handleItemKeyDown}
 								/>
 								<span>{item.name}</span>
 							</label>
@@ -538,7 +559,7 @@ export function CreatableSingleSelect(props: CreatableSingleSelectProps) {
 		>
 			<summary>{selectedLabel() ?? props.placeholder}</summary>
 			<div class="multi-select-options" role="listbox">
-				<input
+				<ClearableInput
 					class="multi-select-filter"
 					placeholder="Search or type a new name…"
 					value={props.search}

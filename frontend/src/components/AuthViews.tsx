@@ -1,4 +1,5 @@
 import { Show } from 'solid-js'
+import { ClearableInput } from './ClearableInput'
 
 export function AuthLoading() {
 	return (
@@ -32,31 +33,34 @@ export function SetupDialog(props: SetupDialogProps) {
 				</p>
 				<form onSubmit={props.onSubmit}>
 					<div class="form-grid">
-						<label>
+						<label for="setup-username">
 							<span>
 								Username <em>*</em>
 							</span>
-							<input
+							<ClearableInput
+								id="setup-username"
 								value={props.username}
 								onInput={(e) => props.onUsername(e.currentTarget.value)}
 								required
 								autocomplete="username"
 							/>
 						</label>
-						<label>
+						<label for="setup-display-name">
 							<span>Display name (optional)</span>
-							<input
+							<ClearableInput
+								id="setup-display-name"
 								value={props.displayName}
 								onInput={(e) => props.onDisplayName(e.currentTarget.value)}
 								autocomplete="nickname"
 								placeholder="e.g. Alex"
 							/>
 						</label>
-						<label>
+						<label for="setup-password">
 							<span>
 								Password <em>*</em>
 							</span>
-							<input
+							<ClearableInput
+								id="setup-password"
 								type="password"
 								value={props.password}
 								onInput={(e) => props.onPassword(e.currentTarget.value)}
@@ -97,22 +101,24 @@ export function LoginDialog(props: LoginDialogProps) {
 				<p class="hint">Everyone can see all books, but you can only edit your own.</p>
 				<form onSubmit={props.onSubmit}>
 					<div class="form-grid">
-						<label>
+						<label for="login-username">
 							<span>
 								Username <em>*</em>
 							</span>
-							<input
+							<ClearableInput
+								id="login-username"
 								value={props.username}
 								onInput={(e) => props.onUsername(e.currentTarget.value)}
 								required
 								autocomplete="username"
 							/>
 						</label>
-						<label>
+						<label for="login-password">
 							<span>
 								Password <em>*</em>
 							</span>
-							<input
+							<ClearableInput
+								id="login-password"
 								type="password"
 								value={props.password}
 								onInput={(e) => props.onPassword(e.currentTarget.value)}

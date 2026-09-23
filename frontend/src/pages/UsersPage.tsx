@@ -1,5 +1,6 @@
 import { IconEdit, IconLoader2, IconTrash, IconX } from '@tabler/icons-solidjs'
 import { For, Show } from 'solid-js'
+import { ClearableInput } from '../components/ClearableInput'
 import type { ManagedUser } from '../types'
 import { userDisplayName } from '../utils/books'
 
@@ -37,31 +38,34 @@ export function UsersPage(props: UsersPageProps) {
 				<h3>Create user</h3>
 				<form onSubmit={props.onCreateUser}>
 					<div class="form-grid user-create-grid">
-						<label>
+						<label for="new-user-username">
 							<span>
 								Username <em>*</em>
 							</span>
-							<input
+							<ClearableInput
+								id="new-user-username"
 								value={props.newUsername}
 								onInput={(e) => props.onNewUsername(e.currentTarget.value)}
 								required
 								autocomplete="off"
 							/>
 						</label>
-						<label>
+						<label for="new-user-display-name">
 							<span>Display name (optional)</span>
-							<input
+							<ClearableInput
+								id="new-user-display-name"
 								value={props.newDisplayName}
 								onInput={(e) => props.onNewDisplayName(e.currentTarget.value)}
 								autocomplete="off"
 								placeholder="e.g. Alex"
 							/>
 						</label>
-						<label>
+						<label for="new-user-password">
 							<span>
 								Password <em>*</em>
 							</span>
-							<input
+							<ClearableInput
+								id="new-user-password"
 								type="password"
 								value={props.newPassword}
 								onInput={(e) => props.onNewPassword(e.currentTarget.value)}
@@ -190,29 +194,32 @@ export function EditUserDialog(props: EditUserDialogProps) {
 				</div>
 				<form onSubmit={props.onSubmit}>
 					<div class="form-grid">
-						<label>
+						<label for="edit-user-username">
 							<span>
 								Username <em>*</em>
 							</span>
-							<input
+							<ClearableInput
+								id="edit-user-username"
 								value={props.username}
 								onInput={(e) => props.onUsername(e.currentTarget.value)}
 								required
 								autocomplete="off"
 							/>
 						</label>
-						<label>
+						<label for="edit-user-display-name">
 							<span>Display name (empty = username)</span>
-							<input
+							<ClearableInput
+								id="edit-user-display-name"
 								value={props.displayName}
 								onInput={(e) => props.onDisplayName(e.currentTarget.value)}
 								autocomplete="off"
 								placeholder="e.g. Alex"
 							/>
 						</label>
-						<label>
+						<label for="edit-user-password">
 							<span>New password (empty = keep)</span>
-							<input
+							<ClearableInput
+								id="edit-user-password"
 								type="password"
 								value={props.password}
 								onInput={(e) => props.onPassword(e.currentTarget.value)}

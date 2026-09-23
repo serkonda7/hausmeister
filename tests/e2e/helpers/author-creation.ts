@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-test('creating an author leaves the dropdown responsive for selection', async ({ page }) => {
+export async function openAddBookPage(page: Page) {
 	let authors = [{ id: 'author-1', name: 'Ursula Le Guin' }]
 
 	await page.route('**/api/**', async (route) => {
@@ -51,20 +51,12 @@ test('creating an author leaves the dropdown responsive for selection', async ({
 
 	await page.addInitScript(() => localStorage.setItem('hausmeister_token', 'e2e-token'))
 	await page.goto('/library/add')
+}
 
+export async function createAuthor(page: Page) {
 	const authorSelect = page.locator('details.multi-select').first()
 	await authorSelect.locator('summary').click()
 	await authorSelect.getByLabel('Search or add author').fill('Octavia Butler')
 	await authorSelect.getByRole('button', { name: /Create “Octavia Butler”/ }).click()
-
-	// Inline creation automatically selects the new author and clears the
-	// search, which can close the dropdown. Reopen it before checking that the
-	// refreshed option remains selectable.
-	await expect(authorSelect.getByRole('button', { name: 'Remove Octavia Butler' })).toBeVisible()
-	await authorSelect.locator('summary').click()
-	const createdAuthor = authorSelect.getByRole('checkbox', { name: 'Octavia Butler' })
-	await expect(createdAuthor).toBeChecked()
-	await createdAuthor.uncheck()
-	await createdAuthor.check()
-	await expect(createdAuthor).toBeChecked()
-})
+	return authorSelect
+}

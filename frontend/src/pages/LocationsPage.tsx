@@ -1,5 +1,6 @@
 import { IconEdit, IconPlus, IconTrash } from '@tabler/icons-solidjs'
 import { createMemo, createSignal, For, Show } from 'solid-js'
+import { ClearableInput } from '../components/ClearableInput'
 import type { Location } from '../types'
 import { locationDescendantIds, locationOptions } from '../utils/books'
 
@@ -42,11 +43,12 @@ export function LocationsPage(props: LocationsPageProps) {
 			<section class="panel catalog-section">
 				<h3>New location</h3>
 				<div class="form-grid location-create-grid">
-					<label>
+					<label for="new-location-name">
 						<span>
 							Name <em>*</em>
 						</span>
-						<input
+						<ClearableInput
+							id="new-location-name"
 							placeholder="e.g. Shelf A"
 							value={props.manageName}
 							onInput={(e) => props.onManageName(e.currentTarget.value)}
@@ -79,7 +81,7 @@ export function LocationsPage(props: LocationsPageProps) {
 					<span class="catalog-count">{props.locations.length}</span>
 				</div>
 				<div class="inline-create">
-					<input
+					<ClearableInput
 						placeholder="Filter locations…"
 						value={search()}
 						onInput={(e) => setSearch(e.currentTarget.value)}

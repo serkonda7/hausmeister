@@ -193,6 +193,39 @@ input:focus {
 	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
+.clearable-input {
+	position: relative;
+	display: block;
+	min-width: 0;
+}
+
+.clearable-input input {
+	padding-right: 2.3rem;
+}
+
+.input-clear {
+	position: absolute;
+	z-index: 2;
+	top: 50%;
+	right: 0.45rem;
+	transform: translateY(-50%);
+	display: grid;
+	place-items: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--muted);
+	padding: 0;
+	line-height: 1;
+}
+
+.input-clear:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
 .search {
 	position: relative;
 	display: flex;
@@ -642,6 +675,10 @@ select {
 }
 
 .inline-create input {
+	flex: 1;
+}
+
+.inline-create > .clearable-input {
 	flex: 1;
 }
 
@@ -1215,6 +1252,7 @@ select {
 }
 
 .book-form-grid > label > input,
+.book-form-grid > label > .clearable-input,
 .book-form-grid > .field-group > :not(.field-label) {
 	grid-column: 2;
 }
@@ -1236,7 +1274,8 @@ select {
 	text-align: right;
 }
 
-.user-create-grid > label:not(.check-item) > input {
+.user-create-grid > label:not(.check-item) > input,
+.user-create-grid > label:not(.check-item) > .clearable-input {
 	grid-column: 2;
 }
 
@@ -1257,6 +1296,7 @@ select {
 }
 
 .location-create-grid > label:not(.check-item) > input,
+.location-create-grid > label:not(.check-item) > .clearable-input,
 .location-create-grid > label:not(.check-item) > select {
 	grid-column: 2;
 }
@@ -1299,6 +1339,7 @@ select {
 
 	.book-form-grid > label > span,
 	.book-form-grid > label > input,
+	.book-form-grid > label > .clearable-input,
 	.book-form-grid > .field-group > .field-label,
 	.book-form-grid > .field-group > :not(.field-label),
 	.book-form-grid > .field-group > .form-grid {
@@ -1306,12 +1347,14 @@ select {
 	}
 
 	.user-create-grid > label:not(.check-item) > span,
-	.user-create-grid > label:not(.check-item) > input {
+	.user-create-grid > label:not(.check-item) > input,
+	.user-create-grid > label:not(.check-item) > .clearable-input {
 		grid-column: 1;
 	}
 
 	.location-create-grid > label:not(.check-item) > span,
 	.location-create-grid > label:not(.check-item) > input,
+	.location-create-grid > label:not(.check-item) > .clearable-input,
 	.location-create-grid > label:not(.check-item) > select {
 		grid-column: 1;
 	}
