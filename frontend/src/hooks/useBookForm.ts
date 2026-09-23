@@ -1,7 +1,7 @@
 import { type Accessor, createSignal } from 'solid-js'
 import { api } from '../api'
-import type { AppUser, Author, Book, BookFormState, Language, Tag } from '../types'
-import { EMPTY_FORM, priceToCents } from '../utils/books'
+import type { AppUser, Author, Book, BookFormState, Language, PageNote, Tag } from '../types'
+import { asPageNotes, EMPTY_FORM, priceToCents } from '../utils/books'
 
 export type BookFormDeps = {
 	authUser: Accessor<AppUser | null>
@@ -14,7 +14,11 @@ export type BookFormDeps = {
 
 /** Book add/edit form state, selections, and save/remove handlers. */
 export function useBookForm(deps: BookFormDeps) {
-	const [form, setForm] = createSignal<BookFormState>({ ...EMPTY_FORM })
+	const [form, setForm] = createSignal<BookFormState>({
+		...EMPTY_FORM,
+		dedications: [],
+		damages: [],
+	})
 	const [selectedAuthorIds, setSelectedAuthorIds] = createSignal<string[]>([])
 	const [selectedPublisherId, setSelectedPublisherId] = createSignal('')
 	const [selectedLocationId, setSelectedLocationId] = createSignal('')
@@ -30,7 +34,11 @@ export function useBookForm(deps: BookFormDeps) {
 	// Owner transfer (admin only, in edit dialog).
 	const [selectedOwnerId, setSelectedOwnerId] = createSignal('')
 
-	function setField(key: keyof BookFormState, value: string): void {
+	function setField(key: keyof BookFormState, value: string | PageNote[]): void {
+		setForm((f) => ({ ...f, [key]: value }))
+	}
+
+	function setPageNotes(key: 'dedications' | 'damages', value: PageNote[]): void {
 		setForm((f) => ({ ...f, [key]: value }))
 	}
 
@@ -46,7 +54,7 @@ export function useBookForm(deps: BookFormDeps) {
 	}
 
 	function resetForm(): void {
-		setForm({ ...EMPTY_FORM })
+		setForm({ ...EMPTY_FORM, dedications: [], damages: [] })
 		setSelectedAuthorIds([])
 		setSelectedPublisherId('')
 		setSelectedLocationId('')
@@ -57,7 +65,7 @@ export function useBookForm(deps: BookFormDeps) {
 
 	/** Clear only per-copy fields so the user can quickly add another book. */
 	function resetForNextBook(): void {
-		setForm((f) => ({ ...f, title: '', subtitle: '', isbn: '', dedications: '', damages: '' }))
+		setForm((f) => ({ ...f, title: '', subtitle: '', isbn: '', dedications: [], damages: [] }))
 	}
 
 	function editBook(book: Book): void {
@@ -66,8 +74,8 @@ export function useBookForm(deps: BookFormDeps) {
 			title: book.title,
 			subtitle: book.subtitle ?? '',
 			printYear: book.printYear?.toString() ?? '',
-			dedications: book.dedications ?? '',
-			damages: book.damages ?? '',
+			dedications: asPageNotes(book.dedications),
+			damages: asPageNotes(book.damages),
 			languages: '',
 			provKind: '',
 			provDate: '',
@@ -99,8 +107,9 @@ export function useBookForm(deps: BookFormDeps) {
 		if ((f.title ?? '').trim() !== (book.title ?? '').trim()) return true
 		if ((f.subtitle ?? '').trim() !== (book.subtitle ?? '').trim()) return true
 		if ((f.printYear ?? '').trim() !== (book.printYear?.toString() ?? '')) return true
-		if ((f.dedications ?? '').trim() !== (book.dedications ?? '').trim()) return true
-		if ((f.damages ?? '').trim() !== (book.damages ?? '').trim()) return true
+		if (JSON.stringify(f.dedications ?? []) !== JSON.stringify(asPageNotes(book.dedications)))
+			return true
+		if (JSON.stringify(f.damages ?? []) !== JSON.stringify(asPageNotes(book.damages))) return true
 		if (
 			[...(selectedLanguageIds() ?? [])].sort().join(',') !==
 			[...(book.languageIds ?? [])].sort().join(',')
@@ -131,6 +140,16 @@ export function useBookForm(deps: BookFormDeps) {
 		closeEditBook()
 	}
 
+	function cleanNotes(notes: PageNote[] | undefined): PageNote[] | undefined {
+		const cleaned = (notes ?? [])
+			.map((n) => ({
+				page: (n.page ?? '').trim().slice(0, 50),
+				text: (n.text ?? '').trim().slice(0, 2000),
+			}))
+			.filter((n) => n.text !== '')
+		return cleaned.length > 0 ? cleaned : undefined
+	}
+
 	async function saveEditedBook(e: Event): Promise<void> {
 		e.preventDefault()
 		setEditError(null)
@@ -157,8 +176,8 @@ export function useBookForm(deps: BookFormDeps) {
 				locationId: selectedLocationId() || null,
 				printYear: Number.isFinite(parsedYear) ? parsedYear : undefined,
 				tagIds: selectedTagIds(),
-				dedications: f.dedications.trim() || undefined,
-				damages: f.damages.trim() || undefined,
+				dedications: cleanNotes(f.dedications),
+				damages: cleanNotes(f.damages),
 				languageIds: selectedLanguageIds(),
 			}
 			if (deps.authUser()?.isAdmin) {
@@ -234,8 +253,8 @@ export function useBookForm(deps: BookFormDeps) {
 					locationId: selectedLocationId() || undefined,
 					printYear: Number.isFinite(parsedYear) ? parsedYear : undefined,
 					tagIds: selectedTagIds(),
-					dedications: f.dedications.trim() || undefined,
-					damages: f.damages.trim() || undefined,
+					dedications: cleanNotes(f.dedications),
+					damages: cleanNotes(f.damages),
 					languageIds: selectedLanguageIds(),
 				}),
 			})
@@ -323,6 +342,7 @@ export function useBookForm(deps: BookFormDeps) {
 	return {
 		form,
 		setField,
+		setPageNotes,
 		selectedAuthorIds,
 		setSelectedAuthorIds,
 		selectedPublisherId,

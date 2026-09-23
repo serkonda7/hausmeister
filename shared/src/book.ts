@@ -58,6 +58,15 @@ export const UpdateLocationSchema = v.object({
 })
 export type UpdateLocation = v.InferOutput<typeof UpdateLocationSchema>
 
+export const PageNoteSchema = v.object({
+	page: v.pipe(v.string(), v.trim(), v.maxLength(50)),
+	text: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(2000)),
+})
+export type PageNote = v.InferOutput<typeof PageNoteSchema>
+
+export const PageNotesSchema = v.pipe(v.array(PageNoteSchema), v.maxLength(100))
+export type PageNotes = v.InferOutput<typeof PageNotesSchema>
+
 export const CreateBookSchema = v.object({
 	isbn: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(20))),
 	title: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(300)),
@@ -73,8 +82,8 @@ export const CreateBookSchema = v.object({
 	coverUrl: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(2000))),
 	pages: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	description: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(5000))),
-	dedications: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(5000))),
-	damages: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(5000))),
+	dedications: v.optional(PageNotesSchema),
+	damages: v.optional(PageNotesSchema),
 })
 export type CreateBook = v.InferOutput<typeof CreateBookSchema>
 

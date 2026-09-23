@@ -1,12 +1,14 @@
-import { createMemo, For, Show } from 'solid-js'
-import type { Author, BookFormState, Language, Location, Publisher, Tag } from '../types'
+import { createMemo, For, Index, Show } from 'solid-js'
+import type { Author, BookFormState, Language, Location, PageNote, Publisher, Tag } from '../types'
 import { locationOptions } from '../utils/books'
 import { ClearableInput } from './ClearableInput'
+
+export type BookFormFieldValue = string | PageNote[]
 
 export type BookMetadataFieldsProps = {
 	fieldIdPrefix?: string
 	form: BookFormState
-	onField: (key: keyof BookFormState, value: string) => void
+	onField: (key: keyof BookFormState, value: BookFormFieldValue) => void
 	authors: Author[]
 	authorSummary: string
 	selectedAuthorIds: string[]
@@ -147,24 +149,26 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 					onCreate={props.onAddLanguage}
 				/>
 			</div>
-			<label for={fieldId('dedications')}>
-				<span>Dedications</span>
-				<ClearableInput
-					id={fieldId('dedications')}
-					placeholder="Inscription inside the cover"
-					value={props.form.dedications}
-					onInput={(e) => props.onField('dedications', e.currentTarget.value)}
-				/>
-			</label>
-			<label for={fieldId('damages')}>
-				<span>Damages</span>
-				<ClearableInput
-					id={fieldId('damages')}
-					placeholder="Torn dust jacket, notes, …"
-					value={props.form.damages}
-					onInput={(e) => props.onField('damages', e.currentTarget.value)}
-				/>
-			</label>
+			<PageNoteEditor
+				title="Dedications"
+				notes={props.form.dedications}
+				onChange={(notes) => props.onField('dedications', notes)}
+				pagePlaceholder="Page"
+				textPlaceholder="Inscription"
+				addLabel="Add dedication"
+				kind="dedication"
+				fieldIdPrefix={`${fieldId('dedications')}`}
+			/>
+			<PageNoteEditor
+				title="Damages"
+				notes={props.form.damages}
+				onChange={(notes) => props.onField('damages', notes)}
+				pagePlaceholder="Page"
+				textPlaceholder="Damage"
+				addLabel="Add damage"
+				kind="damage"
+				fieldIdPrefix={`${fieldId('damages')}`}
+			/>
 			<div class="field-group">
 				<span class="field-label">Location</span>
 				<CreatableSingleSelect
@@ -189,7 +193,7 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 
 export type ProvenanceDraftFieldsProps = {
 	form: BookFormState
-	onField: (key: keyof BookFormState, value: string) => void
+	onField: (key: keyof BookFormState, value: BookFormFieldValue) => void
 	gridClass: 'add-book-acquisition-grid' | 'form-grid-4'
 	eventAriaLabel: string
 	includeSell: boolean
@@ -219,8 +223,10 @@ export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 			<span>Price (EUR)</span>
 			<ClearableInput
 				id={`provenance-price-${props.gridClass}`}
+				type="number"
+				min="0"
+				step="0.01"
 				placeholder="0 = free, empty = unknown"
-				inputmode="decimal"
 				value={props.form.provPrice}
 				onInput={(e) => props.onField('provPrice', e.currentTarget.value)}
 			/>
@@ -256,6 +262,81 @@ export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 			{dateField()}
 			{partyField()}
 			<Show when={!props.priceFirst}>{priceField()}</Show>
+		</div>
+	)
+}
+
+export type PageNoteEditorProps = {
+	title: string
+	notes: PageNote[]
+	onChange: (notes: PageNote[]) => void
+	pagePlaceholder: string
+	textPlaceholder: string
+	addLabel: string
+	kind: 'dedication' | 'damage'
+	fieldIdPrefix: string
+}
+
+/** Repeatable (page, text) pair editor used for dedications and damages. */
+export function PageNoteEditor(props: PageNoteEditorProps) {
+	function update(index: number, patch: Partial<PageNote>): void {
+		props.onChange(props.notes.map((n, i) => (i === index ? { ...n, ...patch } : n)))
+	}
+
+	function remove(index: number): void {
+		props.onChange(props.notes.filter((_, i) => i !== index))
+	}
+
+	function add(): void {
+		props.onChange([...props.notes, { page: '', text: '' }])
+	}
+
+	return (
+		<div class="field-group">
+			<span class="field-label">
+				{props.title} <Show when={props.notes.length > 0}>({props.notes.length})</Show>
+			</span>
+			<div class="page-note-list">
+				{/* Index (not For): rows are reconciled by position, so typing in a
+					row never disposes/recreates its inputs (For matches by item
+					identity, and each keystroke produces a new item object). */}
+				<Index each={props.notes}>
+					{(note, i) => (
+						<div class="page-note-row">
+							<ClearableInput
+								id={`${props.fieldIdPrefix}-page-${i}`}
+								class="page-note-page"
+								placeholder={props.pagePlaceholder}
+								value={note().page}
+								onInput={(e) => update(i, { page: e.currentTarget.value })}
+								aria-label={`${props.kind} ${i + 1} page`}
+							/>
+							<ClearableInput
+								id={`${props.fieldIdPrefix}-text-${i}`}
+								class="page-note-text"
+								placeholder={props.textPlaceholder}
+								value={note().text}
+								onInput={(e) => update(i, { text: e.currentTarget.value })}
+								aria-label={`${props.kind} ${i + 1} text`}
+							/>
+							<button
+								type="button"
+								class="danger-ghost icon-btn"
+								onClick={() => remove(i)}
+								aria-label={`Remove ${props.kind} ${i + 1}`}
+								title={`Remove ${props.kind}`}
+							>
+								×
+							</button>
+						</div>
+					)}
+				</Index>
+				<div>
+					<button type="button" class="ghost small-btn" onClick={add}>
+						+ {props.addLabel}
+					</button>
+				</div>
+			</div>
 		</div>
 	)
 }
@@ -588,13 +669,6 @@ export function CreatableSingleSelect(props: CreatableSingleSelectProps) {
 						</button>
 					)}
 				</For>
-				<Show when={filtered().length === 0}>
-					<p class="multi-select-empty" role="status">
-						{trimmedSearch()
-							? 'No matching options.'
-							: 'No options yet. Type a name to create one.'}
-					</p>
-				</Show>
 				<Show when={canCreate()}>
 					<button type="button" class="create-row" onClick={() => props.onCreate()}>
 						+ Create “{trimmedSearch()}”<Show when={props.createHint}> ({props.createHint})</Show>

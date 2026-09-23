@@ -24,6 +24,10 @@ export function filterBooks(books: EnrichedBook[], filter: BookListFilter): Enri
 		const statusHaystack = b.ownership.toLowerCase()
 		const owner = b.owner as { username?: string; displayName?: string | null } | null
 		const ownerHaystack = `${owner?.displayName ?? ''} ${owner?.username ?? ''}`.toLowerCase()
+		const notesHaystack = [...(b.dedications ?? []), ...(b.damages ?? [])]
+			.map((n) => `${n.page ?? ''} ${n.text ?? ''}`)
+			.join(' ')
+			.toLowerCase()
 		return (
 			b.title.toLowerCase().includes(q) ||
 			(b.subtitle ?? '').toLowerCase().includes(q) ||
@@ -47,6 +51,7 @@ export function filterBooks(books: EnrichedBook[], filter: BookListFilter): Enri
 				.toLowerCase()
 				.includes(q) ||
 			ownerHaystack.includes(q) ||
+			notesHaystack.includes(q) ||
 			(b.provenance as Array<{ party?: string | null; kind: string }>)
 				.map((e) => `${e.kind} ${e.party ?? ''}`)
 				.join(' ')

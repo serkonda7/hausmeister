@@ -61,6 +61,11 @@ export type BookLocation = {
 	fullPath: string
 }
 
+export type PageNote = {
+	page: string
+	text: string
+}
+
 export type Book = {
 	id: string
 	isbn: string | null
@@ -81,8 +86,8 @@ export type Book = {
 	printYear: number | null
 	provenance: ProvenanceEvent[]
 	ownership: Ownership
-	dedications: string | null
-	damages: string | null
+	dedications: PageNote[]
+	damages: PageNote[]
 	coverUrl: string | null
 	description: string | null
 }
@@ -94,8 +99,8 @@ export type BookFormState = {
 	title: string
 	subtitle: string
 	printYear: string
-	dedications: string
-	damages: string
+	dedications: PageNote[]
+	damages: PageNote[]
 	languages: string
 	provKind: string
 	provDate: string

@@ -5,6 +5,7 @@ import type {
 	Location,
 	Ownership,
 	Page,
+	PageNote,
 	ProvenanceEvent,
 	ProvenanceKind,
 } from '../types'
@@ -72,8 +73,8 @@ export const EMPTY_FORM: BookFormState = {
 	title: '',
 	subtitle: '',
 	printYear: '',
-	dedications: '',
-	damages: '',
+	dedications: [],
+	damages: [],
 	languages: '',
 	provKind: '',
 	provDate: '',
@@ -153,6 +154,47 @@ export function pageFromPath(pathname: string): Page {
 	return 'library'
 }
 
+/** Lenient coercion for API payloads that may still carry legacy string values. */
+export function asPageNotes(value: unknown): PageNote[] {
+	if (value == null) return []
+	if (Array.isArray(value)) {
+		const out: PageNote[] = []
+		for (const entry of value) {
+			if (typeof entry === 'string') {
+				const text = entry.trim()
+				if (text) out.push({ page: '', text: text.slice(0, 2000) })
+				continue
+			}
+			if (typeof entry === 'object' && entry !== null) {
+				const record = entry as Record<string, unknown>
+				const rawText = record.text ?? record.dedication ?? record.damage
+				const text = typeof rawText === 'string' ? rawText.trim().slice(0, 2000) : ''
+				if (!text) continue
+				const rawPage = record.page
+				const page =
+					typeof rawPage === 'string' || typeof rawPage === 'number'
+						? String(rawPage).trim().slice(0, 50)
+						: ''
+				out.push({ page, text })
+			}
+		}
+		return out
+	}
+	if (typeof value === 'string') {
+		const text = value.trim()
+		return text ? [{ page: '', text: text.slice(0, 2000) }] : []
+	}
+	return []
+}
+
+export function formatPageNote(n: PageNote): string {
+	return n.page ? `${n.page}: ${n.text}` : n.text
+}
+
+export function formatPageNotes(notes: PageNote[] | null | undefined): string {
+	return (notes ?? []).map(formatPageNote).join('; ')
+}
+
 function sortStringFor(b: Book, key: string): string {
 	switch (key) {
 		case 'title':
@@ -174,9 +216,9 @@ function sortStringFor(b: Book, key: string): string {
 		case 'provenance':
 			return ownershipLabel(b.ownership)
 		case 'dedications':
-			return b.dedications ?? ''
+			return formatPageNotes(b.dedications)
 		case 'damages':
-			return b.damages ?? ''
+			return formatPageNotes(b.damages)
 		default:
 			return ''
 	}

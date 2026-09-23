@@ -14,6 +14,7 @@ import {
 } from '../schema'
 import { authMiddleware, canEditBook, getAuthUser } from '../util/auth'
 import { jsonError } from '../util/http'
+import { normalizePageNotes } from '../util/page-notes'
 import { toBookListJson, toSingleBookJson } from './books-enrichment'
 import { filterBooks } from './books-search'
 import { now } from './books-types'
@@ -105,8 +106,8 @@ export const bookApp = new Hono()
 				coverUrl: data.coverUrl ?? null,
 				pages: data.pages ?? null,
 				description: data.description ?? null,
-				dedications: data.dedications ?? null,
-				damages: data.damages ?? null,
+				dedications: normalizePageNotes(data.dedications),
+				damages: normalizePageNotes(data.damages),
 				createdAt: timestamp,
 				updatedAt: timestamp,
 			})
@@ -219,8 +220,14 @@ export const bookApp = new Hono()
 				coverUrl: data.coverUrl ?? existing.coverUrl,
 				pages: data.pages ?? existing.pages,
 				description: data.description ?? existing.description,
-				dedications: data.dedications ?? existing.dedications,
-				damages: data.damages ?? existing.damages,
+				dedications:
+					data.dedications === undefined
+						? normalizePageNotes(existing.dedications)
+						: normalizePageNotes(data.dedications),
+				damages:
+					data.damages === undefined
+						? normalizePageNotes(existing.damages)
+						: normalizePageNotes(data.damages),
 				updatedAt: now(),
 			})
 			.where(eq(books.id, id))

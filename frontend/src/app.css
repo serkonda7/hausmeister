@@ -1048,6 +1048,31 @@ select {
 	color: var(--danger);
 }
 
+.page-note-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.page-note-row {
+	display: grid;
+	grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) auto;
+	gap: 0.4rem;
+	align-items: center;
+}
+
+.page-note-empty {
+	margin: 0;
+}
+
+.cell-notes {
+	margin: 0;
+	padding-left: 1.1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
 .sr-only {
 	position: absolute;
 	width: 1px;

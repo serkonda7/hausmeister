@@ -11,6 +11,7 @@ import {
 	tags,
 	users,
 } from '../schema'
+import { normalizePageNotes } from '../util/page-notes'
 import type { BooksDb } from './books-types'
 import { buildLocationPath, locationFullPath, locationMaps } from './locations-tree'
 import { ownershipOf, provenanceMap } from './provenance'
@@ -179,6 +180,8 @@ export function toBookJson(
 	const provenance = (provenanceByBook?.get(row.id) ?? []) as Array<Record<string, unknown>>
 	return {
 		...row,
+		dedications: normalizePageNotes(row.dedications),
+		damages: normalizePageNotes(row.damages),
 		authorIds: bookAuthorsList.map((a) => a.id),
 		authors: bookAuthorsList,
 		tagIds: bookTagsList.map((t) => t.id),

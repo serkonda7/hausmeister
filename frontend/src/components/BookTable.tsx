@@ -5,6 +5,8 @@ import type { Book } from '../types'
 import {
 	authorNames,
 	displayLanguages,
+	formatPageNote,
+	formatPageNotes,
 	LIBRARY_DEFAULT_VISIBLE_COLUMNS,
 	LIBRARY_VISIBLE_COLUMNS_KEY,
 	loadLibraryVisibleColumns,
@@ -153,17 +155,29 @@ export function BookTable(props: BookTableProps) {
 			key: 'dedications',
 			label: 'Dedications',
 			sortable: true,
-			sortValue: (b) => b.dedications,
-			getValue: (b) => b.dedications ?? <span class="muted">—</span>,
+			sortValue: (b) => formatPageNotes(b.dedications),
+			getValue: (b) => (
+				<Show when={(b.dedications ?? []).length > 0} fallback={<span class="muted">—</span>}>
+					<ul class="cell-notes">
+						{(b.dedications ?? []).map((n) => (
+							<li>{formatPageNote(n)}</li>
+						))}
+					</ul>
+				</Show>
+			),
 		},
 		{
 			key: 'damages',
 			label: 'Damages',
 			sortable: true,
-			sortValue: (b) => b.damages,
+			sortValue: (b) => formatPageNotes(b.damages),
 			getValue: (b) => (
-				<Show when={b.damages} fallback={<span class="muted">—</span>}>
-					<span class="damages">{b.damages}</span>
+				<Show when={(b.damages ?? []).length > 0} fallback={<span class="muted">—</span>}>
+					<ul class="cell-notes damages">
+						{(b.damages ?? []).map((n) => (
+							<li>{formatPageNote(n)}</li>
+						))}
+					</ul>
 				</Show>
 			),
 		},

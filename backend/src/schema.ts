@@ -6,6 +6,7 @@ import {
 	sqliteTable,
 	text,
 } from 'drizzle-orm/sqlite-core'
+import type { PageNote } from 'shared/src/book'
 
 export const authors = sqliteTable('authors', {
 	id: text('id').primaryKey(),
@@ -53,8 +54,8 @@ export const books = sqliteTable('books', {
 	coverUrl: text('cover_url'),
 	pages: integer('pages'),
 	description: text('description'),
-	dedications: text('dedications'),
-	damages: text('damages'),
+	dedications: text('dedications', { mode: 'json' }).$type<PageNote[]>().notNull().default([]),
+	damages: text('damages', { mode: 'json' }).$type<PageNote[]>().notNull().default([]),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull(),
 })

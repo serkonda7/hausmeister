@@ -17,8 +17,8 @@ export function createCoreTables(db: BunSQLiteDatabase): void {
 			cover_url TEXT,
 			pages INTEGER,
 			description TEXT,
-			dedications TEXT,
-			damages TEXT,
+			dedications TEXT NOT NULL DEFAULT '[]',
+			damages TEXT NOT NULL DEFAULT '[]',
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL
 		)`)

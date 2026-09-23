@@ -6,9 +6,30 @@ import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { DB_PATH } from '../constants'
 import { bookLanguages, books, languages } from '../schema'
+import { normalizePageNotes } from '../util/page-notes'
 import { createAuxTables, createCoreTables } from './tables'
 
 let db: BunSQLiteDatabase | null = null
+
+/** Convert legacy plain-text dedications/damages into JSON page-note arrays. */
+function migratePageNotesColumns(sqlite: Database): void {
+	const cols = sqlite
+		.query<{ name: string }, []>("SELECT name FROM pragma_table_info('books')")
+		.all()
+		.map((c) => c.name)
+	if (!cols.includes('dedications') || !cols.includes('damages')) return
+	const rows = sqlite
+		.query<{ id: string; dedications: string | null; damages: string | null }, []>(
+			'SELECT id, dedications, damages FROM books',
+		)
+		.all()
+	const update = sqlite.prepare('UPDATE books SET dedications = ?, damages = ? WHERE id = ?')
+	for (const row of rows) {
+		const dedications = normalizePageNotes(row.dedications)
+		const damages = normalizePageNotes(row.damages)
+		update.run(JSON.stringify(dedications), JSON.stringify(damages), row.id)
+	}
+}
 
 export function initDb(path: string = DB_PATH): BunSQLiteDatabase {
 	mkdirSync(dirname(path), { recursive: true })
@@ -18,6 +39,7 @@ export function initDb(path: string = DB_PATH): BunSQLiteDatabase {
 	db = drizzle(sqlite)
 	createCoreTables(db)
 	createAuxTables(db)
+	migratePageNotesColumns(sqlite)
 	// Migrate the former JSON language field into the catalog once. The old
 	// column remains for compatibility with existing databases, but is no
 	// longer written by the application.
