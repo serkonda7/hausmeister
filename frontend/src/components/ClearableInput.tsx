@@ -20,11 +20,18 @@ export function ClearableInput(props: JSX.InputHTMLAttributes<HTMLInputElement>)
 					type="button"
 					class="input-clear"
 					aria-label="Clear input"
+					title="Clear"
 					tabIndex={-1}
 					onMouseDown={(e) => e.preventDefault()}
-					onClick={() => {
+					onClick={(e) => {
+						// The button lives inside a <label>: stop the click from
+						// activating the labeled control (focus steal, date picker
+						// popup) after clearing.
+						e.preventDefault()
+						e.stopPropagation()
 						input.value = ''
-						input.dispatchEvent(new Event('input', { bubbles: true }))
+						input.dispatchEvent(new InputEvent('input', { bubbles: true }))
+						input.focus({ preventScroll: true })
 					}}
 				>
 					×

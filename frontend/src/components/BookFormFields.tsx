@@ -202,9 +202,10 @@ export type ProvenanceDraftFieldsProps = {
 
 export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 	const eventField = () => (
-		<label for={`provenance-price-${props.gridClass}`}>
+		<label for={`provenance-kind-${props.gridClass}`}>
 			<span>Event</span>
 			<select
+				id={`provenance-kind-${props.gridClass}`}
 				value={props.form.provKind}
 				onChange={(e) => props.onField('provKind', e.currentTarget.value)}
 				aria-label={props.eventAriaLabel}

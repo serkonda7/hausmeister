@@ -203,6 +203,26 @@ input:focus {
 	padding-right: 2.3rem;
 }
 
+/* Number inputs use the custom × control: hide the native spinners, which
+	would otherwise crowd the ×, shift layout on hover/focus, and swallow
+	clicks meant for clearing (e.g. acquisition price, print year). */
+.clearable-input input[type="number"]::-webkit-outer-spin-button,
+.clearable-input input[type="number"]::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.clearable-input input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+/* Date inputs keep their native picker indicator next to the custom ×, so
+	they need room for both controls. */
+.clearable-input input[type="date"] {
+	padding-right: 4rem;
+}
+
 .input-clear {
 	position: absolute;
 	z-index: 2;
@@ -222,6 +242,16 @@ input:focus {
 }
 
 .input-clear:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+/* The × is vertically centered via translateY(-50%): it must keep that
+	transform while pressed. Otherwise the global button:active shift moves
+	it out from under the cursor, mouseup lands on the wrapping <label>,
+	the click never reaches the button (no clear, input just gets focused). */
+.input-clear:active {
+	transform: translateY(-50%);
 	background: var(--surface-2);
 	color: var(--text);
 }
