@@ -6,6 +6,7 @@ import { getDb } from '../db'
 import { books, readingState } from '../schema'
 import { authMiddleware, canEditBook, getAuthUser } from '../util/auth'
 import { jsonError } from '../util/http'
+import { touchBookUpdatedAt } from './books-types'
 
 export const readingApp = new Hono().patch(
 	'/books/:id/reading',
@@ -42,6 +43,7 @@ export const readingApp = new Hono().patch(
 			})
 			.where(eq(readingState.bookId, bookId))
 			.run()
+		touchBookUpdatedAt(db, bookId, now)
 		const [reading] = db.select().from(readingState).where(eq(readingState.bookId, bookId)).all()
 		return c.json({ reading })
 	},

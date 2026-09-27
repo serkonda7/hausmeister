@@ -6,6 +6,7 @@ import { getDb } from '../db'
 import { books, loans } from '../schema'
 import { authMiddleware, canEditBook, getAuthUser } from '../util/auth'
 import { jsonError } from '../util/http'
+import { touchBookUpdatedAt } from './books-types'
 
 export const loanApp = new Hono()
 	.use('*', authMiddleware)
@@ -52,6 +53,7 @@ export const loanApp = new Hono()
 				returnedAt: null,
 			})
 			.run()
+		touchBookUpdatedAt(db, bookId, lentAt)
 		const [loan] = db.select().from(loans).where(eq(loans.id, id)).all()
 		return c.json({ loan }, 201)
 	})
@@ -74,5 +76,6 @@ export const loanApp = new Hono()
 			return jsonError(c, 'Forbidden: you can only edit your own books', 403)
 		}
 		db.update(loans).set({ returnedAt: Date.now() }).where(eq(loans.id, loan.id)).run()
+		touchBookUpdatedAt(db, loan.bookId)
 		return c.json({ ok: true })
 	})

@@ -90,6 +90,8 @@ export type Book = {
 	damages: PageNote[]
 	coverUrl: string | null
 	description: string | null
+	createdAt: number
+	updatedAt: number
 }
 
 export type Page = 'library' | 'add-book' | 'catalog' | 'locations' | 'users'

@@ -30,6 +30,20 @@ export function formatProvenanceDate(ts: number | null): string {
 	}
 }
 
+/** Locale date for record timestamps (date added / date modified). */
+export function formatRecordDate(ts: number | null | undefined): string {
+	if (ts == null || !Number.isFinite(ts) || ts <= 0) return ''
+	try {
+		return new Date(ts).toLocaleDateString(undefined, {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric',
+		})
+	} catch {
+		return ''
+	}
+}
+
 export function formatProvenancePrice(e: Pick<ProvenanceEvent, 'priceCents' | 'kind'>): string {
 	if (e.priceCents == null) return e.kind === 'buy' ? 'price unknown' : ''
 	if (e.priceCents === 0) return 'Free'
@@ -239,6 +253,15 @@ export function compareBooks(
 		const result = av - bv
 		return direction === 'asc' ? result : -result
 	}
+	if (key === 'added' || key === 'modified') {
+		const av = key === 'added' ? a.createdAt : a.updatedAt
+		const bv = key === 'added' ? b.createdAt : b.updatedAt
+		if (av == null && bv == null) return 0
+		if (av == null) return 1
+		if (bv == null) return -1
+		const result = av - bv
+		return direction === 'asc' ? result : -result
+	}
 	const as = sortStringFor(a, key)
 	const bs = sortStringFor(b, key)
 	if (!as && !bs) return 0
@@ -262,6 +285,8 @@ export const LIBRARY_DEFAULT_VISIBLE_COLUMNS = [
 	'provenance',
 	'dedications',
 	'damages',
+	'added',
+	'modified',
 ]
 
 export const LIBRARY_KNOWN_COLUMN_KEYS = [...LIBRARY_DEFAULT_VISIBLE_COLUMNS, 'isbn']

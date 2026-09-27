@@ -423,15 +423,19 @@ export function MultiSelect(props: MultiSelectProps) {
 	}
 
 	function handleSearchKeyDown(e: KeyboardEvent): void {
-		if (e.key === 'Enter' && canCreate()) {
-			e.preventDefault()
-			createItem((e.currentTarget as HTMLElement).closest('details'))
-		}
+		// Ctrl/Cmd+Enter is the form-wide "Save" shortcut: let it bubble to
+		// the form instead of creating an inline entry.
+		if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return
+		if (!canCreate()) return
+		e.preventDefault()
+		e.stopPropagation()
+		createItem((e.currentTarget as HTMLElement).closest('details'))
 	}
 
 	function handleItemKeyDown(e: KeyboardEvent): void {
-		if (e.key !== 'Enter') return
+		if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return
 		e.preventDefault()
+		e.stopPropagation()
 		const checkbox = e.currentTarget as HTMLInputElement
 		checkbox.click()
 	}
@@ -626,10 +630,13 @@ export function CreatableSingleSelect(props: CreatableSingleSelectProps) {
 	}
 
 	function handleSearchKeyDown(e: KeyboardEvent): void {
-		if (e.key === 'Enter' && canCreate()) {
-			e.preventDefault()
-			props.onCreate()
-		}
+		// Ctrl/Cmd+Enter is the form-wide "Save" shortcut: let it bubble to
+		// the form instead of creating an inline entry.
+		if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return
+		if (!canCreate()) return
+		e.preventDefault()
+		e.stopPropagation()
+		props.onCreate()
 	}
 
 	return (

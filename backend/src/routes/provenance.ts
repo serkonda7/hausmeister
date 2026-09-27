@@ -6,6 +6,7 @@ import { getDb } from '../db'
 import { books, provenanceEvents } from '../schema'
 import { authMiddleware, canEditBook, getAuthUser } from '../util/auth'
 import { jsonError } from '../util/http'
+import { touchBookUpdatedAt } from './books-types'
 
 function parseOccurredAt(input: string | undefined): number | null | 'invalid' {
 	if (input === undefined) {
@@ -71,6 +72,7 @@ export const provenanceApp = new Hono()
 				createdAt: now,
 			})
 			.run()
+		touchBookUpdatedAt(db, bookId, now)
 		const [row] = db.select().from(provenanceEvents).where(eq(provenanceEvents.id, id)).all()
 		return c.json({ event: toEventJson(row) }, 201)
 	})
@@ -108,6 +110,7 @@ export const provenanceApp = new Hono()
 			})
 			.where(eq(provenanceEvents.id, id))
 			.run()
+		touchBookUpdatedAt(db, existing.bookId)
 		const [row] = db.select().from(provenanceEvents).where(eq(provenanceEvents.id, id)).all()
 		return c.json({ event: toEventJson(row) })
 	})
@@ -126,6 +129,9 @@ export const provenanceApp = new Hono()
 			}
 		}
 		db.delete(provenanceEvents).where(eq(provenanceEvents.id, id)).run()
+		if (existing) {
+			touchBookUpdatedAt(db, existing.bookId)
+		}
 		return c.json({ ok: true })
 	})
 	.get('/books/:id/provenance/summary', (c) => {

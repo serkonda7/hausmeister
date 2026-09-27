@@ -4,6 +4,7 @@ import type { Book, ManagedUser } from '../types'
 import {
 	formatProvenanceDate,
 	formatProvenancePrice,
+	formatRecordDate,
 	ownershipLabel,
 	provenanceLabel,
 	userLabel,
@@ -139,6 +140,10 @@ export function EditBookDialog(props: EditBookDialogProps) {
 					<Show when={props.error}>
 						<p class="error">{props.error}</p>
 					</Show>
+					<p class="muted small" style="margin: 0">
+						Added: {formatRecordDate(props.book.createdAt) || '—'} · Modified:{' '}
+						{formatRecordDate(props.book.updatedAt) || '—'}
+					</p>
 					<div class="form-actions">
 						<button type="button" class="ghost" onClick={props.onClose}>
 							Cancel

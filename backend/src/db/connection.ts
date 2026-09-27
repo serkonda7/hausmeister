@@ -31,6 +31,32 @@ function migratePageNotesColumns(sqlite: Database): void {
 	}
 }
 
+/** Backfill timestamp columns for databases created before they existed. */
+function migrateBookTimestamps(sqlite: Database): void {
+	const cols = new Set(
+		sqlite
+			.query<{ name: string }, []>("SELECT name FROM pragma_table_info('books')")
+			.all()
+			.map((c) => c.name),
+	)
+	if (!cols.has('created_at')) {
+		sqlite.exec('ALTER TABLE books ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0')
+		cols.add('created_at')
+	}
+	if (!cols.has('updated_at')) {
+		sqlite.exec('ALTER TABLE books ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0')
+		cols.add('updated_at')
+	}
+	// Backfill any zeros left by the DEFAULT 0 (or by very old rows).
+	const fallback = Date.now()
+	if (cols.has('created_at') && cols.has('updated_at')) {
+		sqlite.exec('UPDATE books SET created_at = updated_at WHERE created_at = 0 AND updated_at <> 0')
+		sqlite.exec('UPDATE books SET updated_at = created_at WHERE updated_at = 0 AND created_at <> 0')
+		sqlite.prepare('UPDATE books SET created_at = ? WHERE created_at = 0').run(fallback)
+		sqlite.prepare('UPDATE books SET updated_at = ? WHERE updated_at = 0').run(fallback)
+	}
+}
+
 export function initDb(path: string = DB_PATH): BunSQLiteDatabase {
 	mkdirSync(dirname(path), { recursive: true })
 	const sqlite = new Database(path)
@@ -39,6 +65,7 @@ export function initDb(path: string = DB_PATH): BunSQLiteDatabase {
 	db = drizzle(sqlite)
 	createCoreTables(db)
 	createAuxTables(db)
+	migrateBookTimestamps(sqlite)
 	migratePageNotesColumns(sqlite)
 	// Migrate the former JSON language field into the catalog once. The old
 	// column remains for compatibility with existing databases, but is no

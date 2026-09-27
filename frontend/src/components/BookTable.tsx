@@ -7,6 +7,7 @@ import {
 	displayLanguages,
 	formatPageNote,
 	formatPageNotes,
+	formatRecordDate,
 	LIBRARY_DEFAULT_VISIBLE_COLUMNS,
 	LIBRARY_VISIBLE_COLUMNS_KEY,
 	loadLibraryVisibleColumns,
@@ -178,6 +179,28 @@ export function BookTable(props: BookTableProps) {
 							<li>{formatPageNote(n)}</li>
 						))}
 					</ul>
+				</Show>
+			),
+		},
+		{
+			key: 'added',
+			label: 'Date added',
+			sortable: true,
+			sortValue: (b) => b.createdAt,
+			getValue: (b) => (
+				<Show when={formatRecordDate(b.createdAt)} fallback={<span class="muted">—</span>}>
+					{formatRecordDate(b.createdAt)}
+				</Show>
+			),
+		},
+		{
+			key: 'modified',
+			label: 'Date modified',
+			sortable: true,
+			sortValue: (b) => b.updatedAt,
+			getValue: (b) => (
+				<Show when={formatRecordDate(b.updatedAt)} fallback={<span class="muted">—</span>}>
+					{formatRecordDate(b.updatedAt)}
 				</Show>
 			),
 		},
