@@ -22,7 +22,7 @@
 	"catalog": {
 		"drizzle-kit": "~0.31.11",
 		"drizzle-orm": "~0.45.3",
-		"hono": "~4.13.8",
+		"hono": "~4.13.9",
 		"@hono/valibot-validator": "~0.6.1",
 		"better-result": "~3.0.1",
 		"valibot": "~1.5.0"
@@ -31,8 +31,8 @@
 		"@biomejs/biome": "2.5.14",
 		"@playwright/test": "1.63.0",
 		"@types/bun": "1.4.2",
-		"@types/node": "~26.6.2",
-		"turbo": "~2.11.2",
+		"@types/node": "~26.6.3",
+		"turbo": "~2.11.4",
 		"typescript": "~7.0.2"
 	}
 }
