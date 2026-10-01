@@ -1030,6 +1030,10 @@ select {
 	overflow-wrap: anywhere;
 }
 
+.reading-table .data-table tbody td {
+	padding-block: 0.3rem;
+}
+
 .book-table tbody tr:last-child td,
 .data-table tbody tr:last-child td {
 	border-bottom: none;

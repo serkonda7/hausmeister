@@ -20,14 +20,18 @@ export const publishers = sqliteTable('publishers', {
 	createdAt: integer('created_at').notNull(),
 })
 
-export const locations = sqliteTable('locations', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	parentId: text('parent_id').references((): AnySQLiteColumn => locations.id, {
-		onDelete: 'set null',
-	}),
-	createdAt: integer('created_at').notNull(),
-})
+export const locations = sqliteTable(
+	'locations',
+	{
+		id: text('id').primaryKey(),
+		name: text('name').notNull(),
+		parentId: text('parent_id').references((): AnySQLiteColumn => locations.id, {
+			onDelete: 'set null',
+		}),
+		createdAt: integer('created_at').notNull(),
+	},
+	(t) => [index('locations_parent_idx').on(t.parentId)],
+)
 
 export const tags = sqliteTable('tags', {
 	id: text('id').primaryKey(),
@@ -41,24 +45,28 @@ export const languages = sqliteTable('languages', {
 	createdAt: integer('created_at').notNull(),
 })
 
-export const books = sqliteTable('books', {
-	id: text('id').primaryKey(),
-	isbn: text('isbn'),
-	title: text('title').notNull(),
-	subtitle: text('subtitle'),
-	publisherId: text('publisher_id').references(() => publishers.id, { onDelete: 'set null' }),
-	ownerId: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
-	locationId: text('location_id').references(() => locations.id, { onDelete: 'set null' }),
-	printYear: integer('print_year'),
-	languages: text('languages', { mode: 'json' }).$type<string[]>().notNull().default([]),
-	coverUrl: text('cover_url'),
-	pages: integer('pages'),
-	description: text('description'),
-	dedications: text('dedications', { mode: 'json' }).$type<PageNote[]>().notNull().default([]),
-	damages: text('damages', { mode: 'json' }).$type<PageNote[]>().notNull().default([]),
-	createdAt: integer('created_at').notNull(),
-	updatedAt: integer('updated_at').notNull(),
-})
+export const books = sqliteTable(
+	'books',
+	{
+		id: text('id').primaryKey(),
+		isbn: text('isbn'),
+		title: text('title').notNull(),
+		subtitle: text('subtitle'),
+		publisherId: text('publisher_id').references(() => publishers.id, { onDelete: 'set null' }),
+		ownerId: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
+		locationId: text('location_id').references(() => locations.id, { onDelete: 'set null' }),
+		printYear: integer('print_year'),
+		languages: text('languages', { mode: 'json' }).$type<string[]>().notNull().default([]),
+		coverUrl: text('cover_url'),
+		pages: integer('pages'),
+		description: text('description'),
+		dedications: text('dedications', { mode: 'json' }).$type<PageNote[]>().notNull().default([]),
+		damages: text('damages', { mode: 'json' }).$type<PageNote[]>().notNull().default([]),
+		createdAt: integer('created_at').notNull(),
+		updatedAt: integer('updated_at').notNull(),
+	},
+	(t) => [index('books_owner_idx').on(t.ownerId), index('books_location_idx').on(t.locationId)],
+)
 
 export const provenanceEvents = sqliteTable(
 	'provenance_events',

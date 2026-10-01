@@ -22,6 +22,12 @@ bun run test
 bun run build
 ```
 
+## Database migrations
+
+The schema lives in `backend/src/schema.ts`; migrations in `backend/drizzle/` are applied automatically on startup.
+After changing the schema, run `bun run db:generate` and commit the generated migration.
+Databases created before migrations were introduced are rebuilt onto the baseline (`0000_init`) once (see `backend/src/db/legacy.ts`).
+
 ## Ports (hardcoded)
 
 - Frontend: `http://localhost:5174`

@@ -1,98 +1,30 @@
 import { Database } from 'bun:sqlite'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { eq, sql } from 'drizzle-orm'
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
-import { DB_PATH } from '../constants'
-import { bookLanguages, books, languages } from '../schema'
-import { normalizePageNotes } from '../util/page-notes'
-import { createAuxTables, createCoreTables } from './tables'
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
+import { readMigrationFiles } from 'drizzle-orm/migrator'
+import { DB_PATH, MIGRATIONS_DIR } from '../constants'
+import { isLegacyDb, upgradeLegacyDb } from './legacy'
 
 let db: BunSQLiteDatabase | null = null
-
-/** Convert legacy plain-text dedications/damages into JSON page-note arrays. */
-function migratePageNotesColumns(sqlite: Database): void {
-	const cols = sqlite
-		.query<{ name: string }, []>("SELECT name FROM pragma_table_info('books')")
-		.all()
-		.map((c) => c.name)
-	if (!cols.includes('dedications') || !cols.includes('damages')) return
-	const rows = sqlite
-		.query<{ id: string; dedications: string | null; damages: string | null }, []>(
-			'SELECT id, dedications, damages FROM books',
-		)
-		.all()
-	const update = sqlite.prepare('UPDATE books SET dedications = ?, damages = ? WHERE id = ?')
-	for (const row of rows) {
-		const dedications = normalizePageNotes(row.dedications)
-		const damages = normalizePageNotes(row.damages)
-		update.run(JSON.stringify(dedications), JSON.stringify(damages), row.id)
-	}
-}
-
-/** Backfill timestamp columns for databases created before they existed. */
-function migrateBookTimestamps(sqlite: Database): void {
-	const cols = new Set(
-		sqlite
-			.query<{ name: string }, []>("SELECT name FROM pragma_table_info('books')")
-			.all()
-			.map((c) => c.name),
-	)
-	if (!cols.has('created_at')) {
-		sqlite.exec('ALTER TABLE books ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0')
-		cols.add('created_at')
-	}
-	if (!cols.has('updated_at')) {
-		sqlite.exec('ALTER TABLE books ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0')
-		cols.add('updated_at')
-	}
-	// Backfill any zeros left by the DEFAULT 0 (or by very old rows).
-	const fallback = Date.now()
-	if (cols.has('created_at') && cols.has('updated_at')) {
-		sqlite.exec('UPDATE books SET created_at = updated_at WHERE created_at = 0 AND updated_at <> 0')
-		sqlite.exec('UPDATE books SET updated_at = created_at WHERE updated_at = 0 AND created_at <> 0')
-		sqlite.prepare('UPDATE books SET created_at = ? WHERE created_at = 0').run(fallback)
-		sqlite.prepare('UPDATE books SET updated_at = ? WHERE updated_at = 0').run(fallback)
-	}
-}
 
 export function initDb(path: string = DB_PATH): BunSQLiteDatabase {
 	mkdirSync(dirname(path), { recursive: true })
 	const sqlite = new Database(path)
 	sqlite.exec('PRAGMA journal_mode = WAL;')
-	sqlite.exec('PRAGMA foreign_keys = ON;')
 	db = drizzle(sqlite)
-	createCoreTables(db)
-	createAuxTables(db)
-	migrateBookTimestamps(sqlite)
-	migratePageNotesColumns(sqlite)
-	// Migrate the former JSON language field into the catalog once. The old
-	// column remains for compatibility with existing databases, but is no
-	// longer written by the application.
-	const legacyBooks = db.select().from(books).all()
-	for (const book of legacyBooks) {
-		const values = Array.isArray(book.languages) ? book.languages : []
-		for (const raw of values) {
-			const name = String(raw).trim()
-			if (!name) continue
-			let language = db
-				.select()
-				.from(languages)
-				.where(sql`lower(${languages.name}) = lower(${name})`)
-				.get()
-			if (!language) {
-				const id = crypto.randomUUID()
-				db.insert(languages).values({ id, name, createdAt: Date.now() }).run()
-				language = db.select().from(languages).where(eq(languages.id, id)).get()
-			}
-			if (language)
-				db.insert(bookLanguages)
-					.values({ bookId: book.id, languageId: language.id })
-					.onConflictDoNothing()
-					.run()
-		}
+	// Table rebuilds in SQLite migrations require foreign keys to be off, and the
+	// pragma is a no-op inside the migrator's transaction.
+	sqlite.exec('PRAGMA foreign_keys = OFF;')
+	if (isLegacyDb(sqlite)) {
+		const [baseline] = readMigrationFiles({ migrationsFolder: MIGRATIONS_DIR })
+		if (!baseline) throw new Error('Missing baseline migration')
+		upgradeLegacyDb(sqlite, db, baseline)
 	}
+	migrate(db, { migrationsFolder: MIGRATIONS_DIR })
+	sqlite.exec('PRAGMA foreign_keys = ON;')
 	return db
 }
 
