@@ -121,17 +121,20 @@ export const bookLanguages = sqliteTable(
 	],
 )
 
-export const readingState = sqliteTable('reading_state', {
-	bookId: text('book_id')
-		.primaryKey()
-		.references(() => books.id, { onDelete: 'cascade' }),
-	status: text('status').notNull().default('want'),
-	progressPages: integer('progress_pages').notNull().default(0),
-	rating: integer('rating'),
-	notes: text('notes'),
-	startedAt: integer('started_at'),
-	finishedAt: integer('finished_at'),
-})
+/** Per-user "I have read this book" marks (the personal reading list). */
+export const bookReads = sqliteTable(
+	'book_reads',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		bookId: text('book_id')
+			.notNull()
+			.references(() => books.id, { onDelete: 'cascade' }),
+		readAt: integer('read_at').notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.userId, t.bookId] }), index('book_reads_book_idx').on(t.bookId)],
+)
 
 export const loans = sqliteTable(
 	'loans',

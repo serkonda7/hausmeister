@@ -1445,3 +1445,57 @@ select {
 		text-align: left;
 	}
 }
+
+/* Reading list */
+.read-checkbox {
+	width: auto;
+	margin: 0;
+	padding: 0;
+	accent-color: var(--accent);
+	cursor: pointer;
+}
+
+.reading-controls {
+	flex-direction: row;
+	align-items: center;
+	gap: 1rem;
+}
+
+.reading-progress {
+	flex: 1;
+	height: 8px;
+	border-radius: 999px;
+	background: var(--surface-2);
+	overflow: hidden;
+}
+
+.reading-progress-bar {
+	height: 100%;
+	background: var(--accent);
+	transition: width 0.2s ease;
+}
+
+.segmented {
+	margin: 0;
+	min-inline-size: 0;
+	display: inline-flex;
+	gap: 0.25rem;
+	padding: 0.2rem;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: var(--surface);
+}
+
+.segmented button {
+	padding: 0.35rem 0.75rem;
+}
+
+.reading-table .data-table td:first-child,
+.reading-table .data-table th:first-child {
+	width: 1%;
+}
+
+/* No actions column here, so the last (date) column keeps normal alignment. */
+.reading-table .data-table tbody td:last-child {
+	text-align: left;
+}

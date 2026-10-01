@@ -164,6 +164,7 @@ export function userLabel(u: { username: string; displayName: string | null }): 
 
 export function pageFromPath(pathname: string): Page {
 	if (pathname === '/library/add') return 'add-book'
+	if (pathname === '/reading') return 'reading'
 	if (pathname === '/catalog') return 'catalog'
 	if (pathname === '/locations') return 'locations'
 	if (pathname === '/users') return 'users'
@@ -276,6 +277,7 @@ export function compareBooks(
 export const LIBRARY_VISIBLE_COLUMNS_KEY = 'hausmeister.library.visibleColumns'
 
 export const LIBRARY_DEFAULT_VISIBLE_COLUMNS = [
+	'read',
 	'title',
 	'authors',
 	'printYear',

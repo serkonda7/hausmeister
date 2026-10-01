@@ -31,6 +31,7 @@ export const de: Record<TranslationKey, string> = {
 	'nav.catalog': 'Stammdaten',
 	'nav.locations': 'Standorte',
 	'nav.users': 'Benutzer',
+	'nav.reading': 'Leseliste',
 	'nav.breadcrumb': 'Brotkrumennavigation',
 	'search.placeholder': 'Titel, Autor, Tag, Verlag, Standort, Besitzer, Status suchen…',
 	'search.label': 'Bücher durchsuchen',
@@ -73,6 +74,7 @@ export const de: Record<TranslationKey, string> = {
 	'book.damages': 'Schäden',
 	'book.added': 'Hinzugefügt am',
 	'book.modified': 'Geändert am',
+	'book.read': 'Gelesen',
 
 	// Book form
 	'form.searchOrCreate': 'Suchen oder neuen Namen eingeben…',
@@ -149,6 +151,20 @@ export const de: Record<TranslationKey, string> = {
 	'library.columnsReset': 'Zurücksetzen',
 	'library.confirmDelete': 'Dieses Buch löschen?',
 	'library.deleteFailed': 'Buch konnte nicht gelöscht werden.',
+
+	// Leseliste
+	'reading.progress': '({read} / {total} gelesen)',
+	'reading.progressAria': 'Anteil gelesener Bücher',
+	'reading.filterAria': 'Nach Lesestatus filtern',
+	'reading.filter.all': 'Alle',
+	'reading.filter.unread': 'Ungelesen',
+	'reading.filter.read': 'Gelesen',
+	'reading.markAria': '{title} als gelesen markieren',
+	'reading.readAt': 'Gelesen am',
+	'reading.readOn': 'gelesen am {date}',
+	'reading.emptyRead': 'Du hast noch keine Bücher als gelesen markiert.',
+	'reading.emptyUnread': 'Du hast alle Bücher hier gelesen.',
+	'reading.toggleFailed': 'Leseliste konnte nicht aktualisiert werden.',
 
 	// Add / edit book
 	'addBook.title': 'Buch hinzufügen',

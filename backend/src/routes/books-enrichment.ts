@@ -1,9 +1,10 @@
-import { inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { getDb } from '../db'
 import {
 	authors,
 	bookAuthors,
 	bookLanguages,
+	bookReads,
 	type books,
 	bookTags,
 	languages,
@@ -116,6 +117,23 @@ export function languageMap(db: BooksDb, bookIds: string[]) {
 	return map
 }
 
+/** When the viewer marked each book as read (absent = unread). */
+export function readMap(db: BooksDb, userId: string, bookIds: string[]): Map<string, number> {
+	const map = new Map<string, number>()
+	if (bookIds.length === 0) {
+		return map
+	}
+	const rows = db
+		.select()
+		.from(bookReads)
+		.where(and(eq(bookReads.userId, userId), inArray(bookReads.bookId, bookIds)))
+		.all()
+	for (const r of rows) {
+		map.set(r.bookId, r.readAt)
+	}
+	return map
+}
+
 export function ownerMap(
 	db: BooksDb,
 	ownerIds: string[],
@@ -173,6 +191,7 @@ export function toBookJson(
 		string,
 		{ id: string; name: string; parentId: string | null; fullPath: string }
 	>,
+	readsByBook?: Map<string, number>,
 ) {
 	const bookAuthorsList = authorsByBook.get(row.id) ?? []
 	const bookTagsList = tagsByBook?.get(row.id) ?? []
@@ -193,13 +212,18 @@ export function toBookJson(
 		location: row.locationId ? (locationsById?.get(row.locationId) ?? null) : null,
 		provenance,
 		ownership: ownershipOf(provenance as Array<{ kind: string }>),
+		readAt: readsByBook?.get(row.id) ?? null,
 	}
 }
 
 export type EnrichedBook = ReturnType<typeof toBookJson>
 
 /** Load every enrichment map needed to serialize a list of book rows. */
-export function enrichBooks(db: ReturnType<typeof getDb>, rows: Array<typeof books.$inferSelect>) {
+export function enrichBooks(
+	db: ReturnType<typeof getDb>,
+	rows: Array<typeof books.$inferSelect>,
+	viewerId: string,
+) {
 	const bookIds = rows.map((b) => b.id)
 	return {
 		authorsByBook: authorMap(db, bookIds),
@@ -212,11 +236,16 @@ export function enrichBooks(db: ReturnType<typeof getDb>, rows: Array<typeof boo
 		languagesByBook: languageMap(db, bookIds),
 		ownersById: ownersFor(db, rows),
 		locationsById: locationsFor(db, rows),
+		readsByBook: readMap(db, viewerId, bookIds),
 	}
 }
 
 /** Serialize one row with single-id enrichment maps (detail/create/update responses). */
-export function toSingleBookJson(db: ReturnType<typeof getDb>, row: typeof books.$inferSelect) {
+export function toSingleBookJson(
+	db: ReturnType<typeof getDb>,
+	row: typeof books.$inferSelect,
+	viewerId: string,
+) {
 	return toBookJson(
 		row,
 		authorMap(db, [row.id]),
@@ -226,6 +255,7 @@ export function toSingleBookJson(db: ReturnType<typeof getDb>, row: typeof books
 		languageMap(db, [row.id]),
 		ownerMap(db, row.ownerId ? [row.ownerId] : []),
 		locationsFor(db, [row]),
+		readMap(db, viewerId, [row.id]),
 	)
 }
 
@@ -233,8 +263,9 @@ export function toSingleBookJson(db: ReturnType<typeof getDb>, row: typeof books
 export function toBookListJson(
 	db: ReturnType<typeof getDb>,
 	rows: Array<typeof books.$inferSelect>,
+	viewerId: string,
 ): EnrichedBook[] {
-	const enriched = enrichBooks(db, rows)
+	const enriched = enrichBooks(db, rows, viewerId)
 	return rows.map((b) =>
 		toBookJson(
 			b,
@@ -245,6 +276,7 @@ export function toBookListJson(
 			enriched.languagesByBook,
 			enriched.ownersById,
 			enriched.locationsById,
+			enriched.readsByBook,
 		),
 	)
 }

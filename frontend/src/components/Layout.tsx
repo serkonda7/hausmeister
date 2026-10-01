@@ -1,4 +1,5 @@
 import {
+	IconBookmarks,
 	IconDatabase,
 	IconLibrary,
 	IconLogout,
@@ -40,6 +41,14 @@ export function Layout(props: LayoutProps) {
 					>
 						<IconLibrary size={18} />
 						<span>{t('nav.library')}</span>
+					</a>
+					<a
+						href="/reading"
+						class={props.page === 'reading' ? 'active' : ''}
+						onClick={(e) => props.onNavigate('/reading', e)}
+					>
+						<IconBookmarks size={18} />
+						<span>{t('nav.reading')}</span>
 					</a>
 					<a
 						href="/catalog"

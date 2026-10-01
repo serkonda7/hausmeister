@@ -29,6 +29,7 @@ export const en = {
 	'nav.catalog': 'Data catalog',
 	'nav.locations': 'Locations',
 	'nav.users': 'Users',
+	'nav.reading': 'Reading list',
 	'nav.breadcrumb': 'Breadcrumb',
 	'search.placeholder': 'Search title, author, tag, publisher, location, owner, status…',
 	'search.label': 'Search books',
@@ -71,6 +72,7 @@ export const en = {
 	'book.damages': 'Damages',
 	'book.added': 'Date added',
 	'book.modified': 'Date modified',
+	'book.read': 'Read',
 
 	// Book form
 	'form.searchOrCreate': 'Search or type a new name…',
@@ -147,6 +149,20 @@ export const en = {
 	'library.columnsReset': 'Reset',
 	'library.confirmDelete': 'Delete this book?',
 	'library.deleteFailed': 'Could not delete the book.',
+
+	// Reading list
+	'reading.progress': '({read} / {total} read)',
+	'reading.progressAria': 'Share of books read',
+	'reading.filterAria': 'Filter by read state',
+	'reading.filter.all': 'All',
+	'reading.filter.unread': 'Unread',
+	'reading.filter.read': 'Read',
+	'reading.markAria': 'Mark {title} as read',
+	'reading.readAt': 'Read on',
+	'reading.readOn': 'read {date}',
+	'reading.emptyRead': 'You have not marked any books as read yet.',
+	'reading.emptyUnread': 'You have read every book here.',
+	'reading.toggleFailed': 'Could not update the reading list.',
 
 	// Add / edit book
 	'addBook.title': 'Add a book',

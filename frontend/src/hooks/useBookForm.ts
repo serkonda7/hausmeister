@@ -308,9 +308,7 @@ export function useBookForm(deps: BookFormDeps) {
 		setEditError(null)
 		try {
 			await api(`/provenance/${encodeURIComponent(eventId)}`, { method: 'DELETE' })
-			const updated = await api<{ book: Book; reading: unknown }>(
-				`/books/${encodeURIComponent(bookId)}`,
-			)
+			const updated = await api<{ book: Book }>(`/books/${encodeURIComponent(bookId)}`)
 			setEditingBook(updated.book)
 			await deps.refetchBooks()
 		} catch (err) {

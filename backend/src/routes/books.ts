@@ -6,10 +6,10 @@ import { getDb } from '../db'
 import {
 	bookAuthors,
 	bookLanguages,
+	bookReads,
 	books,
 	bookTags,
 	provenanceEvents,
-	readingState,
 	users,
 } from '../schema'
 import { authMiddleware, canEditBook, getAuthUser } from '../util/auth'
@@ -30,8 +30,12 @@ export const bookApp = new Hono()
 	.use('*', authMiddleware)
 	.get('/', (c) => {
 		const db = getDb()
+		const me = getAuthUser(c)
+		if (!me) {
+			return jsonError(c, 'Unauthorized', 401)
+		}
 		const rows = db.select().from(books).all()
-		const enriched = toBookListJson(db, rows)
+		const enriched = toBookListJson(db, rows, me.id)
 		const filtered = filterBooks(enriched, {
 			q: c.req.query('q'),
 			owner: c.req.query('owner'),
@@ -120,12 +124,15 @@ export const bookApp = new Hono()
 		}
 		for (const languageId of languageIds)
 			db.insert(bookLanguages).values({ bookId: id, languageId }).run()
-		db.insert(readingState).values({ bookId: id, status: 'want' }).run()
 		const [row] = db.select().from(books).where(eq(books.id, id)).all()
-		return c.json({ book: toSingleBookJson(db, row) }, 201)
+		return c.json({ book: toSingleBookJson(db, row, me.id) }, 201)
 	})
 	.get('/:id', (c) => {
 		const db = getDb()
+		const me = getAuthUser(c)
+		if (!me) {
+			return jsonError(c, 'Unauthorized', 401)
+		}
 		const [row] = db
 			.select()
 			.from(books)
@@ -134,8 +141,7 @@ export const bookApp = new Hono()
 		if (!row) {
 			return jsonError(c, 'Not found', 404)
 		}
-		const [reading] = db.select().from(readingState).where(eq(readingState.bookId, row.id)).all()
-		return c.json({ book: toSingleBookJson(db, row), reading })
+		return c.json({ book: toSingleBookJson(db, row, me.id) })
 	})
 	.patch('/:id', vValidator('json', UpdateBookSchema), async (c) => {
 		const db = getDb()
@@ -247,7 +253,7 @@ export const bookApp = new Hono()
 			}
 		}
 		const [row] = db.select().from(books).where(eq(books.id, id)).all()
-		return c.json({ book: toSingleBookJson(db, row) })
+		return c.json({ book: toSingleBookJson(db, row, me.id) })
 	})
 	.delete('/:id', (c) => {
 		const db = getDb()
@@ -265,7 +271,7 @@ export const bookApp = new Hono()
 		}
 		db.delete(bookAuthors).where(eq(bookAuthors.bookId, id)).run()
 		db.delete(bookTags).where(eq(bookTags.bookId, id)).run()
-		db.delete(readingState).where(eq(readingState.bookId, id)).run()
+		db.delete(bookReads).where(eq(bookReads.bookId, id)).run()
 		db.delete(provenanceEvents).where(eq(provenanceEvents.bookId, id)).run()
 		db.delete(books).where(eq(books.id, id)).run()
 		return c.json({ ok: true })

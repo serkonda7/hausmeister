@@ -3,7 +3,7 @@ import { and, eq, ne, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { CreateUserSchema, UpdateUserSchema } from 'shared/src/book'
 import { getDb } from '../db'
-import { sessions, users } from '../schema'
+import { bookReads, sessions, users } from '../schema'
 import { authMiddleware, getAuthUser, toPublicUser } from '../util/auth'
 import { jsonError } from '../util/http'
 
@@ -80,6 +80,7 @@ export const userApp = new Hono()
 			}
 		}
 		db.delete(sessions).where(eq(sessions.userId, id)).run()
+		db.delete(bookReads).where(eq(bookReads.userId, id)).run()
 		db.delete(users).where(eq(users.id, id)).run()
 		return c.json({ ok: true })
 	})

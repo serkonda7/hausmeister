@@ -41,7 +41,7 @@ Vite proxies `/api` to the backend. See `backend/src/constants.ts`.
 - `GET /api/books?q=&owner=` (search includes owner username; every book carries `ownerId` + `owner`)
 - `POST /api/books` (owner defaults to the creator; only admins may assign another `ownerId`)
 - `GET/PATCH/DELETE /api/books/:id` (PATCH/DELETE: owner or admin; only admins may change `ownerId`)
-- `PATCH /api/books/:id/reading`
+- `PUT/DELETE /api/books/:id/read` → `{ readAt }` (personal reading list: marks the book read/unread for the logged-in user; any user, any book). Book payloads carry the viewer's `readAt` (null = unread).
 - `GET /api/loans?active=1`
 - `POST /api/books/:id/lend`
 - `POST /api/loans/:id/return`
@@ -50,4 +50,4 @@ Vite proxies `/api` to the backend. See `backend/src/constants.ts`.
 - `GET /api/books/:id/provenance/summary` (`ownership`: `owned` | `disposed` | `unknown`)
 
 All endpoints except `/api/health` and `/api/auth/*` require `Authorization: Bearer <token>`.
-Book-scoped writes (book PATCH/DELETE, provenance, reading, lend/return) additionally require ownership or admin.
+Book-scoped writes (book PATCH/DELETE, provenance, lend/return) additionally require ownership or admin.

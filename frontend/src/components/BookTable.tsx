@@ -26,6 +26,8 @@ export type BookTableProps = {
 	isAdmin: boolean
 	onDelete: (id: string) => void
 	onEdit: (book: Book) => void
+	readPendingIds: ReadonlySet<string>
+	onToggleRead: (book: Book) => void
 }
 
 export function BookTable(props: BookTableProps) {
@@ -47,6 +49,27 @@ export function BookTable(props: BookTableProps) {
 
 	// Rebuilt on locale change so header labels follow the selected language.
 	const columns = createMemo((): DataTableColumn<Book>[] => [
+		{
+			key: 'read',
+			label: t('book.read'),
+			sortable: true,
+			sortValue: (b) => b.readAt ?? 0,
+			getValue: (b) => (
+				<input
+					type="checkbox"
+					class="read-checkbox"
+					checked={b.readAt !== null}
+					disabled={props.readPendingIds.has(b.id)}
+					onChange={() => props.onToggleRead(b)}
+					aria-label={t('reading.markAria', { title: b.title })}
+					title={
+						b.readAt !== null
+							? t('reading.readOn', { date: formatRecordDate(b.readAt) })
+							: undefined
+					}
+				/>
+			),
+		},
 		{
 			key: 'title',
 			label: t('book.title'),

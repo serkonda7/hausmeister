@@ -7,12 +7,14 @@ import { Layout } from './components/Layout'
 import { useAuth } from './hooks/useAuth'
 import { useBookForm } from './hooks/useBookForm'
 import { useCatalogActions } from './hooks/useCatalogActions'
+import { useReadingList } from './hooks/useReadingList'
 import { useUserManagement } from './hooks/useUserManagement'
 import { t } from './i18n'
 import { AddBookPage } from './pages/AddBookPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { LocationsPage } from './pages/LocationsPage'
+import { ReadingListPage } from './pages/ReadingListPage'
 import { EditUserDialog, UsersPage } from './pages/UsersPage'
 import type { Author, Book, Language, Location, ManagedUser, Page, Publisher, Tag } from './types'
 import { pageFromPath } from './utils/books'
@@ -24,7 +26,7 @@ export default function App() {
 
 	const auth = useAuth()
 
-	const [books, { refetch: refetchBooks }] = createResource(
+	const [books, { refetch: refetchBooks, mutate: mutateBooks }] = createResource(
 		() => (auth.authUser() ? `${auth.authUser()?.id}:${debouncedQuery()}` : null),
 		async (): Promise<Book[]> => {
 			if (!auth.authUser()) return []
@@ -111,6 +113,8 @@ export default function App() {
 		setSelectedTagIds: book.setSelectedTagIds,
 		setSelectedLanguageIds: book.setSelectedLanguageIds,
 	})
+
+	const reading = useReadingList({ mutateBooks })
 
 	const users = useUserManagement({
 		authUser: auth.authUser,
@@ -243,7 +247,7 @@ export default function App() {
 		<Layout
 			page={page()}
 			isAdmin={auth.authUser()?.isAdmin ?? false}
-			showSearch={page() === 'library' && !!auth.authUser()}
+			showSearch={(page() === 'library' || page() === 'reading') && !!auth.authUser()}
 			query={query()}
 			onQueryChange={setQuery}
 			onClearQuery={() => setQuery('')}
@@ -292,6 +296,20 @@ export default function App() {
 						isAdmin={auth.authUser()?.isAdmin ?? false}
 						onDeleteBook={(id) => void book.removeBook(id)}
 						onEditBook={book.editBook}
+						readPendingIds={reading.pendingIds()}
+						onToggleRead={(b) => void reading.toggleRead(b)}
+					/>
+				</Show>
+
+				<Show when={page() === 'reading'}>
+					<ReadingListPage
+						debouncedQuery={debouncedQuery()}
+						booksLoading={books.loading}
+						booksError={books.error}
+						books={books() ?? []}
+						pendingIds={reading.pendingIds()}
+						error={reading.readError()}
+						onToggleRead={(b) => void reading.toggleRead(b)}
 					/>
 				</Show>
 

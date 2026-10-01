@@ -81,16 +81,8 @@ export function createCoreTables(db: BunSQLiteDatabase): void {
 
 /** Tables that were added after the initial schema. */
 export function createAuxTables(db: BunSQLiteDatabase): void {
-	db.run(sql`
-		CREATE TABLE IF NOT EXISTS reading_state (
-			book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
-			status TEXT NOT NULL DEFAULT 'want',
-			progress_pages INTEGER NOT NULL DEFAULT 0,
-			rating INTEGER,
-			notes TEXT,
-			started_at INTEGER,
-			finished_at INTEGER
-		)`)
+	// Superseded by the per-user book_reads table; it never held user-entered data.
+	db.run(sql`DROP TABLE IF EXISTS reading_state`)
 	db.run(sql`
 		CREATE TABLE IF NOT EXISTS loans (
 			id TEXT PRIMARY KEY,
@@ -101,6 +93,14 @@ export function createAuxTables(db: BunSQLiteDatabase): void {
 			returned_at INTEGER
 		)`)
 	db.run(sql`CREATE INDEX IF NOT EXISTS loans_book_idx ON loans (book_id)`)
+	db.run(sql`
+		CREATE TABLE IF NOT EXISTS book_reads (
+			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+			read_at INTEGER NOT NULL,
+			PRIMARY KEY (user_id, book_id)
+		)`)
+	db.run(sql`CREATE INDEX IF NOT EXISTS book_reads_book_idx ON book_reads (book_id)`)
 	db.run(sql`
 		CREATE TABLE IF NOT EXISTS users (
 			id TEXT PRIMARY KEY,

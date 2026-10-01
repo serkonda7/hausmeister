@@ -1,8 +1,5 @@
 import * as v from 'valibot'
 
-export const ReadingStatus = v.picklist(['want', 'reading', 'finished', 'abandoned'])
-export type ReadingStatus = v.InferOutput<typeof ReadingStatus>
-
 export const AuthorNameSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(200))
 export const PublisherNameSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(200))
 export const TagNameSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(50))
@@ -89,14 +86,6 @@ export type CreateBook = v.InferOutput<typeof CreateBookSchema>
 
 export const UpdateBookSchema = v.partial(CreateBookSchema)
 export type UpdateBook = v.InferOutput<typeof UpdateBookSchema>
-
-export const UpdateReadingSchema = v.object({
-	status: v.optional(ReadingStatus),
-	progressPages: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
-	rating: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(5))),
-	notes: v.optional(v.pipe(v.string(), v.maxLength(5000))),
-})
-export type UpdateReading = v.InferOutput<typeof UpdateReadingSchema>
 
 export const LendSchema = v.object({
 	borrowerName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(200)),

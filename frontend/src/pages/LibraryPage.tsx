@@ -16,6 +16,8 @@ export type LibraryPageProps = {
 	isAdmin: boolean
 	onDeleteBook: (id: string) => void
 	onEditBook: (book: Book) => void
+	readPendingIds: ReadonlySet<string>
+	onToggleRead: (book: Book) => void
 }
 
 export function LibraryPage(props: LibraryPageProps) {
@@ -94,6 +96,8 @@ export function LibraryPage(props: LibraryPageProps) {
 						isAdmin={props.isAdmin}
 						onDelete={props.onDeleteBook}
 						onEdit={props.onEditBook}
+						readPendingIds={props.readPendingIds}
+						onToggleRead={props.onToggleRead}
 					/>
 				</Show>
 			</Show>

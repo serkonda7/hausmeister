@@ -92,9 +92,11 @@ export type Book = {
 	description: string | null
 	createdAt: number
 	updatedAt: number
+	/** When the logged-in user marked this book as read; null = unread. */
+	readAt: number | null
 }
 
-export type Page = 'library' | 'add-book' | 'catalog' | 'locations' | 'users'
+export type Page = 'library' | 'add-book' | 'reading' | 'catalog' | 'locations' | 'users'
 
 export type BookFormState = {
 	isbn: string
