@@ -56,7 +56,6 @@ export const books = sqliteTable(
 		ownerId: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
 		locationId: text('location_id').references(() => locations.id, { onDelete: 'set null' }),
 		printYear: integer('print_year'),
-		languages: text('languages', { mode: 'json' }).$type<string[]>().notNull().default([]),
 		coverUrl: text('cover_url'),
 		pages: integer('pages'),
 		description: text('description'),

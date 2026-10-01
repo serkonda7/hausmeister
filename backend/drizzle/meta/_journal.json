@@ -8,6 +8,13 @@
 			"when": 1790887798834,
 			"tag": "0000_init",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "6",
+			"when": 1790888546410,
+			"tag": "0001_drop_legacy_book_languages",
+			"breakpoints": true
 		}
 	]
 }

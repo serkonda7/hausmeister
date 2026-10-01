@@ -17,7 +17,6 @@ export const en = {
 	'common.remove': 'Remove {name}',
 	'common.clear': 'Clear',
 	'common.clearInput': 'Clear input',
-	'common.search': 'Search',
 	'common.discardChanges': 'Discard unsaved changes?',
 	'common.requestFailed': 'Request failed: {status}',
 	'common.serverUnreachable': 'Could not reach the server.',
@@ -86,15 +85,11 @@ export const en = {
 	'form.noLocation': '— No location —',
 	'form.underLocation': 'under “{name}”',
 	'form.selectAuthors': 'Select authors',
-	'form.authorsSelected': '{count} authors selected',
 	'form.selectTags': 'Select tags',
-	'form.tagsSelected': '{count} tags selected',
 	'form.selectLanguages': 'Select languages',
-	'form.languagesSelected': '{count} languages selected',
 	'form.titleRequired': 'Title is required.',
 	'form.printYearNumber': 'Print year must be a number.',
 	'form.priceInvalid': 'Provenance price must be a non-negative number.',
-	'form.kindInvalid': 'Invalid provenance kind.',
 
 	// Page notes (dedications / damages)
 	'pageNote.page': 'Page',

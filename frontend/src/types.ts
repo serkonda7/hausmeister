@@ -1,42 +1,21 @@
-import type { AuthUser } from './api'
+import type { Ownership, PageNote, ProvenanceKind, PublicUser } from 'shared/src/book'
 
-export type AppUser = AuthUser
+export type { Ownership, PageNote, ProvenanceKind, PublicUser }
 
-export type ManagedUser = AuthUser
-
-export type Author = {
+/** Catalog entry that only carries a name (author, publisher, tag, language). */
+export type NamedEntry = {
 	id: string
 	name: string
 	bookCount?: number
 }
 
-export type Publisher = {
-	id: string
-	name: string
-	bookCount?: number
-}
-
-export type Tag = {
-	id: string
-	name: string
-	bookCount?: number
-}
-export type Language = Tag
-
-export type Location = {
-	id: string
-	name: string
+export type Location = NamedEntry & {
 	parentId: string | null
-	bookCount?: number
 	childrenCount?: number
 	path?: Array<{ id: string; name: string }>
 	fullPath?: string
 	depth?: number
 }
-
-export type ProvenanceKind = 'buy' | 'sell' | 'other'
-
-export type Ownership = 'owned' | 'disposed' | 'unknown'
 
 export type ProvenanceEvent = {
 	id: string
@@ -48,41 +27,23 @@ export type ProvenanceEvent = {
 	createdAt: number
 }
 
-export type BookOwner = {
-	id: string
-	username: string
-	displayName: string | null
-}
-
-export type BookLocation = {
-	id: string
-	name: string
-	parentId: string | null
-	fullPath: string
-}
-
-export type PageNote = {
-	page: string
-	text: string
-}
-
 export type Book = {
 	id: string
 	isbn: string | null
 	title: string
 	subtitle: string | null
 	authorIds: string[]
-	authors: Author[]
+	authors: NamedEntry[]
 	tagIds: string[]
-	tags: Tag[]
+	tags: NamedEntry[]
 	languageIds: string[]
-	languages: Language[]
+	languages: NamedEntry[]
 	publisherId: string | null
-	publisher: Publisher | null
+	publisher: NamedEntry | null
 	locationId: string | null
-	location: BookLocation | null
+	location: { id: string; name: string; parentId: string | null; fullPath: string } | null
 	ownerId: string | null
-	owner: BookOwner | null
+	owner: Pick<PublicUser, 'id' | 'username' | 'displayName'> | null
 	printYear: number | null
 	provenance: ProvenanceEvent[]
 	ownership: Ownership
@@ -96,8 +57,6 @@ export type Book = {
 	readAt: number | null
 }
 
-export type Page = 'library' | 'add-book' | 'reading' | 'catalog' | 'locations' | 'users'
-
 export type BookFormState = {
 	isbn: string
 	title: string
@@ -105,7 +64,13 @@ export type BookFormState = {
 	printYear: string
 	dedications: PageNote[]
 	damages: PageNote[]
-	languages: string
+	authorIds: string[]
+	tagIds: string[]
+	languageIds: string[]
+	publisherId: string
+	locationId: string
+	ownerId: string
+	/** Optional lifecycle event created together with the save. */
 	provKind: string
 	provDate: string
 	provParty: string

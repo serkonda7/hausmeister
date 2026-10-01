@@ -9,24 +9,42 @@ import {
 	IconX,
 } from '@tabler/icons-solidjs'
 import { For, type JSX, Show } from 'solid-js'
-import { LOCALES, type Locale, locale, setLocale, t } from '../i18n'
-import type { AppUser, Page } from '../types'
+import { LOCALES, type Locale, locale, setLocale, type TranslationKey, t } from '../i18n'
+import { PAGE_PATHS, type Page } from '../routes'
+import type { PublicUser } from '../types'
 import { userDisplayName } from '../utils/books'
+
+type NavItem = {
+	page: Page
+	label: TranslationKey
+	icon: (props: { size: number }) => JSX.Element
+	adminOnly?: boolean
+}
+
+const NAV_ITEMS: NavItem[] = [
+	{ page: 'library', label: 'nav.library', icon: IconLibrary },
+	{ page: 'reading', label: 'nav.reading', icon: IconBookmarks },
+	{ page: 'catalog', label: 'nav.catalog', icon: IconDatabase },
+	{ page: 'locations', label: 'nav.locations', icon: IconMapPin },
+	{ page: 'users', label: 'nav.users', icon: IconUsers, adminOnly: true },
+]
 
 export type LayoutProps = {
 	page: Page
-	isAdmin: boolean
+	user: PublicUser | null
 	showSearch: boolean
 	query: string
 	onQueryChange: (value: string) => void
-	onClearQuery: () => void
-	user: AppUser | null
 	onLogout: () => void
 	onNavigate: (path: string, event: MouseEvent) => void
 	children: JSX.Element
 }
 
 export function Layout(props: LayoutProps) {
+	// The add-book page belongs to the library section.
+	const section = () => (props.page === 'add-book' ? 'library' : props.page)
+	const visibleItems = () => NAV_ITEMS.filter((item) => !item.adminOnly || props.user?.isAdmin)
+
 	return (
 		<div class="page">
 			<aside class="sidebar" aria-label={t('nav.primary')}>
@@ -34,53 +52,23 @@ export function Layout(props: LayoutProps) {
 					<strong>Hausmeister</strong>
 				</div>
 				<nav class="sidebar-nav" aria-label={t('nav.sections')}>
-					<a
-						href="/library"
-						class={props.page === 'library' || props.page === 'add-book' ? 'active' : ''}
-						onClick={(e) => props.onNavigate('/library', e)}
-					>
-						<IconLibrary size={18} />
-						<span>{t('nav.library')}</span>
-					</a>
-					<a
-						href="/reading"
-						class={props.page === 'reading' ? 'active' : ''}
-						onClick={(e) => props.onNavigate('/reading', e)}
-					>
-						<IconBookmarks size={18} />
-						<span>{t('nav.reading')}</span>
-					</a>
-					<a
-						href="/catalog"
-						class={props.page === 'catalog' ? 'active' : ''}
-						onClick={(e) => props.onNavigate('/catalog', e)}
-					>
-						<IconDatabase size={18} />
-						<span>{t('nav.catalog')}</span>
-					</a>
-					<a
-						href="/locations"
-						class={props.page === 'locations' ? 'active' : ''}
-						onClick={(e) => props.onNavigate('/locations', e)}
-					>
-						<IconMapPin size={18} />
-						<span>{t('nav.locations')}</span>
-					</a>
-					<Show when={props.isAdmin}>
-						<a
-							href="/users"
-							class={props.page === 'users' ? 'active' : ''}
-							onClick={(e) => props.onNavigate('/users', e)}
-						>
-							<IconUsers size={18} />
-							<span>{t('nav.users')}</span>
-						</a>
-					</Show>
+					<For each={visibleItems()}>
+						{(item) => (
+							<a
+								href={PAGE_PATHS[item.page]}
+								class={section() === item.page ? 'active' : ''}
+								onClick={(e) => props.onNavigate(PAGE_PATHS[item.page], e)}
+							>
+								<item.icon size={18} />
+								<span>{t(item.label)}</span>
+							</a>
+						)}
+					</For>
 				</nav>
 				<div class="sidebar-footer">
 					<Show when={props.user}>
 						<span class="sidebar-user-name">
-							{props.user ? userDisplayName(props.user) : ''}
+							{props.user && userDisplayName(props.user)}
 							<Show when={props.user?.isAdmin}>
 								<span class="muted"> {t('auth.adminSuffix')}</span>
 							</Show>
@@ -121,7 +109,7 @@ export function Layout(props: LayoutProps) {
 							<button
 								type="button"
 								class="clear"
-								onClick={props.onClearQuery}
+								onClick={() => props.onQueryChange('')}
 								aria-label={t('search.clear')}
 							>
 								<IconX size={15} />

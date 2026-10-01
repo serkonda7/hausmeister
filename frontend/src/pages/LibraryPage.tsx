@@ -1,106 +1,94 @@
 import { IconPlus, IconTag } from '@tabler/icons-solidjs'
-import { Show } from 'solid-js'
-import { BookTable } from '../components/BookTable'
+import { type JSX, Show } from 'solid-js'
+import { BookTable, type BookTableProps } from '../components/BookTable'
+import { ErrorText, LoadError, LoadingRows, SearchSummary } from '../components/common'
 import { t } from '../i18n'
-import type { Book } from '../types'
+import { PAGE_PATHS } from '../routes'
 
-export type LibraryPageProps = {
+export type BookListState = {
 	debouncedQuery: string
-	onNavigate: (path: string, event: MouseEvent) => void
-	actionError: string | null
 	booksLoading: boolean
 	booksError: unknown
-	books: Book[]
-	deletingId: string | null
-	currentUserId: string | null
-	isAdmin: boolean
-	onDeleteBook: (id: string) => void
-	onEditBook: (book: Book) => void
-	readPendingIds: ReadonlySet<string>
-	onToggleRead: (book: Book) => void
 }
 
-export function LibraryPage(props: LibraryPageProps) {
+/** Heading, error and loading states shared by the library and the reading list. */
+export function BookListFrame(
+	props: BookListState & {
+		title: string
+		/** Shown next to the title once the books are loaded. */
+		count: JSX.Element
+		controls?: JSX.Element
+		error: string | null
+		children: JSX.Element
+	},
+) {
+	const loaded = () => !props.booksLoading && !props.booksError
 	return (
 		<>
 			<section class="library-head">
 				<h2>
-					{t('nav.library')}{' '}
-					<Show when={!props.booksLoading && !props.booksError}>
-						<span class="muted">({props.books.length})</span>
+					{props.title}{' '}
+					<Show when={loaded()}>
+						<span class="muted">{props.count}</span>
 					</Show>
 				</h2>
-				<Show when={props.debouncedQuery}>
-					<p class="muted">
-						{t('library.resultsFor')} “<strong>{props.debouncedQuery}</strong>”
-					</p>
-				</Show>
+				<SearchSummary query={props.debouncedQuery} />
 			</section>
-
-			<section class="controls">
-				<div class="controls-row">
-					<a
-						href="/library/add"
-						class="btn primary"
-						onClick={(e) => props.onNavigate('/library/add', e)}
-					>
-						<IconPlus size={16} />
-						{t('library.addBook')}
-					</a>
-				</div>
-			</section>
-
-			<Show when={props.actionError}>
-				<p class="error">{props.actionError}</p>
-			</Show>
-
+			{props.controls}
+			<ErrorText message={props.error} />
 			<Show when={props.booksLoading}>
-				<div class="table-wrap">
-					<div class="skeleton skeleton-row" />
-					<div class="skeleton skeleton-row" />
-					<div class="skeleton skeleton-row" />
-				</div>
+				<LoadingRows />
 			</Show>
-
 			<Show when={!props.booksLoading && props.booksError}>
-				<div class="empty">
-					<p>{t('library.loadError')}</p>
-					<button type="button" class="ghost" onClick={() => window.location.reload()}>
-						{t('library.reload')}
-					</button>
-				</div>
+				<LoadError />
 			</Show>
-
-			<Show when={!props.booksLoading && !props.booksError}>
-				<Show
-					when={props.books.length > 0}
-					fallback={
-						<div class="empty">
-							<IconTag size={28} />
-							<h3>{t('library.emptyTitle')}</h3>
-							<p class="muted">{t('library.emptyHint')}</p>
-							<a
-								href="/library/add"
-								class="btn primary"
-								onClick={(e) => props.onNavigate('/library/add', e)}
-							>
-								<IconPlus size={16} /> {t('library.addBook')}
-							</a>
-						</div>
-					}
-				>
-					<BookTable
-						books={props.books}
-						deletingId={props.deletingId}
-						currentUserId={props.currentUserId}
-						isAdmin={props.isAdmin}
-						onDelete={props.onDeleteBook}
-						onEdit={props.onEditBook}
-						readPendingIds={props.readPendingIds}
-						onToggleRead={props.onToggleRead}
-					/>
-				</Show>
-			</Show>
+			<Show when={loaded()}>{props.children}</Show>
 		</>
+	)
+}
+
+export type LibraryPageProps = BookListState &
+	BookTableProps & {
+		actionError: string | null
+		onNavigate: (path: string, event: MouseEvent) => void
+	}
+
+export function LibraryPage(props: LibraryPageProps) {
+	const addBookLink = (
+		<a
+			href={PAGE_PATHS['add-book']}
+			class="btn primary"
+			onClick={(e) => props.onNavigate(PAGE_PATHS['add-book'], e)}
+		>
+			<IconPlus size={16} /> {t('library.addBook')}
+		</a>
+	)
+
+	return (
+		<BookListFrame
+			{...props}
+			title={t('nav.library')}
+			count={`(${props.books.length})`}
+			error={props.actionError}
+			controls={
+				<section class="controls">
+					<div class="controls-row">{addBookLink}</div>
+				</section>
+			}
+		>
+			<Show
+				when={props.books.length > 0}
+				fallback={
+					<div class="empty">
+						<IconTag size={28} />
+						<h3>{t('library.emptyTitle')}</h3>
+						<p class="muted">{t('library.emptyHint')}</p>
+						{addBookLink}
+					</div>
+				}
+			>
+				<BookTable {...props} />
+			</Show>
+		</BookListFrame>
 	)
 }

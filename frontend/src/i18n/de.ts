@@ -19,7 +19,6 @@ export const de: Record<TranslationKey, string> = {
 	'common.remove': '{name} entfernen',
 	'common.clear': 'Leeren',
 	'common.clearInput': 'Eingabe leeren',
-	'common.search': 'Suchen',
 	'common.discardChanges': 'Ungespeicherte Änderungen verwerfen?',
 	'common.requestFailed': 'Anfrage fehlgeschlagen: {status}',
 	'common.serverUnreachable': 'Server nicht erreichbar.',
@@ -88,15 +87,11 @@ export const de: Record<TranslationKey, string> = {
 	'form.noLocation': '— Kein Standort —',
 	'form.underLocation': 'unter „{name}“',
 	'form.selectAuthors': 'Autoren auswählen',
-	'form.authorsSelected': '{count} Autoren ausgewählt',
 	'form.selectTags': 'Tags auswählen',
-	'form.tagsSelected': '{count} Tags ausgewählt',
 	'form.selectLanguages': 'Sprachen auswählen',
-	'form.languagesSelected': '{count} Sprachen ausgewählt',
 	'form.titleRequired': 'Titel ist erforderlich.',
 	'form.printYearNumber': 'Druckjahr muss eine Zahl sein.',
 	'form.priceInvalid': 'Preis muss eine nicht-negative Zahl sein.',
-	'form.kindInvalid': 'Ungültige Ereignisart.',
 
 	// Page notes (dedications / damages)
 	'pageNote.page': 'Seite',

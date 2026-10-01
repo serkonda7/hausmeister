@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js'
+import { loadStored, store } from '../utils/storage'
 import { de } from './de'
 import { en, type TranslationKey } from './en'
 
@@ -22,28 +23,15 @@ function isLocale(value: unknown): value is Locale {
 	return value === 'de' || value === 'en'
 }
 
-function loadLocale(): Locale {
-	try {
-		const stored = localStorage.getItem(LOCALE_KEY)
-		if (isLocale(stored)) return stored
-	} catch {
-		// Storage unavailable (private mode); fall back to the default.
-	}
-	return DEFAULT_LOCALE
-}
-
-const [locale, setLocaleSignal] = createSignal<Locale>(loadLocale())
+const stored = loadStored(LOCALE_KEY)
+const [locale, setLocaleSignal] = createSignal<Locale>(isLocale(stored) ? stored : DEFAULT_LOCALE)
 
 export { locale }
 
 export function setLocale(next: Locale): void {
 	setLocaleSignal(next)
 	document.documentElement.lang = next
-	try {
-		localStorage.setItem(LOCALE_KEY, next)
-	} catch {
-		// Ignore persistence failures (e.g. private browsing).
-	}
+	store(LOCALE_KEY, next)
 }
 
 /**

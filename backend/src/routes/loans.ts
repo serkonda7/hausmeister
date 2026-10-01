@@ -1,81 +1,55 @@
 import { vValidator } from '@hono/valibot-validator'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { LendSchema } from 'shared/src/book'
 import { getDb } from '../db'
-import { books, loans } from '../schema'
-import { authMiddleware, canEditBook, getAuthUser } from '../util/auth'
-import { jsonError } from '../util/http'
-import { touchBookUpdatedAt } from './books-types'
+import { loans } from '../schema'
+import { type AppEnv, currentUser } from '../util/auth'
+import { requireEditableBook, touchBook } from '../util/books'
+import { fail } from '../util/http'
 
-export const loanApp = new Hono()
-	.use('*', authMiddleware)
-	.get('/', (c) => {
-		const db = getDb()
+export const loanApp = new Hono<AppEnv>()
+	.get('/loans', (c) => {
 		const activeOnly = c.req.query('active') === '1'
-		const rows = db.select().from(loans).all()
-		const filtered = activeOnly ? rows.filter((l) => l.returnedAt === null) : rows
-		return c.json({ loans: filtered })
+		const rows = getDb()
+			.select()
+			.from(loans)
+			.where(activeOnly ? isNull(loans.returnedAt) : undefined)
+			.all()
+		return c.json({ loans: rows })
 	})
-	.post('/books/:id/lend', vValidator('json', LendSchema), async (c) => {
+	.post('/books/:id/lend', vValidator('json', LendSchema), (c) => {
 		const db = getDb()
-		const me = getAuthUser(c)
-		if (!me) {
-			return jsonError(c, 'Unauthorized', 401)
-		}
-		const bookId = c.req.param('id')
-		const [book] = db.select().from(books).where(eq(books.id, bookId)).all()
-		if (!book) {
-			return jsonError(c, 'Not found', 404)
-		}
-		if (!canEditBook(book, me)) {
-			return jsonError(c, 'Forbidden: you can only edit your own books', 403)
-		}
-		const data = c.req.valid('json')
+		const bookId = requireEditableBook(db, c.req.param('id'), currentUser(c)).id
 		const active = db
 			.select()
 			.from(loans)
-			.where(eq(loans.bookId, bookId))
-			.all()
-			.find((l) => l.returnedAt === null)
-		if (active) {
-			return jsonError(c, 'Book is already lent out', 409)
+			.where(and(eq(loans.bookId, bookId), isNull(loans.returnedAt)))
+			.get()
+		if (active) fail(409, 'Book is already lent out')
+		const data = c.req.valid('json')
+		const loan = {
+			id: crypto.randomUUID(),
+			bookId,
+			borrowerName: data.borrowerName,
+			lentAt: Date.now(),
+			dueAt: data.dueAt ? Date.parse(data.dueAt) : null,
+			returnedAt: null,
 		}
-		const id = crypto.randomUUID()
-		const lentAt = Date.now()
-		db.insert(loans)
-			.values({
-				id,
-				bookId,
-				borrowerName: data.borrowerName,
-				lentAt,
-				dueAt: data.dueAt ? Date.parse(data.dueAt) : null,
-				returnedAt: null,
-			})
-			.run()
-		touchBookUpdatedAt(db, bookId, lentAt)
-		const [loan] = db.select().from(loans).where(eq(loans.id, id)).all()
+		db.insert(loans).values(loan).run()
+		touchBook(db, bookId, loan.lentAt)
 		return c.json({ loan }, 201)
 	})
-	.post('/:id/return', (c) => {
+	.post('/loans/:id/return', (c) => {
 		const db = getDb()
-		const me = getAuthUser(c)
-		if (!me) {
-			return jsonError(c, 'Unauthorized', 401)
-		}
-		const [loan] = db
-			.select()
-			.from(loans)
-			.where(eq(loans.id, c.req.param('id')))
-			.all()
-		if (!loan) {
-			return jsonError(c, 'Not found', 404)
-		}
-		const [book] = db.select().from(books).where(eq(books.id, loan.bookId)).all()
-		if (book && !canEditBook(book, me)) {
-			return jsonError(c, 'Forbidden: you can only edit your own books', 403)
-		}
+		const loan =
+			db
+				.select()
+				.from(loans)
+				.where(eq(loans.id, c.req.param('id')))
+				.get() ?? fail(404, 'Not found')
+		requireEditableBook(db, loan.bookId, currentUser(c))
 		db.update(loans).set({ returnedAt: Date.now() }).where(eq(loans.id, loan.id)).run()
-		touchBookUpdatedAt(db, loan.bookId)
+		touchBook(db, loan.bookId)
 		return c.json({ ok: true })
 	})

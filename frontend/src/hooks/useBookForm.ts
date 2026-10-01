@@ -1,381 +1,285 @@
+import { PAGE_NOTE_LIMITS } from 'shared/src/book'
 import { type Accessor, createSignal } from 'solid-js'
-import { api } from '../api'
-import { t } from '../i18n'
-import type { AppUser, Author, Book, BookFormState, Language, PageNote, Tag } from '../types'
-import { asPageNotes, EMPTY_FORM, priceToCents } from '../utils/books'
+import { api, errorMessage } from '../api'
+import { type TranslationKey, t } from '../i18n'
+import type { Book, BookFormState, PageNote, PublicUser } from '../types'
+import { priceToCents } from '../utils/books'
+import type { CatalogKind } from './useCatalog'
 
-export type BookFormDeps = {
-	authUser: Accessor<AppUser | null>
-	refetchBooks: () => unknown
-	refetchLocations: () => unknown
-	getAuthors: () => Author[] | undefined
-	getTags: () => Tag[] | undefined
-	getLanguages: () => Language[] | undefined
+const EMPTY_FORM: BookFormState = {
+	isbn: '',
+	title: '',
+	subtitle: '',
+	printYear: '',
+	dedications: [],
+	damages: [],
+	authorIds: [],
+	tagIds: [],
+	languageIds: [],
+	publisherId: '',
+	locationId: '',
+	ownerId: '',
+	provKind: '',
+	provDate: '',
+	provParty: '',
+	provPrice: '',
 }
 
-/** Book add/edit form state, selections, and save/remove handlers. */
-export function useBookForm(deps: BookFormDeps) {
-	const [form, setForm] = createSignal<BookFormState>({
+/** Which form field holds the selection for each catalog kind. */
+const SELECTION_FIELD = {
+	authors: 'authorIds',
+	tags: 'tagIds',
+	languages: 'languageIds',
+	publishers: 'publisherId',
+	locations: 'locationId',
+} as const satisfies Record<CatalogKind, keyof BookFormState>
+
+export type MultiSelectField = 'authorIds' | 'tagIds' | 'languageIds'
+
+function formFromBook(book: Book): BookFormState {
+	return {
 		...EMPTY_FORM,
-		dedications: [],
-		damages: [],
+		isbn: book.isbn ?? '',
+		title: book.title,
+		subtitle: book.subtitle ?? '',
+		printYear: book.printYear?.toString() ?? '',
+		dedications: book.dedications,
+		damages: book.damages,
+		authorIds: book.authorIds,
+		tagIds: book.tagIds,
+		languageIds: book.languageIds,
+		publisherId: book.publisherId ?? '',
+		locationId: book.locationId ?? '',
+		ownerId: book.ownerId ?? '',
+	}
+}
+
+/** Comparable form of a field value: trimmed text, order-insensitive id lists. */
+function fieldKey(value: BookFormState[keyof BookFormState]): string {
+	if (typeof value === 'string') return value.trim()
+	const isIdList = value.every((v) => typeof v === 'string')
+	return JSON.stringify(isIdList ? [...value].sort() : value)
+}
+
+function validate(f: BookFormState): TranslationKey | null {
+	if (!f.title.trim()) return 'form.titleRequired'
+	if (f.printYear.trim() && Number.isNaN(Number.parseInt(f.printYear, 10))) {
+		return 'form.printYearNumber'
+	}
+	if (f.provPrice.trim() && priceToCents(f.provPrice) === undefined) return 'form.priceInvalid'
+	return null
+}
+
+function cleanNotes(notes: PageNote[]): PageNote[] {
+	return notes
+		.map((n) => ({
+			page: n.page.trim().slice(0, PAGE_NOTE_LIMITS.page),
+			text: n.text.trim().slice(0, PAGE_NOTE_LIMITS.text),
+		}))
+		.filter((n) => n.text !== '')
+}
+
+function bookPayload(f: BookFormState) {
+	const printYear = Number.parseInt(f.printYear, 10)
+	return {
+		isbn: f.isbn.trim() || undefined,
+		title: f.title.trim(),
+		subtitle: f.subtitle.trim() || null,
+		authorIds: f.authorIds,
+		publisherId: f.publisherId || null,
+		locationId: f.locationId || null,
+		printYear: Number.isNaN(printYear) ? undefined : printYear,
+		tagIds: f.tagIds,
+		languageIds: f.languageIds,
+		dedications: cleanNotes(f.dedications),
+		damages: cleanNotes(f.damages),
+	}
+}
+
+/** Create the draft lifecycle event, if the user picked a kind. */
+async function saveDraftEvent(bookId: string, f: BookFormState): Promise<void> {
+	if (!f.provKind) return
+	await api(`/books/${encodeURIComponent(bookId)}/provenance`, {
+		method: 'POST',
+		body: {
+			kind: f.provKind,
+			occurredAt: f.provDate.trim() || undefined,
+			party: f.provParty.trim() || undefined,
+			priceCents: priceToCents(f.provPrice),
+		},
 	})
-	const [selectedAuthorIds, setSelectedAuthorIds] = createSignal<string[]>([])
-	const [selectedPublisherId, setSelectedPublisherId] = createSignal('')
-	const [selectedLocationId, setSelectedLocationId] = createSignal('')
-	const [selectedTagIds, setSelectedTagIds] = createSignal<string[]>([])
-	const [selectedLanguageIds, setSelectedLanguageIds] = createSignal<string[]>([])
+}
+
+export type BookFormDeps = {
+	user: Accessor<PublicUser | null>
+	/** Reload books and everything showing book counts. */
+	refresh: () => Promise<unknown>
+}
+
+/** Book add/edit form state and save/remove handlers. */
+export function useBookForm(deps: BookFormDeps) {
+	const [form, setForm] = createSignal<BookFormState>(EMPTY_FORM)
 	const [saving, setSaving] = createSignal(false)
-	const [formError, setFormError] = createSignal<string | null>(null)
+	const [error, setError] = createSignal<string | null>(null)
 	const [actionError, setActionError] = createSignal<string | null>(null)
 	const [deletingId, setDeletingId] = createSignal<string | null>(null)
 	const [editingBook, setEditingBook] = createSignal<Book | null>(null)
-	const [editSaving, setEditSaving] = createSignal(false)
-	const [editError, setEditError] = createSignal<string | null>(null)
-	// Owner transfer (admin only, in edit dialog).
-	const [selectedOwnerId, setSelectedOwnerId] = createSignal('')
 
-	function setField(key: keyof BookFormState, value: string | PageNote[]): void {
+	function setField<K extends keyof BookFormState>(key: K, value: BookFormState[K]): void {
 		setForm((f) => ({ ...f, [key]: value }))
 	}
 
-	function setPageNotes(key: 'dedications' | 'damages', value: PageNote[]): void {
-		setForm((f) => ({ ...f, [key]: value }))
+	function toggle(field: MultiSelectField, id: string): void {
+		const ids = form()[field]
+		setField(field, ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id])
 	}
 
-	function toggleAuthor(id: string): void {
-		setSelectedAuthorIds((ids) => (ids.includes(id) ? ids.filter((a) => a !== id) : [...ids, id]))
+	function select(kind: CatalogKind, id: string): void {
+		const field = SELECTION_FIELD[kind]
+		if (field === 'publisherId' || field === 'locationId') setField(field, id)
+		else if (!form()[field].includes(id)) toggle(field, id)
 	}
 
-	function toggleTag(id: string): void {
-		setSelectedTagIds((ids) => (ids.includes(id) ? ids.filter((t) => t !== id) : [...ids, id]))
-	}
-	function toggleLanguage(id: string): void {
-		setSelectedLanguageIds((ids) => (ids.includes(id) ? ids.filter((l) => l !== id) : [...ids, id]))
+	function deselect(kind: CatalogKind, id: string): void {
+		const field = SELECTION_FIELD[kind]
+		if (field === 'publisherId' || field === 'locationId') {
+			if (form()[field] === id) setField(field, '')
+		} else if (form()[field].includes(id)) {
+			toggle(field, id)
+		}
 	}
 
 	function resetForm(): void {
-		setForm({ ...EMPTY_FORM, dedications: [], damages: [] })
-		setSelectedAuthorIds([])
-		setSelectedPublisherId('')
-		setSelectedLocationId('')
-		setSelectedTagIds([])
-		setSelectedLanguageIds([])
-		setSelectedOwnerId('')
-	}
-
-	/** Clear only per-copy fields so the user can quickly add another book. */
-	function resetForNextBook(): void {
-		setForm((f) => ({ ...f, title: '', subtitle: '', isbn: '', dedications: [], damages: [] }))
+		setForm(EMPTY_FORM)
+		setError(null)
 	}
 
 	function editBook(book: Book): void {
-		setForm({
-			isbn: book.isbn ?? '',
-			title: book.title,
-			subtitle: book.subtitle ?? '',
-			printYear: book.printYear?.toString() ?? '',
-			dedications: asPageNotes(book.dedications),
-			damages: asPageNotes(book.damages),
-			languages: '',
-			provKind: '',
-			provDate: '',
-			provParty: '',
-			provPrice: '',
-		})
-		setSelectedAuthorIds(book.authorIds ?? [])
-		setSelectedPublisherId(book.publisherId ?? '')
-		setSelectedLocationId(book.locationId ?? '')
-		setSelectedTagIds(book.tagIds ?? [])
-		setSelectedLanguageIds(book.languageIds ?? [])
-		setSelectedOwnerId(book.ownerId ?? '')
-		setEditError(null)
+		setForm(formFromBook(book))
+		setError(null)
 		setEditingBook(book)
 	}
 
 	function closeEditBook(): void {
-		if (editSaving()) return
+		if (saving()) return
 		setEditingBook(null)
-		setEditError(null)
 		resetForm()
 	}
 
 	function isEditDirty(): boolean {
 		const book = editingBook()
 		if (!book) return false
+		const initial = formFromBook(book)
+		const current = form()
+		const fields = Object.keys(initial) as Array<keyof BookFormState>
+		return fields.some((key) => fieldKey(current[key]) !== fieldKey(initial[key]))
+	}
+
+	/** Validate, then run `save`; reports failures as the form error. */
+	async function submit(fallback: TranslationKey, save: (f: BookFormState) => Promise<void>) {
+		setError(null)
 		const f = form()
-		if ((f.isbn ?? '').trim() !== (book.isbn ?? '').trim()) return true
-		if ((f.title ?? '').trim() !== (book.title ?? '').trim()) return true
-		if ((f.subtitle ?? '').trim() !== (book.subtitle ?? '').trim()) return true
-		if ((f.printYear ?? '').trim() !== (book.printYear?.toString() ?? '')) return true
-		if (JSON.stringify(f.dedications ?? []) !== JSON.stringify(asPageNotes(book.dedications)))
-			return true
-		if (JSON.stringify(f.damages ?? []) !== JSON.stringify(asPageNotes(book.damages))) return true
-		if (
-			[...(selectedLanguageIds() ?? [])].sort().join(',') !==
-			[...(book.languageIds ?? [])].sort().join(',')
-		)
-			return true
-		if (
-			[...(selectedAuthorIds() ?? [])].sort().join(',') !==
-			[...(book.authorIds ?? [])].sort().join(',')
-		)
-			return true
-		if (
-			[...(selectedTagIds() ?? [])].sort().join(',') !== [...(book.tagIds ?? [])].sort().join(',')
-		)
-			return true
-		if ((selectedPublisherId() ?? '') !== (book.publisherId ?? '')) return true
-		if ((selectedLocationId() ?? '') !== (book.locationId ?? '')) return true
-		if (deps.authUser()?.isAdmin && (selectedOwnerId() ?? '') !== (book.ownerId ?? '')) return true
-		// Draft lifecycle event that would be created on save.
-		if ([f.provKind, f.provDate, f.provParty, f.provPrice].some((v) => (v ?? '').trim() !== ''))
-			return true
-		return false
-	}
-
-	function requestCloseEditBook(): void {
-		// Only used for backdrop clicks: Cancel / ✕ / Escape close unconditionally.
-		if (editSaving()) return
-		if (isEditDirty() && !window.confirm(t('common.discardChanges'))) return
-		closeEditBook()
-	}
-
-	function cleanNotes(notes: PageNote[] | undefined): PageNote[] | undefined {
-		const cleaned = (notes ?? [])
-			.map((n) => ({
-				page: (n.page ?? '').trim().slice(0, 50),
-				text: (n.text ?? '').trim().slice(0, 2000),
-			}))
-			.filter((n) => n.text !== '')
-		return cleaned.length > 0 ? cleaned : undefined
-	}
-
-	async function saveEditedBook(e: Event): Promise<void> {
-		e.preventDefault()
-		setEditError(null)
-		const book = editingBook()
-		if (!book) return
-		const f = form()
-		if (!f.title.trim()) {
-			setEditError(t('form.titleRequired'))
-			return
-		}
-		const parsedYear = Number.parseInt(f.printYear.trim(), 10)
-		if (f.printYear.trim() && !Number.isFinite(parsedYear)) {
-			setEditError(t('form.printYearNumber'))
-			return
-		}
-		setEditSaving(true)
-		try {
-			const payload: Record<string, unknown> = {
-				isbn: f.isbn.trim() || undefined,
-				title: f.title.trim(),
-				subtitle: f.subtitle.trim() || null,
-				authorIds: selectedAuthorIds(),
-				publisherId: selectedPublisherId() || null,
-				locationId: selectedLocationId() || null,
-				printYear: Number.isFinite(parsedYear) ? parsedYear : undefined,
-				tagIds: selectedTagIds(),
-				dedications: cleanNotes(f.dedications),
-				damages: cleanNotes(f.damages),
-				languageIds: selectedLanguageIds(),
-			}
-			if (deps.authUser()?.isAdmin) {
-				payload.ownerId = selectedOwnerId() || null
-			}
-			await api(`/books/${encodeURIComponent(book.id)}`, {
-				method: 'PATCH',
-				body: JSON.stringify(payload),
-			})
-			// Optional: add a lifecycle event from the edit dialog's inline form.
-			if (f.provKind.trim()) {
-				const cents = priceToCents(f.provPrice)
-				if (f.provPrice.trim() && cents === undefined) {
-					throw new Error(t('form.priceInvalid'))
-				}
-				await api(`/books/${encodeURIComponent(book.id)}/provenance`, {
-					method: 'POST',
-					body: JSON.stringify({
-						kind: f.provKind.trim(),
-						occurredAt: f.provDate.trim() || undefined,
-						party: f.provParty.trim() || undefined,
-						priceCents: cents,
-					}),
-				})
-			}
-			setEditSaving(false)
-			closeEditBook()
-			await Promise.all([deps.refetchBooks(), deps.refetchLocations()])
-		} catch (err) {
-			setEditError(err instanceof Error ? err.message : t('editBook.saveFailed'))
-		} finally {
-			setEditSaving(false)
-		}
-	}
-
-	/**
-	 * Returns true when the book was created (so the caller can close the
-	 * panel and clear the inline-create inputs).
-	 * When `keepForAnother` is true, title, subtitle, isbn, dedications and
-	 * damages are cleared — all other fields and selections are kept.
-	 */
-	async function addBook(e: Event, keepForAnother = false): Promise<boolean> {
-		e.preventDefault()
-		setFormError(null)
-		setActionError(null)
-		const f = form()
-		if (!f.title.trim()) {
-			setFormError(t('form.titleRequired'))
-			return false
-		}
-		const parsedYear = Number.parseInt(f.printYear.trim(), 10)
-		if (f.printYear.trim() && !Number.isFinite(parsedYear)) {
-			setFormError(t('form.printYearNumber'))
+		const invalid = validate(f)
+		if (invalid) {
+			setError(t(invalid))
 			return false
 		}
 		setSaving(true)
 		try {
-			if (f.provKind.trim() && !['buy', 'sell', 'other'].includes(f.provKind.trim())) {
-				throw new Error(t('form.kindInvalid'))
-			}
-			const cents = priceToCents(f.provPrice)
-			if (f.provPrice.trim() && cents === undefined) {
-				throw new Error(t('form.priceInvalid'))
-			}
-			const created = await api<{ book: Book }>('/books', {
-				method: 'POST',
-				body: JSON.stringify({
-					isbn: f.isbn.trim() || undefined,
-					title: f.title.trim(),
-					subtitle: f.subtitle.trim() || undefined,
-					authorIds: selectedAuthorIds(),
-					publisherId: selectedPublisherId() || undefined,
-					locationId: selectedLocationId() || undefined,
-					printYear: Number.isFinite(parsedYear) ? parsedYear : undefined,
-					tagIds: selectedTagIds(),
-					dedications: cleanNotes(f.dedications),
-					damages: cleanNotes(f.damages),
-					languageIds: selectedLanguageIds(),
-				}),
-			})
-			if (f.provKind.trim()) {
-				await api(`/books/${encodeURIComponent(created.book.id)}/provenance`, {
-					method: 'POST',
-					body: JSON.stringify({
-						kind: f.provKind.trim(),
-						occurredAt: f.provDate.trim() || undefined,
-						party: f.provParty.trim() || undefined,
-						priceCents: cents,
-					}),
-				})
-			}
-			if (keepForAnother) {
-				resetForNextBook()
-			} else {
-				resetForm()
-			}
-			await Promise.all([deps.refetchBooks(), deps.refetchLocations()])
+			await save(f)
 			return true
 		} catch (err) {
-			setFormError(err instanceof Error ? err.message : t('addBook.saveFailed'))
+			setError(errorMessage(err, fallback))
 			return false
 		} finally {
 			setSaving(false)
 		}
 	}
 
-	async function removeBook(id: string): Promise<void> {
-		if (!window.confirm(t('library.confirmDelete'))) {
-			return
+	async function saveEditedBook(): Promise<boolean> {
+		const book = editingBook()
+		if (!book) return false
+		const ok = await submit('editBook.saveFailed', async (f) => {
+			const body = deps.user()?.isAdmin
+				? { ...bookPayload(f), ownerId: f.ownerId || null }
+				: bookPayload(f)
+			await api(`/books/${encodeURIComponent(book.id)}`, { method: 'PATCH', body })
+			await saveDraftEvent(book.id, f)
+		})
+		if (ok) {
+			closeEditBook()
+			await deps.refresh()
 		}
+		return ok
+	}
+
+	/**
+	 * Create a book from the form. With `keepForAnother`, only the per-copy
+	 * fields (title, subtitle, ISBN, dedications, damages) are cleared.
+	 */
+	async function addBook(keepForAnother = false): Promise<boolean> {
+		setActionError(null)
+		const ok = await submit('addBook.saveFailed', async (f) => {
+			const created = await api<{ book: Book }>('/books', { method: 'POST', body: bookPayload(f) })
+			await saveDraftEvent(created.book.id, f)
+		})
+		if (!ok) return false
+		if (keepForAnother) {
+			setForm((f) => ({ ...f, title: '', subtitle: '', isbn: '', dedications: [], damages: [] }))
+		} else {
+			resetForm()
+		}
+		await deps.refresh()
+		return true
+	}
+
+	async function removeBook(id: string): Promise<void> {
+		if (!window.confirm(t('library.confirmDelete'))) return
 		setActionError(null)
 		setDeletingId(id)
 		try {
 			await api(`/books/${encodeURIComponent(id)}`, { method: 'DELETE' })
-			await Promise.all([deps.refetchBooks(), deps.refetchLocations()])
+			await deps.refresh()
 		} catch (err) {
-			setActionError(err instanceof Error ? err.message : t('library.deleteFailed'))
+			setActionError(errorMessage(err, 'library.deleteFailed'))
 		} finally {
 			setDeletingId(null)
 		}
 	}
 
 	async function removeProvenanceEvent(bookId: string, eventId: string): Promise<void> {
-		if (!window.confirm(t('editBook.confirmDeleteEvent'))) {
-			return
-		}
-		setEditError(null)
+		if (!window.confirm(t('editBook.confirmDeleteEvent'))) return
+		setError(null)
 		try {
 			await api(`/provenance/${encodeURIComponent(eventId)}`, { method: 'DELETE' })
 			const updated = await api<{ book: Book }>(`/books/${encodeURIComponent(bookId)}`)
 			setEditingBook(updated.book)
-			await deps.refetchBooks()
+			await deps.refresh()
 		} catch (err) {
-			setEditError(err instanceof Error ? err.message : t('editBook.deleteEventFailed'))
+			setError(errorMessage(err, 'editBook.deleteEventFailed'))
 		}
-	}
-
-	const selectedAuthorLabel = (): string => {
-		const selected = (deps.getAuthors() ?? []).filter((author) =>
-			selectedAuthorIds().includes(author.id),
-		)
-		if (selected.length === 0) return t('form.selectAuthors')
-		if (selected.length <= 2) return selected.map((author) => author.name).join(', ')
-		return t('form.authorsSelected', { count: selected.length })
-	}
-
-	const selectedTagLabel = (): string => {
-		const selected = (deps.getTags() ?? []).filter((tag) => selectedTagIds().includes(tag.id))
-		if (selected.length === 0) return t('form.selectTags')
-		if (selected.length <= 2) return selected.map((tag) => tag.name).join(', ')
-		return t('form.tagsSelected', { count: selected.length })
-	}
-	const selectedLanguageLabel = (): string => {
-		const selected = (deps.getLanguages() ?? []).filter((l) => selectedLanguageIds().includes(l.id))
-		if (!selected.length) return t('form.selectLanguages')
-		if (selected.length <= 2) return selected.map((l) => l.name).join(', ')
-		return t('form.languagesSelected', { count: selected.length })
 	}
 
 	return {
 		form,
 		setField,
-		setPageNotes,
-		selectedAuthorIds,
-		setSelectedAuthorIds,
-		selectedPublisherId,
-		setSelectedPublisherId,
-		selectedLocationId,
-		setSelectedLocationId,
-		selectedTagIds,
-		selectedLanguageIds,
-		setSelectedLanguageIds,
-		setSelectedTagIds,
-		selectedOwnerId,
-		setSelectedOwnerId,
+		toggle,
+		select,
+		deselect,
 		saving,
-		formError,
+		error,
 		actionError,
 		deletingId,
 		editingBook,
-		editSaving,
-		editError,
-		toggleAuthor,
-		toggleTag,
-		toggleLanguage,
 		resetForm,
 		editBook,
 		closeEditBook,
-		requestCloseEditBook,
+		isEditDirty,
 		saveEditedBook,
 		addBook,
 		removeBook,
 		removeProvenanceEvent,
-		selectedAuthorLabel,
-		selectedTagLabel,
-		selectedLanguageLabel,
 	}
 }
 
-export type BookFormStore = ReturnType<typeof useBookForm>
+export type BookForm = ReturnType<typeof useBookForm>

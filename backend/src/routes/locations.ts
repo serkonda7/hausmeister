@@ -1,186 +1,147 @@
 import { vValidator } from '@hono/valibot-validator'
-import { eq, sql } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { CreateLocationSchema, UpdateLocationSchema } from 'shared/src/book'
-import { getDb } from '../db'
+import { type Db, getDb } from '../db'
 import { books, locations } from '../schema'
-import { authMiddleware } from '../util/auth'
-import { jsonError } from '../util/http'
-import {
-	buildLocationPath,
-	isDescendant,
-	locationFullPath,
-	locationMaps,
-	siblingNameTaken,
-} from './locations-tree'
-
-export type { LocationRow } from './locations-tree'
-// Re-export tree helpers so existing `from './locations'` imports keep working.
-// New code should import from './locations-tree' directly.
-export {
-	buildLocationPath,
-	isDescendant,
-	locationFullPath,
-	locationMap,
-	locationMaps,
-	locationPathStrings,
-	siblingNameTaken,
-} from './locations-tree'
+import type { AppEnv } from '../util/auth'
+import { fail } from '../util/http'
 
 type LocationRow = typeof locations.$inferSelect
 
-export type LocationJson = LocationRow & {
-	bookCount: number
-	childrenCount: number
+export type LocationPath = LocationRow & {
 	path: Array<{ id: string; name: string }>
 	fullPath: string
 	depth: number
 }
 
-export const locationApp = new Hono()
-	.use('*', authMiddleware)
-	.get('/', (c) => {
-		const db = getDb()
-		const q = c.req.query('q')?.toLowerCase() ?? ''
-		const { byId } = locationMaps(db)
-		const rows = [...byId.values()]
-		const bookCounts = db
-			.select({ locationId: books.locationId, count: sql<number>`count(*)` })
-			.from(books)
-			.groupBy(books.locationId)
-			.all()
-		const bookCountById = new Map(
-			bookCounts
-				.filter((r) => r.locationId !== null)
-				.map((r) => [r.locationId as string, Number(r.count)]),
-		)
-		const childrenCounts = db
-			.select({ parentId: locations.parentId, count: sql<number>`count(*)` })
+/** Every location with its ancestor path (root first). */
+export function locationPaths(db: Db): Map<string, LocationPath> {
+	const byId = new Map(
+		db
+			.select()
 			.from(locations)
-			.groupBy(locations.parentId)
 			.all()
-		const childrenCountById = new Map<string, number>()
-		for (const r of childrenCounts) {
-			if (r.parentId) childrenCountById.set(r.parentId, Number(r.count))
+			.map((r) => [r.id, r]),
+	)
+	const result = new Map<string, LocationPath>()
+	for (const row of byId.values()) {
+		const path: LocationRow[] = []
+		// Walk up; the seen-check guards against corrupt cycles.
+		for (let cur: LocationRow | undefined = row; cur && !path.includes(cur); ) {
+			path.unshift(cur)
+			cur = cur.parentId ? byId.get(cur.parentId) : undefined
 		}
-		const enriched: LocationJson[] = rows.map((r) => {
-			const path = buildLocationPath(byId, r.id)
-			return {
-				...r,
-				bookCount: bookCountById.get(r.id) ?? 0,
-				childrenCount: childrenCountById.get(r.id) ?? 0,
-				path,
-				fullPath: locationFullPath(path),
-				depth: path.length - 1,
-			}
+		result.set(row.id, {
+			...row,
+			path: path.map(({ id, name }) => ({ id, name })),
+			fullPath: path.map((p) => p.name).join(' / '),
+			depth: path.length - 1,
 		})
-		const filtered = enriched
-			.filter((l) => !q || l.name.toLowerCase().includes(q) || l.fullPath.toLowerCase().includes(q))
+	}
+	return result
+}
+
+function listLocations(db: Db) {
+	const bookCounts = db
+		.select({ id: books.locationId, count: count() })
+		.from(books)
+		.groupBy(books.locationId)
+		.all()
+	const bookCountById = new Map(bookCounts.map((r) => [r.id, r.count]))
+	const all = [...locationPaths(db).values()]
+	return all.map((l) => ({
+		...l,
+		bookCount: bookCountById.get(l.id) ?? 0,
+		childrenCount: all.filter((child) => child.parentId === l.id).length,
+	}))
+}
+
+function requireLocation(db: Db, id: string): LocationRow {
+	return db.select().from(locations).where(eq(locations.id, id)).get() ?? fail(404, 'Not found')
+}
+
+function assertNameFreeAmongSiblings(
+	db: Db,
+	name: string,
+	parentId: string | null,
+	ownId?: string,
+): void {
+	const taken = db
+		.select()
+		.from(locations)
+		.all()
+		.some(
+			(r) =>
+				r.id !== ownId && r.parentId === parentId && r.name.toLowerCase() === name.toLowerCase(),
+		)
+	if (taken) fail(409, 'A location with this name already exists here')
+}
+
+function locationJson(db: Db, id: string) {
+	return listLocations(db).find((l) => l.id === id)
+}
+
+export const locationApp = new Hono<AppEnv>()
+	.get('/', (c) => {
+		const q = c.req.query('q')?.toLowerCase() ?? ''
+		const matching = listLocations(getDb())
+			.filter((l) => l.name.toLowerCase().includes(q) || l.fullPath.toLowerCase().includes(q))
 			.sort((a, b) => a.fullPath.localeCompare(b.fullPath))
-		return c.json({ locations: filtered })
+		return c.json({ locations: matching })
 	})
-	.post('/', vValidator('json', CreateLocationSchema), async (c) => {
+	.post('/', vValidator('json', CreateLocationSchema), (c) => {
 		const db = getDb()
-		const data = c.req.valid('json')
-		const name = data.name.trim()
-		let parentId: string | null = null
-		if (data.parentId != null) {
-			const [parent] = db.select().from(locations).where(eq(locations.id, data.parentId)).all()
-			if (!parent) return jsonError(c, 'Unknown parent id', 400)
-			parentId = parent.id
-		}
-		if (siblingNameTaken(db, name, parentId)) {
-			return jsonError(c, 'A location with this name already exists here', 409)
-		}
+		const { name, parentId = null } = c.req.valid('json')
+		if (parentId !== null && !locationPaths(db).has(parentId)) fail(400, 'Unknown parent id')
+		assertNameFreeAmongSiblings(db, name, parentId)
 		const id = crypto.randomUUID()
 		db.insert(locations).values({ id, name, parentId, createdAt: Date.now() }).run()
-		const [row] = db.select().from(locations).where(eq(locations.id, id)).all()
-		const { byId } = locationMaps(db)
-		const path = buildLocationPath(byId, id)
-		return c.json(
-			{
-				location: {
-					...row,
-					bookCount: 0,
-					childrenCount: 0,
-					path,
-					fullPath: locationFullPath(path),
-					depth: path.length - 1,
-				},
-			},
-			201,
-		)
+		return c.json({ location: locationJson(db, id) }, 201)
 	})
-	.patch('/:id', vValidator('json', UpdateLocationSchema), async (c) => {
+	.patch('/:id', vValidator('json', UpdateLocationSchema), (c) => {
 		const db = getDb()
 		const id = c.req.param('id')
 		const data = c.req.valid('json')
-		const [existing] = db.select().from(locations).where(eq(locations.id, id)).all()
-		if (!existing) return jsonError(c, 'Not found', 404)
-		const { byId } = locationMaps(db)
-		let nextName = existing.name
-		let nextParentId = existing.parentId ?? null
-		if (data.name !== undefined) {
-			nextName = data.name.trim()
-		}
-		if (data.parentId !== undefined) {
-			if (data.parentId === null) {
-				nextParentId = null
-			} else {
-				if (data.parentId === id) return jsonError(c, 'A location cannot be its own parent', 400)
-				const [parent] = db.select().from(locations).where(eq(locations.id, data.parentId)).all()
-				if (!parent) return jsonError(c, 'Unknown parent id', 400)
-				if (isDescendant(byId, id, data.parentId)) {
-					return jsonError(c, 'Cannot move a location into its own subtree', 400)
-				}
-				nextParentId = parent.id
+		const existing = requireLocation(db, id)
+		const name = data.name ?? existing.name
+		const parentId = data.parentId === undefined ? existing.parentId : data.parentId
+		if (parentId === id) fail(400, 'A location cannot be its own parent')
+		if (parentId !== null && data.parentId !== undefined) {
+			const parent = locationPaths(db).get(parentId) ?? fail(400, 'Unknown parent id')
+			if (parent.path.some((p) => p.id === id)) {
+				fail(400, 'Cannot move a location into its own subtree')
 			}
 		}
-		if (siblingNameTaken(db, nextName, nextParentId, id)) {
-			return jsonError(c, 'A location with this name already exists here', 409)
-		}
-		db.update(locations)
-			.set({ name: nextName, parentId: nextParentId })
-			.where(eq(locations.id, id))
-			.run()
-		const [row] = db.select().from(locations).where(eq(locations.id, id)).all()
-		const fresh = locationMaps(db)
-		const path = buildLocationPath(fresh.byId, id)
-		return c.json({
-			location: {
-				...row,
-				path,
-				fullPath: locationFullPath(path),
-				depth: path.length - 1,
-			},
-		})
+		assertNameFreeAmongSiblings(db, name, parentId, id)
+		db.update(locations).set({ name, parentId }).where(eq(locations.id, id)).run()
+		return c.json({ location: locationJson(db, id) })
 	})
 	.delete('/:id', (c) => {
 		const db = getDb()
 		const id = c.req.param('id')
-		const [existing] = db.select().from(locations).where(eq(locations.id, id)).all()
+		const existing = db.select().from(locations).where(eq(locations.id, id)).get()
 		if (!existing) return c.json({ ok: true })
-		const newParent = existing.parentId ?? null
 		// Reparent children to the deleted location's parent (or root).
 		// Refuse when that would create duplicate sibling names; the user can rename first.
 		const all = db.select().from(locations).all()
-		const staying = new Set(
+		const taken = new Set(
 			all
-				.filter((r) => (r.parentId ?? null) === (newParent ?? null) && r.id !== id)
+				.filter((r) => r.parentId === existing.parentId && r.id !== id)
 				.map((r) => r.name.toLowerCase()),
 		)
-		const moving = all.filter((r) => r.parentId === id)
-		const seenMoving = new Set<string>()
-		for (const child of moving) {
+		for (const child of all.filter((r) => r.parentId === id)) {
 			const key = child.name.toLowerCase()
-			if (staying.has(key) || seenMoving.has(key)) {
-				return jsonError(c, `Cannot delete: sub-location "${child.name}" already exists here`, 409)
+			if (taken.has(key)) {
+				fail(409, `Cannot delete: sub-location "${child.name}" already exists here`)
 			}
-			seenMoving.add(key)
+			taken.add(key)
 		}
-		db.update(locations).set({ parentId: newParent }).where(eq(locations.parentId, id)).run()
-		// Books in the deleted location become unlocated (same as publisher delete).
-		db.update(books).set({ locationId: null }).where(eq(books.locationId, id)).run()
+		db.update(locations)
+			.set({ parentId: existing.parentId })
+			.where(eq(locations.parentId, id))
+			.run()
+		// Books in the deleted location become unlocated (ON DELETE SET NULL).
 		db.delete(locations).where(eq(locations.id, id)).run()
 		return c.json({ ok: true })
 	})

@@ -1,278 +1,128 @@
 import { vValidator } from '@hono/valibot-validator'
 import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { CreateBookSchema, UpdateBookSchema } from 'shared/src/book'
-import { getDb } from '../db'
+import { CreateBookSchema, type PublicUser, UpdateBookSchema } from 'shared/src/book'
+import type * as v from 'valibot'
+import { type Db, getDb } from '../db'
 import {
+	authors,
 	bookAuthors,
 	bookLanguages,
-	bookReads,
 	books,
 	bookTags,
-	provenanceEvents,
+	languages,
+	locations,
+	publishers,
+	tags,
 	users,
 } from '../schema'
-import { authMiddleware, canEditBook, getAuthUser } from '../util/auth'
-import { jsonError } from '../util/http'
-import { normalizePageNotes } from '../util/page-notes'
-import { toBookListJson, toSingleBookJson } from './books-enrichment'
-import { filterBooks } from './books-search'
-import { now } from './books-types'
-import {
-	ensureAuthorsExist,
-	ensureLanguagesExist,
-	ensureLocationExists,
-	ensurePublisherExists,
-	ensureTagsExist,
-} from './books-validation'
+import { type AppEnv, currentUser } from '../util/auth'
+import { assertCanEditBook, findBook, requireBook, requireEditableBook } from '../util/books'
+import { fail } from '../util/http'
+import { ensureIdsExist } from '../util/query'
+import { filterBooks, serializeBook, serializeBooks } from './books-serialize'
 
-export const bookApp = new Hono()
-	.use('*', authMiddleware)
+type BookInput = v.InferOutput<typeof UpdateBookSchema>
+
+function validateReferences(db: Db, data: BookInput): void {
+	if (data.authorIds) ensureIdsExist(db, authors.id, data.authorIds, 'author')
+	if (data.tagIds) ensureIdsExist(db, tags.id, data.tagIds, 'tag')
+	if (data.languageIds) ensureIdsExist(db, languages.id, data.languageIds, 'language')
+	if (data.publisherId) ensureIdsExist(db, publishers.id, [data.publisherId], 'publisher')
+	if (data.locationId) ensureIdsExist(db, locations.id, [data.locationId], 'location')
+}
+
+/** Only admins may assign an owner other than `current` (the creator for new books). */
+function resolveOwner(
+	db: Db,
+	me: PublicUser,
+	requested: string | null | undefined,
+	current: string | null,
+): string | null {
+	if (requested === undefined || requested === current) return current
+	if (!me.isAdmin) fail(403, 'Only admins can change the owner')
+	if (requested !== null) ensureIdsExist(db, users.id, [requested], 'owner')
+	return requested
+}
+
+/** Replace the link rows of every relation present in `data`. */
+function writeLinks(db: Db, bookId: string, data: BookInput): void {
+	const unique = (ids: string[]) => [...new Set(ids)]
+	if (data.authorIds) {
+		db.delete(bookAuthors).where(eq(bookAuthors.bookId, bookId)).run()
+		for (const authorId of unique(data.authorIds)) {
+			db.insert(bookAuthors).values({ bookId, authorId }).run()
+		}
+	}
+	if (data.tagIds) {
+		db.delete(bookTags).where(eq(bookTags.bookId, bookId)).run()
+		for (const tagId of unique(data.tagIds)) db.insert(bookTags).values({ bookId, tagId }).run()
+	}
+	if (data.languageIds) {
+		db.delete(bookLanguages).where(eq(bookLanguages.bookId, bookId)).run()
+		for (const languageId of unique(data.languageIds)) {
+			db.insert(bookLanguages).values({ bookId, languageId }).run()
+		}
+	}
+}
+
+export const bookApp = new Hono<AppEnv>()
 	.get('/', (c) => {
 		const db = getDb()
-		const me = getAuthUser(c)
-		if (!me) {
-			return jsonError(c, 'Unauthorized', 401)
-		}
-		const rows = db.select().from(books).all()
-		const enriched = toBookListJson(db, rows, me.id)
-		const filtered = filterBooks(enriched, {
+		const all = serializeBooks(db, db.select().from(books).all(), currentUser(c).id)
+		const filtered = filterBooks(all, {
 			q: c.req.query('q'),
 			owner: c.req.query('owner'),
 			location: c.req.query('location'),
 		})
 		return c.json({ books: filtered })
 	})
-	.post('/', vValidator('json', CreateBookSchema), async (c) => {
+	.post('/', vValidator('json', CreateBookSchema), (c) => {
 		const db = getDb()
-		const me = getAuthUser(c)
-		if (!me) {
-			return jsonError(c, 'Unauthorized', 401)
-		}
-		const data = c.req.valid('json')
-		const authorIds = [...new Set(data.authorIds ?? [])]
-		const authorError = ensureAuthorsExist(db, authorIds)
-		if (authorError) {
-			return jsonError(c, authorError, 400)
-		}
-		const tagIds = [...new Set(data.tagIds ?? [])]
-		const tagError = ensureTagsExist(db, tagIds)
-		if (tagError) {
-			return jsonError(c, tagError, 400)
-		}
-		const languageIds = [...new Set(data.languageIds ?? [])]
-		const languageError = ensureLanguagesExist(db, languageIds)
-		if (languageError) return jsonError(c, languageError, 400)
-		if (data.publisherId != null) {
-			const publisherError = ensurePublisherExists(db, data.publisherId)
-			if (publisherError) {
-				return jsonError(c, publisherError, 400)
-			}
-		}
-		let locationId: string | null = null
-		if (data.locationId !== undefined && data.locationId !== null) {
-			const locationError = ensureLocationExists(db, data.locationId)
-			if (locationError) {
-				return jsonError(c, locationError, 400)
-			}
-			locationId = data.locationId
-		}
-		// Owner: new books belong to the creator. Only admins may assign another owner.
-		let ownerId: string | null = me.id
-		if (data.ownerId !== undefined && data.ownerId !== null) {
-			if (!me.isAdmin) {
-				if (data.ownerId !== me.id) {
-					return jsonError(c, 'Only admins can assign another owner', 403)
-				}
-				ownerId = me.id
-			} else {
-				const [owner] = db.select().from(users).where(eq(users.id, data.ownerId)).all()
-				if (!owner) {
-					return jsonError(c, 'Unknown owner id', 400)
-				}
-				ownerId = data.ownerId
-			}
-		} else if (data.ownerId === null && me.isAdmin) {
-			ownerId = null
-		}
+		const me = currentUser(c)
+		const { authorIds, tagIds, languageIds, ownerId, ...fields } = c.req.valid('json')
+		validateReferences(db, { authorIds, tagIds, languageIds, ...fields })
+		const owner = resolveOwner(db, me, ownerId, me.id)
 		const id = crypto.randomUUID()
-		const timestamp = now()
-		db.insert(books)
-			.values({
-				id,
-				isbn: data.isbn ?? null,
-				title: data.title,
-				subtitle: data.subtitle ?? null,
-				publisherId: data.publisherId ?? null,
-				ownerId,
-				locationId,
-				printYear: data.printYear ?? null,
-				coverUrl: data.coverUrl ?? null,
-				pages: data.pages ?? null,
-				description: data.description ?? null,
-				dedications: normalizePageNotes(data.dedications),
-				damages: normalizePageNotes(data.damages),
-				createdAt: timestamp,
-				updatedAt: timestamp,
-			})
-			.run()
-		for (const authorId of authorIds) {
-			db.insert(bookAuthors).values({ bookId: id, authorId }).run()
-		}
-		for (const tagId of tagIds) {
-			db.insert(bookTags).values({ bookId: id, tagId }).run()
-		}
-		for (const languageId of languageIds)
-			db.insert(bookLanguages).values({ bookId: id, languageId }).run()
-		const [row] = db.select().from(books).where(eq(books.id, id)).all()
-		return c.json({ book: toSingleBookJson(db, row, me.id) }, 201)
+		const now = Date.now()
+		db.transaction((tx) => {
+			tx.insert(books)
+				.values({ ...fields, id, ownerId: owner, createdAt: now, updatedAt: now })
+				.run()
+			writeLinks(tx, id, { authorIds, tagIds, languageIds })
+		})
+		return c.json({ book: serializeBook(db, requireBook(db, id), me.id) }, 201)
 	})
 	.get('/:id', (c) => {
 		const db = getDb()
-		const me = getAuthUser(c)
-		if (!me) {
-			return jsonError(c, 'Unauthorized', 401)
-		}
-		const [row] = db
-			.select()
-			.from(books)
-			.where(eq(books.id, c.req.param('id')))
-			.all()
-		if (!row) {
-			return jsonError(c, 'Not found', 404)
-		}
-		return c.json({ book: toSingleBookJson(db, row, me.id) })
+		return c.json({
+			book: serializeBook(db, requireBook(db, c.req.param('id')), currentUser(c).id),
+		})
 	})
-	.patch('/:id', vValidator('json', UpdateBookSchema), async (c) => {
+	.patch('/:id', vValidator('json', UpdateBookSchema), (c) => {
 		const db = getDb()
-		const me = getAuthUser(c)
-		if (!me) {
-			return jsonError(c, 'Unauthorized', 401)
-		}
-		const id = c.req.param('id')
-		const data = c.req.valid('json')
-		const [existing] = db.select().from(books).where(eq(books.id, id)).all()
-		if (!existing) {
-			return jsonError(c, 'Not found', 404)
-		}
-		if (!canEditBook(existing, me)) {
-			return jsonError(c, 'Forbidden: you can only edit your own books', 403)
-		}
-		if (data.authorIds !== undefined) {
-			const authorError = ensureAuthorsExist(db, data.authorIds)
-			if (authorError) {
-				return jsonError(c, authorError, 400)
-			}
-		}
-		if (data.tagIds !== undefined) {
-			const tagError = ensureTagsExist(db, data.tagIds)
-			if (tagError) {
-				return jsonError(c, tagError, 400)
-			}
-		}
-		if (data.languageIds !== undefined) {
-			const languageError = ensureLanguagesExist(db, data.languageIds)
-			if (languageError) return jsonError(c, languageError, 400)
-			db.delete(bookLanguages).where(eq(bookLanguages.bookId, id)).run()
-			for (const languageId of [...new Set(data.languageIds)])
-				db.insert(bookLanguages).values({ bookId: id, languageId }).run()
-		}
-		if (data.publisherId !== undefined && data.publisherId !== null) {
-			const publisherError = ensurePublisherExists(db, data.publisherId)
-			if (publisherError) {
-				return jsonError(c, publisherError, 400)
-			}
-		}
-		if (data.locationId !== undefined && data.locationId !== null) {
-			const locationError = ensureLocationExists(db, data.locationId)
-			if (locationError) {
-				return jsonError(c, locationError, 400)
-			}
-		}
-		// Only admins may transfer ownership.
-		let nextOwnerId = existing.ownerId
-		if (data.ownerId !== undefined) {
-			if (!me.isAdmin) {
-				if (data.ownerId !== existing.ownerId && data.ownerId !== me.id) {
-					return jsonError(c, 'Only admins can change the owner', 403)
-				}
-				nextOwnerId = existing.ownerId
-			} else if (data.ownerId === null) {
-				nextOwnerId = null
-			} else {
-				const [owner] = db.select().from(users).where(eq(users.id, data.ownerId)).all()
-				if (!owner) {
-					return jsonError(c, 'Unknown owner id', 400)
-				}
-				nextOwnerId = data.ownerId
-			}
-		}
-		let nextLocationId = existing.locationId
-		if (data.locationId !== undefined) {
-			nextLocationId = data.locationId
-		}
-		const existingLanguages = (existing.languages as string[] | null) ?? []
-		const nextLanguages = data.languages ?? existingLanguages
-		db.update(books)
-			.set({
-				isbn: data.isbn ?? existing.isbn,
-				title: data.title ?? existing.title,
-				subtitle: data.subtitle === undefined ? existing.subtitle : data.subtitle,
-				publisherId: data.publisherId === undefined ? existing.publisherId : data.publisherId,
-				ownerId: nextOwnerId,
-				locationId: nextLocationId,
-				printYear: data.printYear ?? existing.printYear,
-				languages: nextLanguages,
-				coverUrl: data.coverUrl ?? existing.coverUrl,
-				pages: data.pages ?? existing.pages,
-				description: data.description ?? existing.description,
-				dedications:
-					data.dedications === undefined
-						? normalizePageNotes(existing.dedications)
-						: normalizePageNotes(data.dedications),
-				damages:
-					data.damages === undefined
-						? normalizePageNotes(existing.damages)
-						: normalizePageNotes(data.damages),
-				updatedAt: now(),
-			})
-			.where(eq(books.id, id))
-			.run()
-		if (data.authorIds !== undefined) {
-			const next = [...new Set(data.authorIds)]
-			db.delete(bookAuthors).where(eq(bookAuthors.bookId, id)).run()
-			for (const authorId of next) {
-				db.insert(bookAuthors).values({ bookId: id, authorId }).run()
-			}
-		}
-		if (data.tagIds !== undefined) {
-			const nextTags = [...new Set(data.tagIds)]
-			db.delete(bookTags).where(eq(bookTags.bookId, id)).run()
-			for (const tagId of nextTags) {
-				db.insert(bookTags).values({ bookId: id, tagId }).run()
-			}
-		}
-		const [row] = db.select().from(books).where(eq(books.id, id)).all()
-		return c.json({ book: toSingleBookJson(db, row, me.id) })
+		const me = currentUser(c)
+		const existing = requireEditableBook(db, c.req.param('id'), me)
+		const { authorIds, tagIds, languageIds, ownerId, ...fields } = c.req.valid('json')
+		validateReferences(db, { authorIds, tagIds, languageIds, ...fields })
+		const owner = resolveOwner(db, me, ownerId, existing.ownerId)
+		db.transaction((tx) => {
+			// Drizzle skips undefined values, so omitted fields keep their current value.
+			tx.update(books)
+				.set({ ...fields, ownerId: owner, updatedAt: Date.now() })
+				.where(eq(books.id, existing.id))
+				.run()
+			writeLinks(tx, existing.id, { authorIds, tagIds, languageIds })
+		})
+		return c.json({ book: serializeBook(db, requireBook(db, existing.id), me.id) })
 	})
 	.delete('/:id', (c) => {
 		const db = getDb()
-		const me = getAuthUser(c)
-		if (!me) {
-			return jsonError(c, 'Unauthorized', 401)
+		const existing = findBook(db, c.req.param('id'))
+		if (existing) {
+			assertCanEditBook(existing, currentUser(c), 'delete')
+			// Links, reads, loans and provenance cascade.
+			db.delete(books).where(eq(books.id, existing.id)).run()
 		}
-		const id = c.req.param('id')
-		const [existing] = db.select().from(books).where(eq(books.id, id)).all()
-		if (!existing) {
-			return c.json({ ok: true })
-		}
-		if (!canEditBook(existing, me)) {
-			return jsonError(c, 'Forbidden: you can only delete your own books', 403)
-		}
-		db.delete(bookAuthors).where(eq(bookAuthors.bookId, id)).run()
-		db.delete(bookTags).where(eq(bookTags.bookId, id)).run()
-		db.delete(bookReads).where(eq(bookReads.bookId, id)).run()
-		db.delete(provenanceEvents).where(eq(provenanceEvents.bookId, id)).run()
-		db.delete(books).where(eq(books.id, id)).run()
 		return c.json({ ok: true })
 	})

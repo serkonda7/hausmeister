@@ -1,6 +1,5 @@
 import { createSignal } from 'solid-js'
-import { api } from '../api'
-import { t } from '../i18n'
+import { api, errorMessage } from '../api'
 import type { Book } from '../types'
 
 export type ReadingListDeps = {
@@ -34,14 +33,12 @@ export function useReadingList(deps: ReadingListDeps) {
 		// Optimistic: flip immediately, reconcile with the server's timestamp.
 		setReadAt(book.id, wasRead ? null : Date.now())
 		try {
-			const data = await api<{ readAt: number | null }>(
-				`/books/${encodeURIComponent(book.id)}/read`,
-				{ method: wasRead ? 'DELETE' : 'PUT' },
-			)
+			const url = `/books/${encodeURIComponent(book.id)}/read`
+			const data = await api<{ readAt: number | null }>(url, { method: wasRead ? 'DELETE' : 'PUT' })
 			setReadAt(book.id, data.readAt)
 		} catch (err) {
 			setReadAt(book.id, book.readAt)
-			setReadError(err instanceof Error ? err.message : t('reading.toggleFailed'))
+			setReadError(errorMessage(err, 'reading.toggleFailed'))
 		} finally {
 			setPending(book.id, false)
 		}
@@ -54,4 +51,4 @@ export function useReadingList(deps: ReadingListDeps) {
 	}
 }
 
-export type ReadingListStore = ReturnType<typeof useReadingList>
+export type ReadingList = ReturnType<typeof useReadingList>

@@ -1,27 +1,17 @@
-import { IconEdit, IconLoader2, IconTrash, IconX } from '@tabler/icons-solidjs'
-import { For, Show } from 'solid-js'
-import { ClearableInput } from '../components/ClearableInput'
+import { IconEdit, IconTrash } from '@tabler/icons-solidjs'
+import { createSignal, For, Show } from 'solid-js'
+import { ErrorText, SubmitButton, TextField } from '../components/common'
+import { Dialog } from '../components/Dialog'
+import type { List } from '../hooks/useCatalog'
+import type { UserChanges, UserManagement } from '../hooks/useUserManagement'
 import { t } from '../i18n'
-import type { ManagedUser } from '../types'
+import type { PublicUser } from '../types'
 import { userDisplayName } from '../utils/books'
 
 export type UsersPageProps = {
-	users: ManagedUser[]
-	usersLoading: boolean
-	currentUserId: string | null
-	userError: string | null
-	newUsername: string
-	onNewUsername: (v: string) => void
-	newDisplayName: string
-	onNewDisplayName: (v: string) => void
-	newPassword: string
-	onNewPassword: (v: string) => void
-	newIsAdmin: boolean
-	onNewIsAdmin: (v: boolean) => void
-	userSaving: boolean
-	onCreateUser: (e: Event) => void
-	onRemoveUser: (id: string, username: string) => void
-	onStartEditUser: (u: ManagedUser) => void
+	list: List<PublicUser>
+	currentUserId: string
+	manage: UserManagement
 }
 
 export function UsersPage(props: UsersPageProps) {
@@ -30,118 +20,20 @@ export function UsersPage(props: UsersPageProps) {
 			<section class="library-head">
 				<div>
 					<h2>
-						{t('nav.users')} ({props.users.length})
+						{t('nav.users')} ({props.list.items().length})
 					</h2>
 				</div>
 			</section>
-			<Show when={props.userError}>
-				<p class="error">{props.userError}</p>
-			</Show>
-			<section class="panel catalog-section">
-				<h3>{t('users.create')}</h3>
-				<form onSubmit={props.onCreateUser}>
-					<div class="form-grid user-create-grid">
-						<label for="new-user-username">
-							<span>
-								{t('auth.username')} <em>*</em>
-							</span>
-							<ClearableInput
-								id="new-user-username"
-								value={props.newUsername}
-								onInput={(e) => props.onNewUsername(e.currentTarget.value)}
-								required
-								autocomplete="off"
-							/>
-						</label>
-						<label for="new-user-display-name">
-							<span>{t('auth.displayNameOptional')}</span>
-							<ClearableInput
-								id="new-user-display-name"
-								value={props.newDisplayName}
-								onInput={(e) => props.onNewDisplayName(e.currentTarget.value)}
-								autocomplete="off"
-								placeholder={t('auth.displayNamePlaceholder')}
-							/>
-						</label>
-						<label for="new-user-password">
-							<span>
-								{t('auth.password')} <em>*</em>
-							</span>
-							<ClearableInput
-								id="new-user-password"
-								type="password"
-								value={props.newPassword}
-								onInput={(e) => props.onNewPassword(e.currentTarget.value)}
-								required
-								autocomplete="new-password"
-							/>
-						</label>
-						<label class="check-item span-2">
-							<span class="user-admin-toggle">
-								<input
-									type="checkbox"
-									checked={props.newIsAdmin}
-									onChange={(e) => props.onNewIsAdmin(e.currentTarget.checked)}
-								/>
-								<span>{t('users.adminCheckbox')}</span>
-							</span>
-						</label>
-					</div>
-					<div class="form-actions">
-						<button type="submit" class="primary" disabled={props.userSaving}>
-							{props.userSaving ? t('common.creating') : t('users.create')}
-						</button>
-					</div>
-				</form>
-			</section>
+			<ErrorText message={props.manage.error()} />
+			<CreateUserForm manage={props.manage} />
 			<section class="panel catalog-section">
 				<h3>{t('users.all')}</h3>
 				<Show
-					when={!props.usersLoading && props.users.length > 0}
+					when={!props.list.loading() && props.list.items().length > 0}
 					fallback={<p class="muted small">{t('users.empty')}</p>}
 				>
 					<ul class="manage-list">
-						<For each={props.users}>
-							{(u) => (
-								<li class="manage-row">
-									<span>
-										{userDisplayName(u)}{' '}
-										<Show when={u.displayName}>
-											<span class="muted small">({u.username}) </span>
-										</Show>
-										<Show when={u.isAdmin}>
-											<span class="muted small">{t('users.adminBadge')}</span>
-										</Show>
-										<Show when={u.id === props.currentUserId}>
-											<span class="muted small"> {t('users.youBadge')}</span>
-										</Show>
-									</span>
-									<span class="manage-actions">
-										<button
-											type="button"
-											class="ghost small-btn"
-											onClick={() => props.onStartEditUser(u)}
-											aria-label={t('library.editAria', { title: u.username })}
-										>
-											<IconEdit size={14} /> {t('common.edit')}
-										</button>
-										<Show
-											when={u.id !== props.currentUserId}
-											fallback={<span class="muted small">{t('users.current')}</span>}
-										>
-											<button
-												type="button"
-												class="danger-ghost"
-												onClick={() => props.onRemoveUser(u.id, u.username)}
-												aria-label={t('common.delete', { name: u.username })}
-											>
-												<IconTrash size={14} />
-											</button>
-										</Show>
-									</span>
-								</li>
-							)}
-						</For>
+						<For each={props.list.items()}>{(u) => <UserRow {...props} user={u} />}</For>
 					</ul>
 				</Show>
 			</section>
@@ -149,111 +41,205 @@ export function UsersPage(props: UsersPageProps) {
 	)
 }
 
+function CreateUserForm(props: { manage: UserManagement }) {
+	const [username, setUsername] = createSignal('')
+	const [displayName, setDisplayName] = createSignal('')
+	const [password, setPassword] = createSignal('')
+	const [isAdmin, setIsAdmin] = createSignal(false)
+
+	async function submit(e: Event): Promise<void> {
+		e.preventDefault()
+		const data = {
+			username: username(),
+			displayName: displayName(),
+			password: password(),
+			isAdmin: isAdmin(),
+		}
+		if (!(await props.manage.createUser(data))) return
+		setUsername('')
+		setDisplayName('')
+		setPassword('')
+		setIsAdmin(false)
+	}
+
+	return (
+		<section class="panel catalog-section">
+			<h3>{t('users.create')}</h3>
+			<form onSubmit={submit}>
+				<div class="form-grid user-create-grid">
+					<TextField
+						id="new-user-username"
+						label={t('auth.username')}
+						value={username()}
+						onInput={setUsername}
+						required
+						autocomplete="off"
+					/>
+					<TextField
+						id="new-user-display-name"
+						label={t('auth.displayNameOptional')}
+						value={displayName()}
+						onInput={setDisplayName}
+						autocomplete="off"
+						placeholder={t('auth.displayNamePlaceholder')}
+					/>
+					<TextField
+						id="new-user-password"
+						label={t('auth.password')}
+						type="password"
+						value={password()}
+						onInput={setPassword}
+						required
+						autocomplete="new-password"
+					/>
+					<label class="check-item span-2">
+						<span class="user-admin-toggle">
+							<input
+								type="checkbox"
+								checked={isAdmin()}
+								onChange={(e) => setIsAdmin(e.currentTarget.checked)}
+							/>
+							<span>{t('users.adminCheckbox')}</span>
+						</span>
+					</label>
+				</div>
+				<div class="form-actions">
+					<SubmitButton busy={props.manage.creating()} busyLabel={t('common.creating')}>
+						{t('users.create')}
+					</SubmitButton>
+				</div>
+			</form>
+		</section>
+	)
+}
+
+function UserRow(props: UsersPageProps & { user: PublicUser }) {
+	const u = () => props.user
+	const isMe = () => u().id === props.currentUserId
+	return (
+		<li class="manage-row">
+			<span>
+				{userDisplayName(u())}{' '}
+				<Show when={u().displayName}>
+					<span class="muted small">({u().username}) </span>
+				</Show>
+				<Show when={u().isAdmin}>
+					<span class="muted small">{t('users.adminBadge')}</span>
+				</Show>
+				<Show when={isMe()}>
+					<span class="muted small"> {t('users.youBadge')}</span>
+				</Show>
+			</span>
+			<span class="manage-actions">
+				<button
+					type="button"
+					class="ghost small-btn"
+					onClick={() => props.manage.startEditUser(u())}
+					aria-label={t('library.editAria', { title: u().username })}
+				>
+					<IconEdit size={14} /> {t('common.edit')}
+				</button>
+				<Show when={!isMe()} fallback={<span class="muted small">{t('users.current')}</span>}>
+					<button
+						type="button"
+						class="danger-ghost"
+						onClick={() => void props.manage.removeUser(u().id, u().username)}
+						aria-label={t('common.delete', { name: u().username })}
+					>
+						<IconTrash size={14} />
+					</button>
+				</Show>
+			</span>
+		</li>
+	)
+}
+
 export type EditUserDialogProps = {
-	user: ManagedUser
-	username: string
-	onUsername: (v: string) => void
-	displayName: string
-	onDisplayName: (v: string) => void
-	password: string
-	onPassword: (v: string) => void
-	isAdmin: boolean
-	onIsAdmin: (v: boolean) => void
-	saving: boolean
-	error: string | null
-	onSubmit: (e: Event) => void
-	onClose: () => void
-	onBackdropClose: () => void
+	user: PublicUser
+	manage: UserManagement
 }
 
 export function EditUserDialog(props: EditUserDialogProps) {
+	// The dialog is keyed on the user, so these start from the user being edited.
+	const [username, setUsername] = createSignal(props.user.username)
+	const [displayName, setDisplayName] = createSignal(props.user.displayName ?? '')
+	const [password, setPassword] = createSignal('')
+	const [isAdmin, setIsAdmin] = createSignal(props.user.isAdmin)
+
+	/** Only the fields that differ from the stored user. */
+	function changes(): UserChanges {
+		const result: UserChanges = {}
+		const name = username().trim()
+		const display = displayName().trim() || null
+		if (name !== props.user.username) result.username = name
+		if (display !== props.user.displayName) result.displayName = display
+		if (password()) result.password = password()
+		if (isAdmin() !== props.user.isAdmin) result.isAdmin = isAdmin()
+		return result
+	}
+
+	function submit(e: Event): void {
+		e.preventDefault()
+		void props.manage.saveEditUser(changes())
+	}
+
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: dialog backdrop dismisses on mouse click; keyboard users have Cancel and Escape.
-		<div
-			class="dialog-backdrop"
-			role="presentation"
-			onClick={(e) => {
-				if (e.target === e.currentTarget) props.onBackdropClose()
-			}}
+		<Dialog
+			id="edit-user"
+			title={t('users.editTitle')}
+			closeLabel={t('users.editClose')}
+			onClose={props.manage.closeEditUser}
+			isDirty={() => Object.keys(changes()).length > 0}
 		>
-			<section
-				class="dialog panel"
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="edit-user-title"
-			>
-				<div class="dialog-heading">
-					<div>
-						<h2 id="edit-user-title">{t('users.editTitle')}</h2>
-					</div>
-					<button
-						type="button"
-						class="clear"
-						onClick={props.onClose}
-						aria-label={t('users.editClose')}
-					>
-						<IconX size={18} />
-					</button>
+			<form onSubmit={submit}>
+				<div class="form-grid">
+					<TextField
+						id="edit-user-username"
+						label={t('auth.username')}
+						value={username()}
+						onInput={setUsername}
+						required
+						autocomplete="off"
+					/>
+					<TextField
+						id="edit-user-display-name"
+						label={t('users.displayNameEdit')}
+						value={displayName()}
+						onInput={setDisplayName}
+						autocomplete="off"
+						placeholder={t('auth.displayNamePlaceholder')}
+					/>
+					<TextField
+						id="edit-user-password"
+						label={t('users.newPassword')}
+						type="password"
+						value={password()}
+						onInput={setPassword}
+						autocomplete="new-password"
+					/>
+					<label class="check-item span-2">
+						<input
+							type="checkbox"
+							checked={isAdmin()}
+							onChange={(e) => setIsAdmin(e.currentTarget.checked)}
+						/>
+						<span>{t('users.adminCheckbox')}</span>
+					</label>
 				</div>
-				<form onSubmit={props.onSubmit}>
-					<div class="form-grid">
-						<label for="edit-user-username">
-							<span>
-								{t('auth.username')} <em>*</em>
-							</span>
-							<ClearableInput
-								id="edit-user-username"
-								value={props.username}
-								onInput={(e) => props.onUsername(e.currentTarget.value)}
-								required
-								autocomplete="off"
-							/>
-						</label>
-						<label for="edit-user-display-name">
-							<span>{t('users.displayNameEdit')}</span>
-							<ClearableInput
-								id="edit-user-display-name"
-								value={props.displayName}
-								onInput={(e) => props.onDisplayName(e.currentTarget.value)}
-								autocomplete="off"
-								placeholder={t('auth.displayNamePlaceholder')}
-							/>
-						</label>
-						<label for="edit-user-password">
-							<span>{t('users.newPassword')}</span>
-							<ClearableInput
-								id="edit-user-password"
-								type="password"
-								value={props.password}
-								onInput={(e) => props.onPassword(e.currentTarget.value)}
-								autocomplete="new-password"
-							/>
-						</label>
-						<label class="check-item span-2">
-							<input
-								type="checkbox"
-								checked={props.isAdmin}
-								onChange={(e) => props.onIsAdmin(e.currentTarget.checked)}
-							/>
-							<span>{t('users.adminCheckbox')}</span>
-						</label>
-					</div>
-					<Show when={props.error}>
-						<p class="error">{props.error}</p>
-					</Show>
-					<div class="form-actions">
-						<button type="button" class="ghost" onClick={props.onClose}>
-							{t('common.cancel')}
-						</button>
-						<button type="submit" class="primary" disabled={props.saving}>
-							<Show when={props.saving} fallback={<IconEdit size={16} />}>
-								<IconLoader2 size={16} class="spin" />
-							</Show>
-							{props.saving ? t('common.saving') : t('common.saveChanges')}
-						</button>
-					</div>
-				</form>
-			</section>
-		</div>
+				<ErrorText message={props.manage.editError()} />
+				<div class="form-actions">
+					<button type="button" class="ghost" onClick={props.manage.closeEditUser}>
+						{t('common.cancel')}
+					</button>
+					<SubmitButton
+						busy={props.manage.editSaving()}
+						busyLabel={t('common.saving')}
+						icon={<IconEdit size={16} />}
+					>
+						{t('common.saveChanges')}
+					</SubmitButton>
+				</div>
+			</form>
+		</Dialog>
 	)
 }

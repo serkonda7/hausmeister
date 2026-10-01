@@ -1,79 +1,103 @@
-import { IconEdit, IconPlus, IconTrash } from '@tabler/icons-solidjs'
+import { IconPlus } from '@tabler/icons-solidjs'
 import { createMemo, createSignal, For, Show } from 'solid-js'
 import { ClearableInput } from '../components/ClearableInput'
+import { ErrorText, TextField } from '../components/common'
+import { EntryTable } from '../components/EntryTable'
+import type { CatalogActions, List } from '../hooks/useCatalog'
 import { t } from '../i18n'
 import type { Location } from '../types'
-import { locationDescendantIds, locationOptions } from '../utils/books'
+import { locationLabel, locationSubtreeIds, sortLocations } from '../utils/books'
 
 export type LocationsPageProps = {
-	locations: Location[]
-	locationsLoading: boolean
-	catalogError: string | null
-	manageName: string
-	onManageName: (v: string) => void
-	manageParentId: string
-	onManageParentId: (v: string) => void
-	onAdd: () => void
-	onRename: (id: string, current: string) => void
-	onMove: (id: string, parentId: string) => void
-	onRemove: (id: string, name: string) => void
+	list: List<Location>
+	actions: CatalogActions
+}
+
+function LocationOptions(props: { locations: Location[] }) {
+	return <For each={props.locations}>{(l) => <option value={l.id}>{locationLabel(l)}</option>}</For>
 }
 
 export function LocationsPage(props: LocationsPageProps) {
+	const locations = createMemo(() => sortLocations(props.list.items()))
 	const [search, setSearch] = createSignal('')
-	const matchingLocations = createMemo(() => {
-		const query = search().trim().toLocaleLowerCase()
-		const options = locationOptions(props.locations)
-		return query
-			? options.filter((location) =>
-					(location.fullPath ?? location.name).toLocaleLowerCase().includes(query),
-				)
-			: options
-	})
+	const query = () => search().trim().toLocaleLowerCase()
+	const matching = createMemo(() =>
+		locations().filter((l) => locationLabel(l).toLocaleLowerCase().includes(query())),
+	)
+
+	const [newName, setNewName] = createSignal('')
+	const [newParentId, setNewParentId] = createSignal('')
+	// The chosen parent may have been deleted in the meantime.
+	const parentId = () => (locations().some((l) => l.id === newParentId()) ? newParentId() : '')
+
+	async function add(): Promise<void> {
+		if (await props.actions.create('locations', newName(), parentId())) setNewName('')
+	}
+
+	// Indent by depth, except in filtered results.
+	const indent = (l: Location) =>
+		query() ? undefined : `padding-left: ${0.45 + Math.min(l.depth ?? 0, 6) * 1.25}rem`
+
+	const nameWithPath = (l: Location) => (
+		<>
+			<strong>{l.name}</strong>
+			<Show when={l.fullPath && l.fullPath !== l.name}>
+				<span class="location-full-path">{l.fullPath}</span>
+			</Show>
+		</>
+	)
+
+	const parentSelect = (l: Location) => {
+		const subtree = locationSubtreeIds(locations(), l.id)
+		return (
+			<select
+				value={l.parentId ?? ''}
+				onChange={(e) => void props.actions.moveLocation(l.id, e.currentTarget.value)}
+				aria-label={t('locations.moveAria', { name: l.name })}
+				title={t('locations.moveTitle')}
+			>
+				<option value="">{t('locations.topLevel')}</option>
+				<LocationOptions locations={locations().filter((o) => !subtree.has(o.id))} />
+			</select>
+		)
+	}
 
 	return (
 		<>
 			<section class="library-head">
 				<div>
 					<h2>
-						{t('nav.locations')} ({props.locations.length})
+						{t('nav.locations')} ({locations().length})
 					</h2>
 				</div>
 			</section>
-			<Show when={props.catalogError}>
-				<p class="error">{props.catalogError}</p>
-			</Show>
+			<ErrorText message={props.actions.error()} />
 			<section class="panel catalog-section">
 				<h3>{t('locations.new')}</h3>
 				<div class="form-grid location-create-grid">
-					<label for="new-location-name">
-						<span>
-							{t('common.name')} <em>*</em>
-						</span>
-						<ClearableInput
-							id="new-location-name"
-							placeholder={t('locations.namePlaceholder')}
-							value={props.manageName}
-							onInput={(e) => props.onManageName(e.currentTarget.value)}
-							aria-label={t('locations.nameAria')}
-						/>
-					</label>
+					<TextField
+						id="new-location-name"
+						label={t('common.name')}
+						required
+						placeholder={t('locations.namePlaceholder')}
+						value={newName()}
+						onInput={setNewName}
+						aria-label={t('locations.nameAria')}
+					/>
 					<label>
 						<span>{t('locations.parentOptional')}</span>
 						<select
-							value={props.manageParentId}
-							onChange={(e) => props.onManageParentId(e.currentTarget.value)}
+							value={parentId()}
+							onChange={(e) => setNewParentId(e.currentTarget.value)}
 							aria-label={t('locations.parentAria')}
 						>
 							<option value="">{t('locations.topLevelOption')}</option>
-							<For each={locationOptions(props.locations)}>
-								{(l) => <option value={l.id}>{l.fullPath ?? l.name}</option>}
-							</For>
+							<LocationOptions locations={locations()} />
 						</select>
 					</label>
 				</div>
 				<div class="form-actions">
-					<button type="button" class="primary" onClick={props.onAdd}>
+					<button type="button" class="primary" onClick={() => void add()}>
 						<IconPlus size={15} /> {t('locations.add')}
 					</button>
 				</div>
@@ -81,7 +105,7 @@ export function LocationsPage(props: LocationsPageProps) {
 			<section class="panel catalog-section">
 				<div class="catalog-section-header">
 					<h3>{t('locations.all')}</h3>
-					<span class="catalog-count">{props.locations.length}</span>
+					<span class="catalog-count">{locations().length}</span>
 				</div>
 				<div class="inline-create">
 					<ClearableInput
@@ -92,91 +116,22 @@ export function LocationsPage(props: LocationsPageProps) {
 					/>
 				</div>
 				<Show
-					when={!props.locationsLoading && matchingLocations().length > 0}
+					when={!props.list.loading() && matching().length > 0}
 					fallback={
-						<p class="muted small">
-							{search().trim() ? t('locations.noMatch') : t('locations.empty')}
-						</p>
+						<p class="muted small">{query() ? t('locations.noMatch') : t('locations.empty')}</p>
 					}
 				>
-					<div class="catalog-table-wrap">
-						<table class="catalog-table location-table" aria-label={t('locations.listLabel')}>
-							<thead>
-								<tr>
-									<th scope="col">{t('common.name')}</th>
-									<th scope="col">{t('locations.parent')}</th>
-									<th scope="col">{t('common.books')}</th>
-									<th scope="col">
-										<span class="sr-only">{t('common.actions')}</span>
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								<For each={matchingLocations()}>
-									{(l) => (
-										<tr>
-											<td
-												class="catalog-table-name"
-												title={l.fullPath ?? l.name}
-												style={
-													search().trim()
-														? undefined
-														: `padding-left: ${0.45 + Math.min(l.depth ?? 0, 6) * 1.25}rem`
-												}
-											>
-												<strong>{l.name}</strong>
-												<Show when={l.fullPath && l.fullPath !== l.name}>
-													<span class="location-full-path">{l.fullPath}</span>
-												</Show>
-											</td>
-											<td>
-												<select
-													value={l.parentId ?? ''}
-													onChange={(e) => props.onMove(l.id, e.currentTarget.value)}
-													aria-label={t('locations.moveAria', { name: l.name })}
-													title={t('locations.moveTitle')}
-												>
-													<option value="">{t('locations.topLevel')}</option>
-													<For
-														each={props.locations.filter(
-															(o) =>
-																o.id !== l.id &&
-																!locationDescendantIds(props.locations, l.id).has(o.id),
-														)}
-													>
-														{(o) => <option value={o.id}>{o.fullPath ?? o.name}</option>}
-													</For>
-												</select>
-											</td>
-											<td class="catalog-table-books">{l.bookCount ?? 0}</td>
-											<td>
-												<span class="manage-actions">
-													<button
-														type="button"
-														class="ghost small-btn catalog-rename-btn"
-														onClick={() => props.onRename(l.id, l.name)}
-														aria-label={t('common.rename', { name: l.name })}
-														title={t('common.rename', { name: l.name })}
-													>
-														<IconEdit size={14} />
-													</button>
-													<button
-														type="button"
-														class="danger-ghost"
-														onClick={() => props.onRemove(l.id, l.name)}
-														aria-label={t('common.delete', { name: l.name })}
-														title={t('common.delete', { name: l.name })}
-													>
-														<IconTrash size={14} />
-													</button>
-												</span>
-											</td>
-										</tr>
-									)}
-								</For>
-							</tbody>
-						</table>
-					</div>
+					<EntryTable
+						label={t('locations.listLabel')}
+						class="catalog-table location-table"
+						items={matching()}
+						onRename={(id, current) => void props.actions.rename('locations', id, current)}
+						onRemove={(id, name) => void props.actions.remove('locations', id, name)}
+						nameTitle={locationLabel}
+						nameStyle={indent}
+						renderName={nameWithPath}
+						extraColumn={{ label: t('locations.parent'), render: parentSelect }}
+					/>
 				</Show>
 			</section>
 		</>

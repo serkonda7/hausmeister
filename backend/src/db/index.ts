@@ -1,16 +1,17 @@
 import { Database } from 'bun:sqlite'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
-import { drizzle } from 'drizzle-orm/bun-sqlite'
+import { type BunSQLiteDatabase, drizzle } from 'drizzle-orm/bun-sqlite'
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import { readMigrationFiles } from 'drizzle-orm/migrator'
 import { DB_PATH, MIGRATIONS_DIR } from '../constants'
 import { isLegacyDb, upgradeLegacyDb } from './legacy'
 
-let db: BunSQLiteDatabase | null = null
+export type Db = BunSQLiteDatabase
 
-export function initDb(path: string = DB_PATH): BunSQLiteDatabase {
+let db: Db | null = null
+
+export function initDb(path: string = DB_PATH): Db {
 	mkdirSync(dirname(path), { recursive: true })
 	const sqlite = new Database(path)
 	sqlite.exec('PRAGMA journal_mode = WAL;')
@@ -21,16 +22,14 @@ export function initDb(path: string = DB_PATH): BunSQLiteDatabase {
 	if (isLegacyDb(sqlite)) {
 		const [baseline] = readMigrationFiles({ migrationsFolder: MIGRATIONS_DIR })
 		if (!baseline) throw new Error('Missing baseline migration')
-		upgradeLegacyDb(sqlite, db, baseline)
+		upgradeLegacyDb(sqlite, baseline)
 	}
 	migrate(db, { migrationsFolder: MIGRATIONS_DIR })
+	// Deletes rely on the schema's ON DELETE CASCADE / SET NULL rules.
 	sqlite.exec('PRAGMA foreign_keys = ON;')
 	return db
 }
 
-export function getDb(): BunSQLiteDatabase {
-	if (!db) {
-		return initDb()
-	}
-	return db
+export function getDb(): Db {
+	return db ?? initDb()
 }

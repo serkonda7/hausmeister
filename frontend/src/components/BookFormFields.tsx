@@ -1,190 +1,143 @@
-import { createMemo, For, Index, Show } from 'solid-js'
-import { t } from '../i18n'
-import type { Author, BookFormState, Language, Location, PageNote, Publisher, Tag } from '../types'
-import { locationOptions } from '../utils/books'
+import { PROVENANCE_KINDS } from 'shared/src/book'
+import { Index, Show } from 'solid-js'
+import type { BookForm, MultiSelectField } from '../hooks/useBookForm'
+import type { CatalogKind, CatalogLists } from '../hooks/useCatalog'
+import { type TranslationKey, t } from '../i18n'
+import type { BookFormState, PageNote } from '../types'
+import { locationLabel, provenanceLabel, sortLocations } from '../utils/books'
 import { ClearableInput } from './ClearableInput'
+import { TextField } from './common'
+import { MultiSelect, SingleSelect } from './Dropdown'
 
-export type BookFormFieldValue = string | PageNote[]
-
-export type BookMetadataFieldsProps = {
-	fieldIdPrefix?: string
-	form: BookFormState
-	onField: (key: keyof BookFormState, value: BookFormFieldValue) => void
-	authors: Author[]
-	authorSummary: string
-	selectedAuthorIds: string[]
-	onToggleAuthor: (id: string) => void
-	publishers: Publisher[]
-	selectedPublisherId: string
-	onSelectPublisher: (id: string) => void
-	locations: Location[]
-	selectedLocationId: string
-	onSelectLocation: (id: string) => void
-	tags: Tag[]
-	tagSummary: string
-	selectedTagIds: string[]
-	onToggleTag: (id: string) => void
-	newAuthorName: string
-	onNewAuthorName: (v: string) => void
-	onAddAuthor: () => void
-	newPublisherName: string
-	onNewPublisherName: (v: string) => void
-	onAddPublisher: () => void
-	newLocationName: string
-	onNewLocationName: (v: string) => void
-	onAddLocation: () => void
-	newTagName: string
-	onNewTagName: (v: string) => void
-	onAddTag: () => void
-	languages: Language[]
-	languageSummary: string
-	selectedLanguageIds: string[]
-	onToggleLanguage: (id: string) => void
-	newLanguageName: string
-	onNewLanguageName: (v: string) => void
-	onAddLanguage: () => void
+export type BookFieldsProps = {
+	book: BookForm
+	lists: CatalogLists
+	onCreate: (kind: CatalogKind, name: string) => void
 }
 
-export function BookMetadataFields(props: BookMetadataFieldsProps) {
-	const fieldId = (name: string) => `${props.fieldIdPrefix ?? 'book'}-${name}`
-	const locationParentHint = (): string | undefined => {
-		const id = props.selectedLocationId
-		if (!id) return undefined
-		const parent = locationOptions(props.locations).find((l) => l.id === id)
-		return parent ? t('form.underLocation', { name: parent.fullPath ?? parent.name }) : undefined
+type MultiField = {
+	kind: 'authors' | 'tags' | 'languages'
+	field: MultiSelectField
+	label: TranslationKey
+	empty: TranslationKey
+	search: TranslationKey
+	wide?: boolean
+}
+
+const MULTI_FIELDS = {
+	authors: {
+		kind: 'authors',
+		field: 'authorIds',
+		label: 'book.authors',
+		empty: 'form.selectAuthors',
+		search: 'form.searchAddAuthor',
+		wide: true,
+	},
+	tags: {
+		kind: 'tags',
+		field: 'tagIds',
+		label: 'book.tags',
+		empty: 'form.selectTags',
+		search: 'form.searchAddTag',
+	},
+	languages: {
+		kind: 'languages',
+		field: 'languageIds',
+		label: 'book.languages',
+		empty: 'form.selectLanguages',
+		search: 'form.searchAddLanguage',
+	},
+} satisfies Record<string, MultiField>
+
+function MultiSelectGroup(props: BookFieldsProps & { config: MultiField }) {
+	const selectedIds = () => props.book.form()[props.config.field]
+	return (
+		<div class={props.config.wide ? 'span-2 field-group' : 'field-group'}>
+			<span class="field-label">{t(props.config.label)}</span>
+			<MultiSelect
+				emptySummary={t(props.config.empty)}
+				items={props.lists[props.config.kind].items()}
+				selectedIds={selectedIds()}
+				onToggle={(id) => props.book.toggle(props.config.field, id)}
+				searchLabel={t(props.config.search)}
+				onCreate={(name) => props.onCreate(props.config.kind, name)}
+			/>
+		</div>
+	)
+}
+
+/** Title, authors, publisher, … — the fields shared by the add and edit forms. */
+export function BookMetadataFields(props: BookFieldsProps & { idPrefix: string }) {
+	const form = () => props.book.form()
+	const fieldId = (name: string) => `${props.idPrefix}-${name}`
+	const locations = () => sortLocations(props.lists.locations.items())
+	const locationParentHint = () => {
+		const parent = locations().find((l) => l.id === form().locationId)
+		return parent && t('form.underLocation', { name: locationLabel(parent) })
 	}
+	const textField = (key: 'title' | 'subtitle' | 'isbn', label: TranslationKey) => (
+		<TextField
+			id={fieldId(key)}
+			label={t(label)}
+			value={form()[key]}
+			onInput={(value) => props.book.setField(key, value)}
+			placeholder={key === 'title' ? t('book.titlePlaceholder') : t('common.optional')}
+			required={key === 'title'}
+			labelClass={key === 'isbn' ? undefined : 'span-2'}
+		/>
+	)
 
 	return (
 		<>
-			<label class="span-2" for={fieldId('title')}>
-				<span>
-					{t('book.title')} <em>*</em>
-				</span>
-				<ClearableInput
-					id={fieldId('title')}
-					placeholder={t('book.titlePlaceholder')}
-					value={props.form.title}
-					onInput={(e) => props.onField('title', e.currentTarget.value)}
-					required
-				/>
-			</label>
-			<label class="span-2" for={fieldId('subtitle')}>
-				<span>{t('book.subtitle')}</span>
-				<ClearableInput
-					id={fieldId('subtitle')}
-					placeholder={t('common.optional')}
-					value={props.form.subtitle}
-					onInput={(e) => props.onField('subtitle', e.currentTarget.value)}
-				/>
-			</label>
-			<div class="span-2 field-group">
-				<span class="field-label">{t('book.authors')}</span>
-				<MultiSelect
-					summary={props.authorSummary}
-					items={props.authors}
-					selectedIds={props.selectedAuthorIds}
-					onToggle={props.onToggleAuthor}
-					search={props.newAuthorName}
-					onSearch={props.onNewAuthorName}
-					searchLabel={t('form.searchAddAuthor')}
-					onCreate={props.onAddAuthor}
-				/>
-			</div>
+			{textField('title', 'book.title')}
+			{textField('subtitle', 'book.subtitle')}
+			<MultiSelectGroup {...props} config={MULTI_FIELDS.authors} />
 			<div class="field-group">
 				<span class="field-label">{t('book.publisher')}</span>
-				<CreatableSingleSelect
-					placeholder={t('form.noPublisher')}
-					clearLabel={t('form.noPublisher')}
-					options={props.publishers.map((pub) => ({ id: pub.id, label: pub.name }))}
-					value={props.selectedPublisherId}
-					onSelect={props.onSelectPublisher}
-					search={props.newPublisherName}
-					onSearch={props.onNewPublisherName}
+				<SingleSelect
+					noneLabel={t('form.noPublisher')}
+					options={props.lists.publishers.items().map((p) => ({ id: p.id, label: p.name }))}
+					value={form().publisherId}
+					onSelect={(id) => props.book.setField('publisherId', id)}
 					searchLabel={t('form.searchAddPublisher')}
-					onCreate={props.onAddPublisher}
+					onCreate={(name) => props.onCreate('publishers', name)}
 				/>
 			</div>
-			<label for={fieldId('print-year')}>
-				<span>{t('book.printYear')}</span>
-				<ClearableInput
-					id={fieldId('print-year')}
-					type="number"
-					step="1"
-					placeholder="1969"
-					value={props.form.printYear}
-					onInput={(e) => props.onField('printYear', e.currentTarget.value)}
-				/>
-			</label>
-			<label for={fieldId('isbn')}>
-				<span>{t('book.isbn')}</span>
-				<ClearableInput
-					id={fieldId('isbn')}
-					placeholder={t('common.optional')}
-					value={props.form.isbn}
-					onInput={(e) => props.onField('isbn', e.currentTarget.value)}
-				/>
-			</label>
-			<div class="field-group">
-				<span class="field-label">{t('book.tags')}</span>
-				<MultiSelect
-					summary={props.tagSummary}
-					items={props.tags}
-					selectedIds={props.selectedTagIds}
-					onToggle={props.onToggleTag}
-					search={props.newTagName}
-					onSearch={props.onNewTagName}
-					searchLabel={t('form.searchAddTag')}
-					onCreate={props.onAddTag}
-				/>
-			</div>
-			<div class="field-group">
-				<span class="field-label">{t('book.languages')}</span>
-				<MultiSelect
-					summary={props.languageSummary}
-					items={props.languages}
-					selectedIds={props.selectedLanguageIds}
-					onToggle={props.onToggleLanguage}
-					search={props.newLanguageName}
-					onSearch={props.onNewLanguageName}
-					searchLabel={t('form.searchAddLanguage')}
-					onCreate={props.onAddLanguage}
-				/>
-			</div>
+			<TextField
+				id={fieldId('print-year')}
+				label={t('book.printYear')}
+				type="number"
+				step="1"
+				placeholder="1969"
+				value={form().printYear}
+				onInput={(value) => props.book.setField('printYear', value)}
+			/>
+			{textField('isbn', 'book.isbn')}
+			<MultiSelectGroup {...props} config={MULTI_FIELDS.tags} />
+			<MultiSelectGroup {...props} config={MULTI_FIELDS.languages} />
 			<PageNoteEditor
+				kind="dedication"
 				title={t('book.dedications')}
-				notes={props.form.dedications}
-				onChange={(notes) => props.onField('dedications', notes)}
-				pagePlaceholder={t('pageNote.page')}
-				textPlaceholder={t('pageNote.dedicationText')}
-				addLabel={t('pageNote.addDedication')}
-				kindLabel={t('pageNote.dedication')}
-				fieldIdPrefix={`${fieldId('dedications')}`}
+				notes={form().dedications}
+				onChange={(notes) => props.book.setField('dedications', notes)}
+				idPrefix={fieldId('dedications')}
 			/>
 			<PageNoteEditor
+				kind="damage"
 				title={t('book.damages')}
-				notes={props.form.damages}
-				onChange={(notes) => props.onField('damages', notes)}
-				pagePlaceholder={t('pageNote.page')}
-				textPlaceholder={t('pageNote.damageText')}
-				addLabel={t('pageNote.addDamage')}
-				kindLabel={t('pageNote.damage')}
-				fieldIdPrefix={`${fieldId('damages')}`}
+				notes={form().damages}
+				onChange={(notes) => props.book.setField('damages', notes)}
+				idPrefix={fieldId('damages')}
 			/>
 			<div class="field-group">
 				<span class="field-label">{t('book.location')}</span>
-				<CreatableSingleSelect
-					placeholder={t('form.noLocation')}
-					clearLabel={t('form.noLocation')}
-					options={locationOptions(props.locations).map((l) => ({
-						id: l.id,
-						label: l.fullPath ?? l.name,
-					}))}
-					value={props.selectedLocationId}
-					onSelect={props.onSelectLocation}
-					search={props.newLocationName}
-					onSearch={props.onNewLocationName}
+				<SingleSelect
+					noneLabel={t('form.noLocation')}
+					options={locations().map((l) => ({ id: l.id, label: locationLabel(l) }))}
+					value={form().locationId}
+					onSelect={(id) => props.book.setField('locationId', id)}
 					searchLabel={t('form.searchAddLocation')}
-					onCreate={props.onAddLocation}
+					onCreate={(name) => props.onCreate('locations', name)}
 					createHint={locationParentHint()}
 				/>
 			</div>
@@ -193,105 +146,117 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 }
 
 export type ProvenanceDraftFieldsProps = {
-	form: BookFormState
-	onField: (key: keyof BookFormState, value: BookFormFieldValue) => void
+	book: BookForm
 	gridClass: 'add-book-acquisition-grid' | 'form-grid-4'
 	eventAriaLabel: string
 	includeSell: boolean
 	priceFirst?: boolean
 }
 
+/** Inputs for an optional lifecycle event saved together with the book. */
 export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
-	const eventField = () => (
-		<label for={`provenance-kind-${props.gridClass}`}>
-			<span>{t('prov.event')}</span>
-			<select
-				id={`provenance-kind-${props.gridClass}`}
-				value={props.form.provKind}
-				onChange={(e) => props.onField('provKind', e.currentTarget.value)}
-				aria-label={props.eventAriaLabel}
-			>
-				<option value="">{t('prov.none')}</option>
-				<option value="buy">{t('prov.buyOption')}</option>
-				<Show when={props.includeSell}>
-					<option value="sell">{t('prov.sellOption')}</option>
-				</Show>
-				<option value="other">{t('prov.other')}</option>
-			</select>
-		</label>
+	const form = () => props.book.form()
+	const id = (name: string) => `provenance-${name}-${props.gridClass}`
+	const kinds = () => PROVENANCE_KINDS.filter((kind) => props.includeSell || kind !== 'sell')
+	const kindLabel = (kind: string) =>
+		kind === 'other'
+			? provenanceLabel(kind)
+			: t(kind === 'buy' ? 'prov.buyOption' : 'prov.sellOption')
+	const draftField = (
+		key: keyof BookFormState & `prov${string}`,
+		name: string,
+		label: TranslationKey,
+		extra: { type?: string; min?: string; step?: string; placeholder?: string } = {},
+	) => (
+		<TextField
+			{...extra}
+			id={id(name)}
+			label={t(label)}
+			value={form()[key]}
+			onInput={(value) => props.book.setField(key, value)}
+		/>
 	)
-	const priceField = () => (
-		<label for={`provenance-price-${props.gridClass}`}>
-			<span>{t('prov.price')}</span>
-			<ClearableInput
-				id={`provenance-price-${props.gridClass}`}
-				type="number"
-				min="0"
-				step="0.01"
-				placeholder={t('prov.pricePlaceholder')}
-				value={props.form.provPrice}
-				onInput={(e) => props.onField('provPrice', e.currentTarget.value)}
-			/>
-		</label>
-	)
-	const dateField = () => (
-		<label for={`provenance-date-${props.gridClass}`}>
-			<span>{t('prov.date')}</span>
-			<ClearableInput
-				id={`provenance-date-${props.gridClass}`}
-				type="date"
-				value={props.form.provDate}
-				onInput={(e) => props.onField('provDate', e.currentTarget.value)}
-			/>
-		</label>
-	)
-	const partyField = () => (
-		<label for={`provenance-party-${props.gridClass}`}>
-			<span>{t('prov.party')}</span>
-			<ClearableInput
-				id={`provenance-party-${props.gridClass}`}
-				placeholder={t('prov.partyPlaceholder')}
-				value={props.form.provParty}
-				onInput={(e) => props.onField('provParty', e.currentTarget.value)}
-			/>
-		</label>
-	)
+	const priceField = () =>
+		draftField('provPrice', 'price', 'prov.price', {
+			type: 'number',
+			min: '0',
+			step: '0.01',
+			placeholder: t('prov.pricePlaceholder'),
+		})
 
 	return (
 		<div class={`form-grid ${props.gridClass}`}>
-			{eventField()}
+			<label for={id('kind')}>
+				<span>{t('prov.event')}</span>
+				<select
+					id={id('kind')}
+					value={form().provKind}
+					onChange={(e) => props.book.setField('provKind', e.currentTarget.value)}
+					aria-label={props.eventAriaLabel}
+				>
+					<option value="">{t('prov.none')}</option>
+					{kinds().map((kind) => (
+						<option value={kind}>{kindLabel(kind)}</option>
+					))}
+				</select>
+			</label>
 			<Show when={props.priceFirst}>{priceField()}</Show>
-			{dateField()}
-			{partyField()}
+			{draftField('provDate', 'date', 'prov.date', { type: 'date' })}
+			{draftField('provParty', 'party', 'prov.party', { placeholder: t('prov.partyPlaceholder') })}
 			<Show when={!props.priceFirst}>{priceField()}</Show>
 		</div>
 	)
 }
 
-export type PageNoteEditorProps = {
+type PageNoteEditorProps = {
+	kind: 'dedication' | 'damage'
 	title: string
 	notes: PageNote[]
 	onChange: (notes: PageNote[]) => void
-	pagePlaceholder: string
-	textPlaceholder: string
-	addLabel: string
-	/** Entry name used in per-row accessible labels. */
-	kindLabel: string
-	fieldIdPrefix: string
+	idPrefix: string
 }
 
 /** Repeatable (page, text) pair editor used for dedications and damages. */
-export function PageNoteEditor(props: PageNoteEditorProps) {
-	function update(index: number, patch: Partial<PageNote>): void {
+function PageNoteEditor(props: PageNoteEditorProps) {
+	const kindLabel = () => t(`pageNote.${props.kind}`)
+	const update = (index: number, patch: Partial<PageNote>) =>
 		props.onChange(props.notes.map((n, i) => (i === index ? { ...n, ...patch } : n)))
-	}
+	const remove = (index: number) => props.onChange(props.notes.filter((_, i) => i !== index))
+	const add = () => props.onChange([...props.notes, { page: '', text: '' }])
 
-	function remove(index: number): void {
-		props.onChange(props.notes.filter((_, i) => i !== index))
-	}
-
-	function add(): void {
-		props.onChange([...props.notes, { page: '', text: '' }])
+	const row = (note: () => PageNote, i: number) => {
+		const aria = { kind: kindLabel(), n: i + 1 }
+		return (
+			<div class="page-note-row">
+				<ClearableInput
+					id={`${props.idPrefix}-page-${i}`}
+					class="page-note-page"
+					placeholder={t('pageNote.page')}
+					value={note().page}
+					onInput={(e) => update(i, { page: e.currentTarget.value })}
+					aria-label={t('pageNote.pageAria', aria)}
+				/>
+				<ClearableInput
+					id={`${props.idPrefix}-text-${i}`}
+					class="page-note-text"
+					placeholder={t(
+						props.kind === 'dedication' ? 'pageNote.dedicationText' : 'pageNote.damageText',
+					)}
+					value={note().text}
+					onInput={(e) => update(i, { text: e.currentTarget.value })}
+					aria-label={t('pageNote.textAria', aria)}
+				/>
+				<button
+					type="button"
+					class="danger-ghost icon-btn"
+					onClick={() => remove(i)}
+					aria-label={t('pageNote.removeAria', aria)}
+					title={t('pageNote.removeTitle', { kind: kindLabel() })}
+				>
+					×
+				</button>
+			</div>
+		)
 	}
 
 	return (
@@ -303,389 +268,13 @@ export function PageNoteEditor(props: PageNoteEditorProps) {
 				{/* Index (not For): rows are reconciled by position, so typing in a
 					row never disposes/recreates its inputs (For matches by item
 					identity, and each keystroke produces a new item object). */}
-				<Index each={props.notes}>
-					{(note, i) => (
-						<div class="page-note-row">
-							<ClearableInput
-								id={`${props.fieldIdPrefix}-page-${i}`}
-								class="page-note-page"
-								placeholder={props.pagePlaceholder}
-								value={note().page}
-								onInput={(e) => update(i, { page: e.currentTarget.value })}
-								aria-label={t('pageNote.pageAria', { kind: props.kindLabel, n: i + 1 })}
-							/>
-							<ClearableInput
-								id={`${props.fieldIdPrefix}-text-${i}`}
-								class="page-note-text"
-								placeholder={props.textPlaceholder}
-								value={note().text}
-								onInput={(e) => update(i, { text: e.currentTarget.value })}
-								aria-label={t('pageNote.textAria', { kind: props.kindLabel, n: i + 1 })}
-							/>
-							<button
-								type="button"
-								class="danger-ghost icon-btn"
-								onClick={() => remove(i)}
-								aria-label={t('pageNote.removeAria', { kind: props.kindLabel, n: i + 1 })}
-								title={t('pageNote.removeTitle', { kind: props.kindLabel })}
-							>
-								×
-							</button>
-						</div>
-					)}
-				</Index>
+				<Index each={props.notes}>{row}</Index>
 				<div>
 					<button type="button" class="ghost small-btn" onClick={add}>
-						+ {props.addLabel}
+						+ {t(props.kind === 'dedication' ? 'pageNote.addDedication' : 'pageNote.addDamage')}
 					</button>
 				</div>
 			</div>
 		</div>
-	)
-}
-
-export type MultiSelectProps = {
-	summary: string
-	items: Array<{ id: string; name: string }>
-	selectedIds: string[]
-	onToggle: (id: string) => void
-	search?: string
-	onSearch?: (v: string) => void
-	searchLabel?: string
-	onCreate?: () => void
-}
-
-/** Expandable checkbox list used for authors/tags in the book forms. */
-export function MultiSelect(props: MultiSelectProps) {
-	const selectedItems = createMemo(() =>
-		props.items.filter((item) => props.selectedIds.includes(item.id)),
-	)
-
-	const filtered = createMemo(() => {
-		const q = (props.search ?? '').trim().toLowerCase()
-		if (!q) return props.items
-		return props.items.filter((item) => item.name.toLowerCase().includes(q))
-	})
-
-	const trimmedSearch = createMemo(() => (props.search ?? '').trim())
-
-	const canCreate = createMemo(
-		() =>
-			props.onCreate !== undefined &&
-			trimmedSearch() !== '' &&
-			!props.items.some((item) => item.name.toLowerCase() === trimmedSearch().toLowerCase()),
-	)
-
-	function handleToggle(e: Event): void {
-		if (props.onSearch === undefined) return
-		const details = e.currentTarget as HTMLDetailsElement
-		if (details.open) {
-			details.querySelector('input')?.focus({ preventScroll: true })
-		}
-	}
-
-	function handleDetailsFocusOut(e: FocusEvent): void {
-		const details = e.currentTarget as HTMLDetailsElement
-		const next = e.relatedTarget as Node | null
-		// `focusout` fires before the browser has finished moving focus. In
-		// particular, clicking the create button can report a null relatedTarget
-		// while Solid is updating the list. Closing the details element from that
-		// event can detach the button that is currently handling the click and
-		// cause the dropdown to get stuck in a focus/update loop.
-		if (next === null) return
-		queueMicrotask(() => {
-			if (!details.isConnected) return
-			if (!details.contains(next)) details.open = false
-		})
-	}
-
-	function handleDetailsKeyDown(e: KeyboardEvent): void {
-		const details = e.currentTarget as HTMLDetailsElement
-		if (e.key === 'Escape') {
-			if (!details.open) return
-			e.preventDefault()
-			e.stopPropagation()
-			details.open = false
-			details.querySelector('summary')?.focus({ preventScroll: true })
-			return
-		}
-		// Type-to-search: when the summary has focus (e.g. after tabbing into
-		// the field), a printable key opens the dropdown and forwards the
-		// character to the search input, so no Enter/Space keypress is needed
-		// first. Space is left alone so it keeps its native toggle behaviour.
-		const target = e.target as HTMLElement | null
-		if (target === null || target.closest('summary') === null) return
-		if (props.onSearch === undefined) return
-		if (e.ctrlKey || e.metaKey || e.altKey) return
-		if (e.key.length !== 1 || e.key === ' ') return
-		e.preventDefault()
-		if (!details.open) details.open = true
-		props.onSearch((props.search ?? '') + e.key)
-		queueMicrotask(() => details.querySelector('input')?.focus({ preventScroll: true }))
-	}
-
-	function handleSearchKeyDown(e: KeyboardEvent): void {
-		// Ctrl/Cmd+Enter is the form-wide "Save" shortcut: let it bubble to
-		// the form instead of creating an inline entry.
-		if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return
-		if (!canCreate()) return
-		e.preventDefault()
-		e.stopPropagation()
-		createItem((e.currentTarget as HTMLElement).closest('details'))
-	}
-
-	function handleItemKeyDown(e: KeyboardEvent): void {
-		if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return
-		e.preventDefault()
-		e.stopPropagation()
-		const checkbox = e.currentTarget as HTMLInputElement
-		checkbox.click()
-	}
-
-	function focusSearchInput(details: HTMLDetailsElement | null): void {
-		if (!details) return
-		queueMicrotask(() =>
-			details
-				.querySelector<HTMLInputElement>('.multi-select-filter')
-				?.focus({ preventScroll: true }),
-		)
-	}
-
-	function handleItemToggle(e: Event, id: string): void {
-		props.onToggle(id)
-		props.onSearch?.('')
-		focusSearchInput((e.currentTarget as HTMLElement).closest('details'))
-	}
-
-	function createItem(details: HTMLDetailsElement | null): void {
-		props.onCreate?.()
-		props.onSearch?.('')
-		focusSearchInput(details)
-	}
-
-	return (
-		<details
-			class="multi-select"
-			onToggle={handleToggle}
-			onFocusOut={handleDetailsFocusOut}
-			onKeyDown={handleDetailsKeyDown}
-		>
-			<summary>
-				<Show when={selectedItems().length > 0} fallback={<span>{props.summary}</span>}>
-					<For each={selectedItems()}>
-						{(item) => (
-							<span class="multi-select-chip">
-								<span>{item.name}</span>
-								<button
-									type="button"
-									class="multi-select-chip-remove"
-									aria-label={t('common.remove', { name: item.name })}
-									onClick={(e) => {
-										e.preventDefault()
-										e.stopPropagation()
-										props.onToggle(item.id)
-									}}
-								>
-									×
-								</button>
-							</span>
-						)}
-					</For>
-				</Show>
-			</summary>
-			<Show
-				when={props.onSearch !== undefined}
-				fallback={
-					<div class="multi-select-options">
-						<For each={props.items}>
-							{(item) => (
-								<label class="check-item">
-									<input
-										type="checkbox"
-										checked={props.selectedIds.includes(item.id)}
-										onChange={(e) => handleItemToggle(e, item.id)}
-									/>
-									<span>{item.name}</span>
-								</label>
-							)}
-						</For>
-					</div>
-				}
-			>
-				<div class="multi-select-options">
-					<ClearableInput
-						class="multi-select-filter"
-						placeholder={t('form.searchOrCreate')}
-						value={props.search ?? ''}
-						onInput={(e) => props.onSearch?.(e.currentTarget.value)}
-						onKeyDown={handleSearchKeyDown}
-						aria-label={props.searchLabel ?? t('common.search')}
-					/>
-					<For each={filtered()}>
-						{(item) => (
-							<label class="check-item">
-								<input
-									type="checkbox"
-									checked={props.selectedIds.includes(item.id)}
-									onChange={(e) => handleItemToggle(e, item.id)}
-									onKeyDown={handleItemKeyDown}
-								/>
-								<span>{item.name}</span>
-							</label>
-						)}
-					</For>
-					<Show when={canCreate()}>
-						<button
-							type="button"
-							class="create-row"
-							onClick={(e) => createItem((e.currentTarget as HTMLElement).closest('details'))}
-						>
-							{t('form.create', { name: trimmedSearch() })}
-						</button>
-					</Show>
-				</div>
-			</Show>
-		</details>
-	)
-}
-
-export type CreatableSingleSelectProps = {
-	placeholder: string
-	clearLabel: string
-	options: Array<{ id: string; label: string }>
-	value: string
-	onSelect: (id: string) => void
-	search: string
-	onSearch: (v: string) => void
-	searchLabel: string
-	onCreate: () => void
-	createHint?: string
-}
-
-/** Filterable single-select with inline create, used for publisher/location. */
-export function CreatableSingleSelect(props: CreatableSingleSelectProps) {
-	const filtered = createMemo(() => {
-		const q = props.search.trim().toLowerCase()
-		if (!q) return props.options
-		return props.options.filter((option) => option.label.toLowerCase().includes(q))
-	})
-
-	const trimmedSearch = createMemo(() => props.search.trim())
-
-	const canCreate = createMemo(
-		() =>
-			trimmedSearch() !== '' &&
-			!props.options.some((option) => option.label.toLowerCase() === trimmedSearch().toLowerCase()),
-	)
-
-	const selectedLabel = createMemo(
-		() => props.options.find((option) => option.id === props.value)?.label,
-	)
-
-	function choose(id: string): void {
-		props.onSelect(id)
-		props.onSearch('')
-	}
-
-	function handleToggle(e: Event): void {
-		const details = e.currentTarget as HTMLDetailsElement
-		if (details.open) {
-			details.querySelector('input')?.focus({ preventScroll: true })
-		}
-	}
-
-	function handleDetailsFocusOut(e: FocusEvent): void {
-		const details = e.currentTarget as HTMLDetailsElement
-		const next = e.relatedTarget as Node | null
-		// Defer the close until focus has settled. A synchronous close here can
-		// race with the click handler for an option/create button and repeatedly
-		// open and close the native details control.
-		if (next === null) return
-		queueMicrotask(() => {
-			if (!details.isConnected) return
-			if (!details.contains(next)) details.open = false
-		})
-	}
-
-	function handleDetailsKeyDown(e: KeyboardEvent): void {
-		const details = e.currentTarget as HTMLDetailsElement
-		if (e.key === 'Escape') {
-			if (!details.open) return
-			e.preventDefault()
-			e.stopPropagation()
-			details.open = false
-			details.querySelector('summary')?.focus({ preventScroll: true })
-			return
-		}
-		// Type-to-search: when the summary has focus (e.g. after tabbing into
-		// the field), a printable key opens the dropdown and forwards the
-		// character to the search input, so no Enter/Space keypress is needed
-		// first. Space is left alone so it keeps its native toggle behaviour.
-		const target = e.target as HTMLElement | null
-		if (target === null || target.closest('summary') === null) return
-		if (e.ctrlKey || e.metaKey || e.altKey) return
-		if (e.key.length !== 1 || e.key === ' ') return
-		e.preventDefault()
-		if (!details.open) details.open = true
-		props.onSearch(props.search + e.key)
-		queueMicrotask(() => details.querySelector('input')?.focus({ preventScroll: true }))
-	}
-
-	function handleSearchKeyDown(e: KeyboardEvent): void {
-		// Ctrl/Cmd+Enter is the form-wide "Save" shortcut: let it bubble to
-		// the form instead of creating an inline entry.
-		if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return
-		if (!canCreate()) return
-		e.preventDefault()
-		e.stopPropagation()
-		props.onCreate()
-	}
-
-	return (
-		<details
-			class="multi-select"
-			onToggle={handleToggle}
-			onFocusOut={handleDetailsFocusOut}
-			onKeyDown={handleDetailsKeyDown}
-		>
-			<summary>{selectedLabel() ?? props.placeholder}</summary>
-			<div class="multi-select-options" role="listbox">
-				<ClearableInput
-					class="multi-select-filter"
-					placeholder={t('form.searchOrCreate')}
-					value={props.search}
-					onInput={(e) => props.onSearch(e.currentTarget.value)}
-					onKeyDown={handleSearchKeyDown}
-					aria-label={props.searchLabel}
-				/>
-				<Show when={props.value !== ''}>
-					<button type="button" class="select-option" onClick={() => choose('')}>
-						{props.clearLabel}
-					</button>
-				</Show>
-				<For each={filtered()}>
-					{(option) => (
-						<button
-							type="button"
-							role="option"
-							aria-selected={option.id === props.value}
-							class="select-option"
-							onClick={() => choose(option.id)}
-						>
-							<Show when={option.id === props.value}>
-								<span aria-hidden="true">✓ </span>
-							</Show>
-							{option.label}
-						</button>
-					)}
-				</For>
-				<Show when={canCreate()}>
-					<button type="button" class="create-row" onClick={() => props.onCreate()}>
-						{t('form.create', { name: trimmedSearch() })}
-						<Show when={props.createHint}> ({props.createHint})</Show>
-					</button>
-				</Show>
-			</div>
-		</details>
 	)
 }

@@ -3,15 +3,12 @@
 // it as applied. Do not add new schema changes here; generate a migration with
 // `bun run db:generate` instead.
 import type { Database } from 'bun:sqlite'
-import { eq, sql } from 'drizzle-orm'
-import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
 import type { MigrationMeta } from 'drizzle-orm/migrator'
-import { bookLanguages, books, languages } from '../schema'
-import { normalizePageNotes } from '../util/page-notes'
+import { PAGE_NOTE_LIMITS, type PageNote } from 'shared/src/book'
 
 /** Pre-migration table creation. Idempotent via IF NOT EXISTS. */
-function createCoreTables(db: BunSQLiteDatabase): void {
-	db.run(sql`
+function createCoreTables(sqlite: Database): void {
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS books (
 			id TEXT PRIMARY KEY,
 			isbn TEXT,
@@ -30,68 +27,68 @@ function createCoreTables(db: BunSQLiteDatabase): void {
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL
 		)`)
-	db.run(sql`
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS authors (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS publishers (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS locations (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
 			parent_id TEXT REFERENCES locations(id) ON DELETE SET NULL,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS locations_parent_idx ON locations (parent_id)`)
-	db.run(sql`
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS locations_parent_idx ON locations (parent_id)`)
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS book_authors (
 			book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
 			author_id TEXT NOT NULL REFERENCES authors(id) ON DELETE CASCADE,
 			PRIMARY KEY (book_id, author_id)
 		)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS book_authors_author_idx ON book_authors (author_id)`)
-	db.run(sql`
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS book_authors_author_idx ON book_authors (author_id)`)
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS tags (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS book_tags (
 			book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
 			tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
 			PRIMARY KEY (book_id, tag_id)
 		)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS book_tags_tag_idx ON book_tags (tag_id)`)
-	db.run(sql`
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS book_tags_tag_idx ON book_tags (tag_id)`)
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS languages (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS book_languages (
 			book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
 			language_id TEXT NOT NULL REFERENCES languages(id) ON DELETE CASCADE,
 			PRIMARY KEY (book_id, language_id)
 		)`)
-	db.run(
-		sql`CREATE INDEX IF NOT EXISTS book_languages_language_idx ON book_languages (language_id)`,
+	sqlite.exec(
+		`CREATE INDEX IF NOT EXISTS book_languages_language_idx ON book_languages (language_id)`,
 	)
 }
 
 /** Tables that were added after the initial schema. */
-function createAuxTables(db: BunSQLiteDatabase): void {
+function createAuxTables(sqlite: Database): void {
 	// Superseded by the per-user book_reads table; it never held user-entered data.
-	db.run(sql`DROP TABLE IF EXISTS reading_state`)
-	db.run(sql`
+	sqlite.exec(`DROP TABLE IF EXISTS reading_state`)
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS loans (
 			id TEXT PRIMARY KEY,
 			book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
@@ -100,16 +97,16 @@ function createAuxTables(db: BunSQLiteDatabase): void {
 			due_at INTEGER,
 			returned_at INTEGER
 		)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS loans_book_idx ON loans (book_id)`)
-	db.run(sql`
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS loans_book_idx ON loans (book_id)`)
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS book_reads (
 			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
 			read_at INTEGER NOT NULL,
 			PRIMARY KEY (user_id, book_id)
 		)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS book_reads_book_idx ON book_reads (book_id)`)
-	db.run(sql`
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS book_reads_book_idx ON book_reads (book_id)`)
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS users (
 			id TEXT PRIMARY KEY,
 			username TEXT NOT NULL UNIQUE,
@@ -118,16 +115,16 @@ function createAuxTables(db: BunSQLiteDatabase): void {
 			is_admin INTEGER NOT NULL DEFAULT 0,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS sessions (
 			token TEXT PRIMARY KEY,
 			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS books_owner_idx ON books (owner_id)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS books_location_idx ON books (location_id)`)
-	db.run(sql`
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id)`)
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS books_owner_idx ON books (owner_id)`)
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS books_location_idx ON books (location_id)`)
+	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS provenance_events (
 			id TEXT PRIMARY KEY,
 			book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
@@ -137,81 +134,14 @@ function createAuxTables(db: BunSQLiteDatabase): void {
 			price_cents INTEGER,
 			created_at INTEGER NOT NULL
 		)`)
-	db.run(sql`CREATE INDEX IF NOT EXISTS provenance_events_book_idx ON provenance_events (book_id)`)
+	sqlite.exec(
+		`CREATE INDEX IF NOT EXISTS provenance_events_book_idx ON provenance_events (book_id)`,
+	)
 	// Legacy NULL buy prices were recorded under the old 'empty = free' convention;
 	// going forward NULL means 'price unknown' and 0 means free.
-	db.run(
-		sql`UPDATE provenance_events SET price_cents = 0 WHERE kind = 'buy' AND price_cents IS NULL`,
+	sqlite.exec(
+		`UPDATE provenance_events SET price_cents = 0 WHERE kind = 'buy' AND price_cents IS NULL`,
 	)
-}
-
-/** Convert legacy plain-text dedications/damages into JSON page-note arrays. */
-function migratePageNotesColumns(sqlite: Database): void {
-	const cols = sqlite
-		.query<{ name: string }, []>("SELECT name FROM pragma_table_info('books')")
-		.all()
-		.map((c) => c.name)
-	if (!cols.includes('dedications') || !cols.includes('damages')) return
-	const rows = sqlite
-		.query<{ id: string; dedications: string | null; damages: string | null }, []>(
-			'SELECT id, dedications, damages FROM books',
-		)
-		.all()
-	const update = sqlite.prepare('UPDATE books SET dedications = ?, damages = ? WHERE id = ?')
-	for (const row of rows) {
-		const dedications = normalizePageNotes(row.dedications)
-		const damages = normalizePageNotes(row.damages)
-		update.run(JSON.stringify(dedications), JSON.stringify(damages), row.id)
-	}
-}
-
-/** Add and backfill timestamp columns for databases created before they existed. */
-function migrateBookTimestamps(sqlite: Database): void {
-	const cols = new Set(
-		sqlite
-			.query<{ name: string }, []>("SELECT name FROM pragma_table_info('books')")
-			.all()
-			.map((c) => c.name),
-	)
-	if (!cols.has('created_at')) {
-		sqlite.exec('ALTER TABLE books ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0')
-	}
-	if (!cols.has('updated_at')) {
-		sqlite.exec('ALTER TABLE books ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0')
-	}
-	// Backfill any zeros left by the DEFAULT 0 (or by very old rows).
-	const fallback = Date.now()
-	sqlite.exec('UPDATE books SET created_at = updated_at WHERE created_at = 0 AND updated_at <> 0')
-	sqlite.exec('UPDATE books SET updated_at = created_at WHERE updated_at = 0 AND created_at <> 0')
-	sqlite.prepare('UPDATE books SET created_at = ? WHERE created_at = 0').run(fallback)
-	sqlite.prepare('UPDATE books SET updated_at = ? WHERE updated_at = 0').run(fallback)
-}
-
-/** Move the former JSON language field into the language catalog. */
-function migrateBookLanguages(db: BunSQLiteDatabase): void {
-	const legacyBooks = db.select().from(books).all()
-	for (const book of legacyBooks) {
-		const values = Array.isArray(book.languages) ? book.languages : []
-		for (const raw of values) {
-			const name = String(raw).trim()
-			if (!name) continue
-			let language = db
-				.select()
-				.from(languages)
-				.where(sql`lower(${languages.name}) = lower(${name})`)
-				.get()
-			if (!language) {
-				const id = crypto.randomUUID()
-				db.insert(languages).values({ id, name, createdAt: Date.now() }).run()
-				language = db.select().from(languages).where(eq(languages.id, id)).get()
-			}
-			if (language)
-				db.insert(bookLanguages)
-					.values({ bookId: book.id, languageId: language.id })
-					.onConflictDoNothing()
-					.run()
-		}
-	}
 }
 
 function listTables(sqlite: Database): string[] {
@@ -228,6 +158,104 @@ function listColumns(sqlite: Database, table: string): string[] {
 		.query<{ name: string }, [string]>('SELECT name FROM pragma_table_info(?)')
 		.all(table)
 		.map((c) => c.name)
+}
+
+function parseJson(value: string): unknown {
+	try {
+		return JSON.parse(value)
+	} catch {
+		return undefined
+	}
+}
+
+function toPageNote(entry: unknown): PageNote | null {
+	const record: Record<string, unknown> =
+		typeof entry === 'object' && entry !== null ? (entry as Record<string, unknown>) : {}
+	const rawText =
+		typeof entry === 'string'
+			? entry
+			: (record.text ?? record.dedication ?? record.damage ?? record.note)
+	const text = typeof rawText === 'string' ? rawText.trim().slice(0, PAGE_NOTE_LIMITS.text) : ''
+	if (!text) return null
+	const rawPage = record.page
+	const page =
+		typeof rawPage === 'string' || typeof rawPage === 'number'
+			? String(rawPage).trim().slice(0, PAGE_NOTE_LIMITS.page)
+			: ''
+	return { page, text }
+}
+
+/** Lenient parse of legacy page notes: JSON arrays of strings/objects, or plain text. */
+function parsePageNotes(value: string | null): PageNote[] {
+	const trimmed = value?.trim()
+	if (!trimmed) return []
+	const parsed = parseJson(trimmed)
+	if (!Array.isArray(parsed)) return [{ page: '', text: trimmed.slice(0, PAGE_NOTE_LIMITS.text) }]
+	return parsed
+		.map(toPageNote)
+		.filter((n): n is PageNote => n !== null)
+		.slice(0, PAGE_NOTE_LIMITS.entries)
+}
+
+/** Convert legacy plain-text dedications/damages into JSON page-note arrays. */
+function migratePageNotesColumns(sqlite: Database): void {
+	const cols = listColumns(sqlite, 'books')
+	if (!cols.includes('dedications') || !cols.includes('damages')) return
+	const rows = sqlite
+		.query<{ id: string; dedications: string | null; damages: string | null }, []>(
+			'SELECT id, dedications, damages FROM books',
+		)
+		.all()
+	const update = sqlite.prepare('UPDATE books SET dedications = ?, damages = ? WHERE id = ?')
+	for (const row of rows) {
+		const dedications = JSON.stringify(parsePageNotes(row.dedications))
+		const damages = JSON.stringify(parsePageNotes(row.damages))
+		update.run(dedications, damages, row.id)
+	}
+}
+
+/** Add and backfill timestamp columns for databases created before they existed. */
+function migrateBookTimestamps(sqlite: Database): void {
+	const cols = listColumns(sqlite, 'books')
+	for (const col of ['created_at', 'updated_at']) {
+		if (cols.includes(col)) continue
+		sqlite.exec(`ALTER TABLE books ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`)
+	}
+	// Backfill any zeros left by the DEFAULT 0 (or by very old rows).
+	const fallback = Date.now()
+	sqlite.exec('UPDATE books SET created_at = updated_at WHERE created_at = 0 AND updated_at <> 0')
+	sqlite.exec('UPDATE books SET updated_at = created_at WHERE updated_at = 0 AND created_at <> 0')
+	sqlite.prepare('UPDATE books SET created_at = ? WHERE created_at = 0').run(fallback)
+	sqlite.prepare('UPDATE books SET updated_at = ? WHERE updated_at = 0').run(fallback)
+}
+
+/** Move the former JSON language field into the language catalog. */
+function migrateBookLanguages(sqlite: Database): void {
+	if (!listColumns(sqlite, 'books').includes('languages')) return
+	const rows = sqlite
+		.query<{ id: string; languages: string | null }, []>('SELECT id, languages FROM books')
+		.all()
+	const findLanguage = sqlite.query<{ id: string }, [string]>(
+		'SELECT id FROM languages WHERE lower(name) = lower(?)',
+	)
+	const insertLanguage = sqlite.prepare(
+		'INSERT INTO languages (id, name, created_at) VALUES (?, ?, ?)',
+	)
+	const linkLanguage = sqlite.prepare(
+		'INSERT OR IGNORE INTO book_languages (book_id, language_id) VALUES (?, ?)',
+	)
+	for (const row of rows) {
+		const values = parseJson(row.languages ?? '[]')
+		if (!Array.isArray(values)) continue
+		for (const name of values.map((v) => String(v).trim()).filter(Boolean)) {
+			let languageId = findLanguage.get(name)?.id
+			if (!languageId) {
+				languageId = crypto.randomUUID()
+				insertLanguage.run(languageId, name, Date.now())
+			}
+			linkLanguage.run(row.id, languageId)
+		}
+	}
 }
 
 /** Whether the database holds data from before drizzle migrations were used. */
@@ -249,8 +277,9 @@ function rebuildFromBaseline(sqlite: Database, baseline: MigrationMeta): void {
 		.all()
 	for (const { name } of indexes) sqlite.exec(`DROP INDEX "${name}"`)
 	const legacyTables = listTables(sqlite)
-	for (const table of legacyTables)
+	for (const table of legacyTables) {
 		sqlite.exec(`ALTER TABLE "${table}" RENAME TO "legacy_${table}"`)
+	}
 	for (const stmt of baseline.sql) sqlite.exec(stmt)
 	const tables = new Set(listTables(sqlite))
 	for (const table of legacyTables) {
@@ -269,17 +298,13 @@ function rebuildFromBaseline(sqlite: Database, baseline: MigrationMeta): void {
 }
 
 /** Bring a pre-migration database to the baseline migration and mark it applied. */
-export function upgradeLegacyDb(
-	sqlite: Database,
-	db: BunSQLiteDatabase,
-	baseline: MigrationMeta,
-): void {
+export function upgradeLegacyDb(sqlite: Database, baseline: MigrationMeta): void {
 	sqlite.transaction(() => {
-		createCoreTables(db)
-		createAuxTables(db)
+		createCoreTables(sqlite)
+		createAuxTables(sqlite)
 		migrateBookTimestamps(sqlite)
 		migratePageNotesColumns(sqlite)
-		migrateBookLanguages(db)
+		migrateBookLanguages(sqlite)
 		rebuildFromBaseline(sqlite, baseline)
 		sqlite.exec(`
 			CREATE TABLE "__drizzle_migrations" (

@@ -1,139 +1,78 @@
 import { createSignal, onMount } from 'solid-js'
-import { type AuthUser, api, apiPublic, getToken, setToken } from '../api'
-import { t } from '../i18n'
+import { api, errorMessage, setToken } from '../api'
+import { type TranslationKey, t } from '../i18n'
+import type { PublicUser } from '../types'
 
-/**
- * Login / setup / session state.
- * Data refresh after login/setup is orchestrated by the caller, which owns
- * the resource refetch functions.
- */
+export type Credentials = { username: string; password: string; displayName?: string }
+
+/** Session state: first-run setup, login and logout. */
 export function useAuth() {
-	const [authUser, setAuthUser] = createSignal<AuthUser | null>(null)
+	const [user, setUser] = createSignal<PublicUser | null>(null)
 	const [setupRequired, setSetupRequired] = createSignal(false)
-	const [authLoading, setAuthLoading] = createSignal(true)
-	const [authError, setAuthError] = createSignal<string | null>(null)
-	const [loginUsername, setLoginUsername] = createSignal('')
-	const [loginPassword, setLoginPassword] = createSignal('')
-	const [loginBusy, setLoginBusy] = createSignal(false)
-	const [setupUsername, setSetupUsername] = createSignal('')
-	const [setupDisplayName, setSetupDisplayName] = createSignal('')
-	const [setupPassword, setSetupPassword] = createSignal('')
-	const [setupBusy, setSetupBusy] = createSignal(false)
+	const [loading, setLoading] = createSignal(true)
+	const [busy, setBusy] = createSignal(false)
+	const [error, setError] = createSignal<string | null>(null)
 
-	async function refreshAuthStatus(): Promise<void> {
-		setAuthLoading(true)
+	onMount(async () => {
 		try {
-			const token = getToken()
-			const headers: Record<string, string> = { 'content-type': 'application/json' }
-			if (token) headers.authorization = `Bearer ${token}`
-			const res = await fetch('/api/auth/status', { headers })
-			const data = (await res.json()) as { setupRequired: boolean; user: AuthUser | null }
+			const data = await api<{ setupRequired: boolean; user: PublicUser | null }>('/auth/status')
 			setSetupRequired(data.setupRequired)
-			setAuthUser(data.user)
+			setUser(data.user)
 			if (!data.user) setToken(null)
 		} catch {
-			setAuthError(t('common.serverUnreachable'))
+			setError(t('common.serverUnreachable'))
 		} finally {
-			setAuthLoading(false)
+			setLoading(false)
 		}
-	}
-
-	onMount(() => {
-		void refreshAuthStatus()
 	})
 
-	/** Returns the logged-in user, or null on validation failure / error. */
-	async function login(e: Event): Promise<AuthUser | null> {
-		e.preventDefault()
-		setAuthError(null)
-		if (!loginUsername().trim() || !loginPassword()) {
-			setAuthError(t('auth.credentialsRequired'))
-			return null
+	async function authenticate(
+		path: string,
+		credentials: Credentials,
+		fallback: TranslationKey,
+	): Promise<void> {
+		setError(null)
+		const username = credentials.username.trim()
+		if (!username || !credentials.password) {
+			setError(t('auth.credentialsRequired'))
+			return
 		}
-		setLoginBusy(true)
+		setBusy(true)
 		try {
-			const data = await apiPublic<{ user: AuthUser; token: string }>('/auth/login', {
-				method: 'POST',
-				body: JSON.stringify({ username: loginUsername().trim(), password: loginPassword() }),
-			})
+			const body = {
+				username,
+				password: credentials.password,
+				displayName: credentials.displayName?.trim() || undefined,
+			}
+			const data = await api<{ user: PublicUser; token: string }>(path, { method: 'POST', body })
 			setToken(data.token)
-			setAuthUser(data.user)
 			setSetupRequired(false)
-			setLoginPassword('')
-			return data.user
+			setUser(data.user)
 		} catch (err) {
-			setAuthError(err instanceof Error ? err.message : t('auth.loginFailed'))
-			return null
+			setError(errorMessage(err, fallback))
 		} finally {
-			setLoginBusy(false)
-		}
-	}
-
-	/** Returns the created admin user, or null on validation failure / error. */
-	async function setup(e: Event): Promise<AuthUser | null> {
-		e.preventDefault()
-		setAuthError(null)
-		if (!setupUsername().trim() || !setupPassword()) {
-			setAuthError(t('auth.credentialsRequired'))
-			return null
-		}
-		setSetupBusy(true)
-		try {
-			const data = await apiPublic<{ user: AuthUser; token: string }>('/auth/setup', {
-				method: 'POST',
-				body: JSON.stringify({
-					username: setupUsername().trim(),
-					displayName: setupDisplayName().trim() || undefined,
-					password: setupPassword(),
-				}),
-			})
-			setToken(data.token)
-			setAuthUser(data.user)
-			setSetupRequired(false)
-			setSetupDisplayName('')
-			setSetupPassword('')
-			return data.user
-		} catch (err) {
-			setAuthError(err instanceof Error ? err.message : t('auth.setupFailed'))
-			return null
-		} finally {
-			setSetupBusy(false)
+			setBusy(false)
 		}
 	}
 
 	async function logout(): Promise<void> {
-		try {
-			await api('/auth/logout', { method: 'POST' })
-		} catch {
-			// Ignore; token is cleared below regardless.
-		}
+		// Best effort: the token is dropped locally either way.
+		await api('/auth/logout', { method: 'POST' }).catch(() => undefined)
 		setToken(null)
-		setAuthUser(null)
+		setUser(null)
 	}
 
 	return {
-		authUser,
-		setAuthUser,
+		user,
+		setUser,
 		setupRequired,
-		authLoading,
-		authError,
-		loginUsername,
-		setLoginUsername,
-		loginPassword,
-		setLoginPassword,
-		loginBusy,
-		setupUsername,
-		setSetupUsername,
-		setupDisplayName,
-		setSetupDisplayName,
-		setupPassword,
-		setSetupPassword,
-		setupBusy,
-		refreshAuthStatus,
-		login,
-		setup,
+		loading,
+		busy,
+		error,
+		login: (credentials: Credentials) =>
+			authenticate('/auth/login', credentials, 'auth.loginFailed'),
+		setup: (credentials: Credentials) =>
+			authenticate('/auth/setup', credentials, 'auth.setupFailed'),
 		logout,
 	}
 }
-
-export type AuthStore = ReturnType<typeof useAuth>
