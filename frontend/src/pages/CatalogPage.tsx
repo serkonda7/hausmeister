@@ -1,6 +1,7 @@
 import { IconEdit, IconPlus, IconTrash } from '@tabler/icons-solidjs'
 import { createMemo, For, Show } from 'solid-js'
 import { ClearableInput } from '../components/ClearableInput'
+import { t } from '../i18n'
 import type { Author, Language, Publisher, Tag } from '../types'
 
 export type CatalogPageProps = {
@@ -53,10 +54,8 @@ export function CatalogPage(props: CatalogPageProps) {
 		<>
 			<section class="library-head">
 				<div>
-					<h2>Data catalog</h2>
-					<p class="muted">
-						Manage the authors, publishers, tags, and languages used in your library.
-					</p>
+					<h2>{t('nav.catalog')}</h2>
+					<p class="muted">{t('catalog.intro')}</p>
 				</div>
 			</section>
 			<Show when={props.catalogError}>
@@ -65,12 +64,12 @@ export function CatalogPage(props: CatalogPageProps) {
 			<div class="catalog-grid">
 				<section class="panel catalog-section">
 					<div class="catalog-section-header">
-						<h3>Authors</h3>
+						<h3>{t('catalog.authors')}</h3>
 						<span class="catalog-count">{props.authors.length}</span>
 					</div>
 					<div class="inline-create">
 						<ClearableInput
-							placeholder="Search or add an author…"
+							placeholder={`${t('catalog.authorsSearch')}…`}
 							value={props.manageAuthorName}
 							onInput={(e) => props.onManageAuthorName(e.currentTarget.value)}
 							onKeyDown={(e) => {
@@ -79,7 +78,7 @@ export function CatalogPage(props: CatalogPageProps) {
 									props.onAddAuthor()
 								}
 							}}
-							aria-label="Search or add an author"
+							aria-label={t('catalog.authorsSearch')}
 						/>
 						<button
 							type="button"
@@ -87,19 +86,21 @@ export function CatalogPage(props: CatalogPageProps) {
 							onClick={props.onAddAuthor}
 							disabled={!canAddAuthor()}
 						>
-							<IconPlus size={15} /> Add
+							<IconPlus size={15} /> {t('common.add')}
 						</button>
 					</div>
 					<Show
 						when={!props.authorsLoading && matchingAuthors().length > 0}
 						fallback={
 							<p class="muted small">
-								{props.manageAuthorName.trim() ? 'No matching authors.' : 'No authors yet.'}
+								{props.manageAuthorName.trim()
+									? t('catalog.authorsNoMatch')
+									: t('catalog.authorsEmpty')}
 							</p>
 						}
 					>
 						<CatalogTable
-							label="Authors"
+							label={t('catalog.authors')}
 							items={matchingAuthors()}
 							onRename={props.onRenameAuthor}
 							onRemove={props.onRemoveAuthor}
@@ -108,12 +109,12 @@ export function CatalogPage(props: CatalogPageProps) {
 				</section>
 				<section class="panel catalog-section">
 					<div class="catalog-section-header">
-						<h3>Publishers</h3>
+						<h3>{t('catalog.publishers')}</h3>
 						<span class="catalog-count">{props.publishers.length}</span>
 					</div>
 					<div class="inline-create">
 						<ClearableInput
-							placeholder="Search or add a publisher…"
+							placeholder={`${t('catalog.publishersSearch')}…`}
 							value={props.managePublisherName}
 							onInput={(e) => props.onManagePublisherName(e.currentTarget.value)}
 							onKeyDown={(e) => {
@@ -122,7 +123,7 @@ export function CatalogPage(props: CatalogPageProps) {
 									props.onAddPublisher()
 								}
 							}}
-							aria-label="Search or add a publisher"
+							aria-label={t('catalog.publishersSearch')}
 						/>
 						<button
 							type="button"
@@ -130,7 +131,7 @@ export function CatalogPage(props: CatalogPageProps) {
 							onClick={props.onAddPublisher}
 							disabled={!canAddPublisher()}
 						>
-							<IconPlus size={15} /> Add
+							<IconPlus size={15} /> {t('common.add')}
 						</button>
 					</div>
 					<Show
@@ -138,13 +139,13 @@ export function CatalogPage(props: CatalogPageProps) {
 						fallback={
 							<p class="muted small">
 								{props.managePublisherName.trim()
-									? 'No matching publishers.'
-									: 'No publishers yet.'}
+									? t('catalog.publishersNoMatch')
+									: t('catalog.publishersEmpty')}
 							</p>
 						}
 					>
 						<CatalogTable
-							label="Publishers"
+							label={t('catalog.publishers')}
 							items={matchingPublishers()}
 							onRename={props.onRenamePublisher}
 							onRemove={props.onRemovePublisher}
@@ -153,12 +154,12 @@ export function CatalogPage(props: CatalogPageProps) {
 				</section>
 				<section class="panel catalog-section">
 					<div class="catalog-section-header">
-						<h3>Tags</h3>
+						<h3>{t('catalog.tags')}</h3>
 						<span class="catalog-count">{props.tags.length}</span>
 					</div>
 					<div class="inline-create">
 						<ClearableInput
-							placeholder="Search or add a tag…"
+							placeholder={`${t('catalog.tagsSearch')}…`}
 							value={props.manageTagName}
 							onInput={(e) => props.onManageTagName(e.currentTarget.value)}
 							onKeyDown={(e) => {
@@ -167,22 +168,22 @@ export function CatalogPage(props: CatalogPageProps) {
 									props.onAddTag()
 								}
 							}}
-							aria-label="Search or add a tag"
+							aria-label={t('catalog.tagsSearch')}
 						/>
 						<button type="button" class="primary" onClick={props.onAddTag} disabled={!canAddTag()}>
-							<IconPlus size={15} /> Add
+							<IconPlus size={15} /> {t('common.add')}
 						</button>
 					</div>
 					<Show
 						when={!props.tagsLoading && matchingTags().length > 0}
 						fallback={
 							<p class="muted small">
-								{props.manageTagName.trim() ? 'No matching tags.' : 'No tags yet.'}
+								{props.manageTagName.trim() ? t('catalog.tagsNoMatch') : t('catalog.tagsEmpty')}
 							</p>
 						}
 					>
 						<CatalogTable
-							label="Tags"
+							label={t('catalog.tags')}
 							items={matchingTags()}
 							onRename={props.onRenameTag}
 							onRemove={props.onRemoveTag}
@@ -191,12 +192,12 @@ export function CatalogPage(props: CatalogPageProps) {
 				</section>
 				<section class="panel catalog-section">
 					<div class="catalog-section-header">
-						<h3>Languages</h3>
+						<h3>{t('catalog.languages')}</h3>
 						<span class="catalog-count">{props.languages.length}</span>
 					</div>
 					<div class="inline-create">
 						<ClearableInput
-							placeholder="Search or add a language…"
+							placeholder={`${t('catalog.languagesSearch')}…`}
 							value={props.manageLanguageName}
 							onInput={(e) => props.onManageLanguageName(e.currentTarget.value)}
 							onKeyDown={(e) => {
@@ -205,7 +206,7 @@ export function CatalogPage(props: CatalogPageProps) {
 									props.onAddLanguage()
 								}
 							}}
-							aria-label="Search or add a language"
+							aria-label={t('catalog.languagesSearch')}
 						/>
 						<button
 							type="button"
@@ -213,19 +214,21 @@ export function CatalogPage(props: CatalogPageProps) {
 							onClick={props.onAddLanguage}
 							disabled={!canAddLanguage()}
 						>
-							<IconPlus size={15} /> Add
+							<IconPlus size={15} /> {t('common.add')}
 						</button>
 					</div>
 					<Show
 						when={!props.languagesLoading && matchingLanguages().length > 0}
 						fallback={
 							<p class="muted small">
-								{props.manageLanguageName.trim() ? 'No matching languages.' : 'No languages yet.'}
+								{props.manageLanguageName.trim()
+									? t('catalog.languagesNoMatch')
+									: t('catalog.languagesEmpty')}
 							</p>
 						}
 					>
 						<CatalogTable
-							label="Languages"
+							label={t('catalog.languages')}
 							items={matchingLanguages()}
 							onRename={props.onRenameLanguage}
 							onRemove={props.onRemoveLanguage}
@@ -249,13 +252,13 @@ type CatalogTableProps = {
 function CatalogTable(props: CatalogTableProps) {
 	return (
 		<div class="catalog-table-wrap">
-			<table class="catalog-table" aria-label={`${props.label} list`}>
+			<table class="catalog-table" aria-label={t('catalog.listLabel', { label: props.label })}>
 				<thead>
 					<tr>
-						<th scope="col">Name</th>
-						<th scope="col">Books</th>
+						<th scope="col">{t('common.name')}</th>
+						<th scope="col">{t('common.books')}</th>
 						<th scope="col">
-							<span class="sr-only">Actions</span>
+							<span class="sr-only">{t('common.actions')}</span>
 						</th>
 					</tr>
 				</thead>
@@ -273,8 +276,8 @@ function CatalogTable(props: CatalogTableProps) {
 											type="button"
 											class="ghost small-btn catalog-rename-btn"
 											onClick={() => props.onRename(item.id, item.name)}
-											aria-label={`Rename ${item.name}`}
-											title={`Rename ${item.name}`}
+											aria-label={t('common.rename', { name: item.name })}
+											title={t('common.rename', { name: item.name })}
 										>
 											<IconEdit size={14} />
 										</button>
@@ -282,7 +285,7 @@ function CatalogTable(props: CatalogTableProps) {
 											type="button"
 											class="danger-ghost"
 											onClick={() => props.onRemove(item.id, item.name)}
-											aria-label={`Delete ${item.name}`}
+											aria-label={t('common.delete', { name: item.name })}
 										>
 											<IconTrash size={14} />
 										</button>

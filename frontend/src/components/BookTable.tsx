@@ -1,6 +1,7 @@
 import { DataTable, type DataTableColumn } from '@serkonda7/solid-components'
 import { IconEdit, IconLoader2, IconTrash } from '@tabler/icons-solidjs'
-import { createEffect, createSignal, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, Show } from 'solid-js'
+import { t } from '../i18n'
 import type { Book } from '../types'
 import {
 	authorNames,
@@ -44,10 +45,11 @@ export function BookTable(props: BookTableProps) {
 		return b.ownerId !== null && b.ownerId === props.currentUserId
 	}
 
-	const columns: DataTableColumn<Book>[] = [
+	// Rebuilt on locale change so header labels follow the selected language.
+	const columns = createMemo((): DataTableColumn<Book>[] => [
 		{
 			key: 'title',
-			label: 'Title',
+			label: t('book.title'),
 			sortable: true,
 			toggleable: false,
 			sortValue: (b) => b.title,
@@ -62,7 +64,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'isbn',
-			label: 'ISBN',
+			label: t('book.isbn'),
 			sortable: true,
 			defaultVisible: false,
 			sortValue: (b) => b.isbn,
@@ -74,32 +76,35 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'authors',
-			label: 'Author(s)',
+			label: t('book.authors'),
 			sortable: true,
 			sortValue: authorNames,
 			getValue: (b) => (
-				<Show when={(b.authors ?? []).length > 0} fallback={<span class="muted">Unknown</span>}>
+				<Show
+					when={(b.authors ?? []).length > 0}
+					fallback={<span class="muted">{t('common.unknown')}</span>}
+				>
 					{authorNames(b)}
 				</Show>
 			),
 		},
 		{
 			key: 'printYear',
-			label: 'Print year',
+			label: t('book.printYear'),
 			sortable: true,
 			sortValue: (b) => b.printYear,
 			getValue: (b) => b.printYear ?? <span class="muted">—</span>,
 		},
 		{
 			key: 'publisher',
-			label: 'Publisher',
+			label: t('book.publisher'),
 			sortable: true,
 			sortValue: (b) => b.publisher?.name,
 			getValue: (b) => b.publisher?.name ?? <span class="muted">—</span>,
 		},
 		{
 			key: 'location',
-			label: 'Location',
+			label: t('book.location'),
 			sortable: true,
 			sortValue: locationName,
 			getValue: (b) => (
@@ -110,7 +115,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'owner',
-			label: 'Owner',
+			label: t('book.owner'),
 			sortable: true,
 			sortValue: ownerName,
 			getValue: (b) => (
@@ -121,7 +126,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'languages',
-			label: 'Languages',
+			label: t('catalog.languages'),
 			sortable: true,
 			sortValue: displayLanguages,
 			getValue: (b) => (
@@ -132,7 +137,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'tags',
-			label: 'Tags',
+			label: t('catalog.tags'),
 			sortable: true,
 			sortValue: tagNames,
 			getValue: (b) => (
@@ -143,7 +148,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'provenance',
-			label: 'Status',
+			label: t('book.status'),
 			sortable: true,
 			sortValue: (b) => ownershipLabel(b.ownership),
 			getValue: (b) => (
@@ -154,7 +159,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'dedications',
-			label: 'Dedications',
+			label: t('book.dedications'),
 			sortable: true,
 			sortValue: (b) => formatPageNotes(b.dedications),
 			getValue: (b) => (
@@ -169,7 +174,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'damages',
-			label: 'Damages',
+			label: t('book.damages'),
 			sortable: true,
 			sortValue: (b) => formatPageNotes(b.damages),
 			getValue: (b) => (
@@ -184,7 +189,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'added',
-			label: 'Date added',
+			label: t('book.added'),
 			sortable: true,
 			sortValue: (b) => b.createdAt,
 			getValue: (b) => (
@@ -195,7 +200,7 @@ export function BookTable(props: BookTableProps) {
 		},
 		{
 			key: 'modified',
-			label: 'Date modified',
+			label: t('book.modified'),
 			sortable: true,
 			sortValue: (b) => b.updatedAt,
 			getValue: (b) => (
@@ -204,12 +209,12 @@ export function BookTable(props: BookTableProps) {
 				</Show>
 			),
 		},
-	]
+	])
 
 	return (
 		<DataTable
 			rows={props.books}
-			columns={columns}
+			columns={columns()}
 			getRowId={(b) => b.id}
 			class="table-wrap"
 			onSort={() => undefined}
@@ -217,13 +222,20 @@ export function BookTable(props: BookTableProps) {
 			defaultVisibleColumns={LIBRARY_DEFAULT_VISIBLE_COLUMNS}
 			onVisibleColumnsChange={setVisibleColumns}
 			showColumnCustomizer
+			columnCustomizerLabel={t('library.columns')}
+			columnCustomizerTitle={t('library.columnsTitle')}
+			columnCustomizerShowAllLabel={t('library.columnsShowAll')}
+			columnCustomizerResetLabel={t('library.columnsReset')}
 			rowActions={(b) => (
 				<div class="cell-actions">
 					<Show
 						when={canEdit(b)}
 						fallback={
-							<span class="muted small" title={`Owned by ${ownerName(b) || 'someone else'}`}>
-								read-only
+							<span
+								class="muted small"
+								title={t('library.ownedBy', { name: ownerName(b) || t('library.someoneElse') })}
+							>
+								{t('library.readOnly')}
 							</span>
 						}
 					>
@@ -231,8 +243,8 @@ export function BookTable(props: BookTableProps) {
 							type="button"
 							class="ghost icon-btn"
 							onClick={() => props.onEdit(b)}
-							aria-label={`Edit ${b.title}`}
-							title="Edit book"
+							aria-label={t('library.editAria', { title: b.title })}
+							title={t('library.editBook')}
 						>
 							<IconEdit size={15} />
 						</button>
@@ -241,8 +253,8 @@ export function BookTable(props: BookTableProps) {
 							class="danger-ghost icon-btn"
 							disabled={props.deletingId === b.id}
 							onClick={() => props.onDelete(b.id)}
-							aria-label={`Delete ${b.title}`}
-							title="Delete book"
+							aria-label={t('library.deleteAria', { title: b.title })}
+							title={t('library.deleteBook')}
 						>
 							<Show when={props.deletingId === b.id} fallback={<IconTrash size={15} />}>
 								<IconLoader2 size={15} class="spin" />

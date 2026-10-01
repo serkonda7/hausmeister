@@ -1,4 +1,5 @@
 import type { DataTableSortDirection } from '@serkonda7/solid-components'
+import { locale, type TranslationKey, t } from '../i18n'
 import type {
 	Book,
 	BookFormState,
@@ -10,14 +11,15 @@ import type {
 	ProvenanceKind,
 } from '../types'
 
-export const PROVENANCE_LABEL: Record<ProvenanceKind, string> = {
-	buy: 'Bought',
-	sell: 'Sold',
-	other: 'Other',
+const PROVENANCE_LABEL_KEY: Record<ProvenanceKind, TranslationKey> = {
+	buy: 'prov.buy',
+	sell: 'prov.sell',
+	other: 'prov.other',
 }
 
 export function provenanceLabel(kind: string): string {
-	return (PROVENANCE_LABEL as Record<string, string>)[kind] ?? kind
+	const key = (PROVENANCE_LABEL_KEY as Record<string, TranslationKey>)[kind]
+	return key ? t(key) : kind
 }
 
 export function formatProvenanceDate(ts: number | null): string {
@@ -34,7 +36,7 @@ export function formatProvenanceDate(ts: number | null): string {
 export function formatRecordDate(ts: number | null | undefined): string {
 	if (ts == null || !Number.isFinite(ts) || ts <= 0) return ''
 	try {
-		return new Date(ts).toLocaleDateString(undefined, {
+		return new Date(ts).toLocaleDateString(locale(), {
 			year: 'numeric',
 			month: 'short',
 			day: 'numeric',
@@ -45,9 +47,9 @@ export function formatRecordDate(ts: number | null | undefined): string {
 }
 
 export function formatProvenancePrice(e: Pick<ProvenanceEvent, 'priceCents' | 'kind'>): string {
-	if (e.priceCents == null) return e.kind === 'buy' ? 'price unknown' : ''
-	if (e.priceCents === 0) return 'Free'
-	const major = (e.priceCents / 100).toLocaleString(undefined, {
+	if (e.priceCents == null) return e.kind === 'buy' ? t('prov.priceUnknown') : ''
+	if (e.priceCents === 0) return t('prov.free')
+	const major = (e.priceCents / 100).toLocaleString(locale(), {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
 	})
@@ -55,12 +57,12 @@ export function formatProvenancePrice(e: Pick<ProvenanceEvent, 'priceCents' | 'k
 }
 
 export function ownershipLabel(o: Ownership): string {
-	return o === 'owned' ? 'Available' : o === 'disposed' ? 'Disposed' : 'Unknown'
+	return t(`ownership.${o}`)
 }
 
 export function provenanceTooltip(b: Book): string {
 	const events = b.provenance ?? []
-	if (events.length === 0) return `${ownershipLabel(b.ownership)} · No lifecycle events yet`
+	if (events.length === 0) return `${ownershipLabel(b.ownership)} · ${t('prov.noEvents')}`
 	return events
 		.map((e) => {
 			const parts: string[] = [provenanceLabel(e.kind)]

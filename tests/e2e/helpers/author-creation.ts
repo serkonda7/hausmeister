@@ -49,7 +49,11 @@ export async function openAddBookPage(page: Page) {
 		await route.fulfill({ json: emptyResponses[url.pathname] ?? {} })
 	})
 
-	await page.addInitScript(() => localStorage.setItem('hausmeister_token', 'e2e-token'))
+	await page.addInitScript(() => {
+		localStorage.setItem('hausmeister_token', 'e2e-token')
+		// Selectors below use English labels; the app defaults to German.
+		localStorage.setItem('hausmeister.locale', 'en')
+	})
 	await page.goto('/library/add')
 }
 

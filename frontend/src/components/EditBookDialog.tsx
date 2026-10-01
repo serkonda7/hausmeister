@@ -1,5 +1,6 @@
 import { IconEdit, IconLoader2, IconTrash, IconX } from '@tabler/icons-solidjs'
 import { For, Show } from 'solid-js'
+import { t } from '../i18n'
 import type { Book, ManagedUser } from '../types'
 import {
 	formatProvenanceDate,
@@ -46,12 +47,12 @@ export function EditBookDialog(props: EditBookDialogProps) {
 				aria-labelledby="edit-book-title"
 			>
 				<div class="dialog-heading">
-					<h2 id="edit-book-title">Edit book</h2>
+					<h2 id="edit-book-title">{t('editBook.title')}</h2>
 					<button
 						type="button"
 						class="clear"
 						onClick={props.onClose}
-						aria-label="Close edit dialog"
+						aria-label={t('editBook.close')}
 					>
 						<IconX size={18} />
 					</button>
@@ -61,13 +62,13 @@ export function EditBookDialog(props: EditBookDialogProps) {
 						<BookMetadataFields {...props} fieldIdPrefix="edit-book" />
 						<Show when={props.isAdmin}>
 							<div class="field-group">
-								<span class="field-label">Owner (admin only)</span>
+								<span class="field-label">{t('editBook.ownerAdmin')}</span>
 								<select
 									value={props.selectedOwnerId}
 									onChange={(e) => props.onSelectOwner(e.currentTarget.value)}
-									aria-label="Book owner"
+									aria-label={t('editBook.ownerAria')}
 								>
-									<option value="">— Unowned —</option>
+									<option value="">{t('editBook.unowned')}</option>
 									<For each={props.users}>
 										{(u) => <option value={u.id}>{userLabel(u)}</option>}
 									</For>
@@ -76,7 +77,7 @@ export function EditBookDialog(props: EditBookDialogProps) {
 						</Show>
 						<Show when={!props.isAdmin}>
 							<div class="field-group">
-								<span class="field-label">Owner</span>
+								<span class="field-label">{t('book.owner')}</span>
 								<p class="muted small" style="margin: 0">
 									{props.book.owner
 										? (props.book.owner.displayName ?? props.book.owner.username)
@@ -86,12 +87,12 @@ export function EditBookDialog(props: EditBookDialogProps) {
 						</Show>
 						<div class="span-2 field-group">
 							<span class="field-label">
-								Lifecycle ({(props.book.provenance ?? []).length}) ·{' '}
+								{t('editBook.lifecycle')} ({(props.book.provenance ?? []).length}) ·{' '}
 								{ownershipLabel(props.book.ownership ?? 'unknown')}
 							</span>
 							<Show
 								when={(props.book.provenance ?? []).length > 0}
-								fallback={<p class="muted small">No lifecycle events yet.</p>}
+								fallback={<p class="muted small">{t('editBook.noEvents')}</p>}
 							>
 								<ul class="manage-list">
 									<For each={props.book.provenance ?? []}>
@@ -114,7 +115,9 @@ export function EditBookDialog(props: EditBookDialogProps) {
 														type="button"
 														class="danger-ghost"
 														onClick={() => props.onRemoveProvenance(props.book.id, e.id)}
-														aria-label={`Delete ${provenanceLabel(e.kind)} event`}
+														aria-label={t('editBook.deleteEvent', {
+															kind: provenanceLabel(e.kind),
+														})}
 													>
 														<IconTrash size={14} />
 													</button>
@@ -128,31 +131,28 @@ export function EditBookDialog(props: EditBookDialogProps) {
 								form={props.form}
 								onField={props.onField}
 								gridClass="form-grid-4"
-								eventAriaLabel="New lifecycle event kind"
+								eventAriaLabel={t('editBook.newEventKind')}
 								includeSell
 							/>
-							<p class="hint">
-								The new event is saved together with “Save changes”. To delete an old event, use the
-								trash icon (applies immediately).
-							</p>
+							<p class="hint">{t('editBook.eventHint')}</p>
 						</div>
 					</div>
 					<Show when={props.error}>
 						<p class="error">{props.error}</p>
 					</Show>
 					<p class="muted small" style="margin: 0">
-						Added: {formatRecordDate(props.book.createdAt) || '—'} · Modified:{' '}
-						{formatRecordDate(props.book.updatedAt) || '—'}
+						{t('editBook.added')}: {formatRecordDate(props.book.createdAt) || '—'} ·{' '}
+						{t('editBook.modified')}: {formatRecordDate(props.book.updatedAt) || '—'}
 					</p>
 					<div class="form-actions">
 						<button type="button" class="ghost" onClick={props.onClose}>
-							Cancel
+							{t('common.cancel')}
 						</button>
 						<button type="submit" class="primary" disabled={props.saving}>
 							<Show when={props.saving} fallback={<IconEdit size={16} />}>
 								<IconLoader2 size={16} class="spin" />
 							</Show>
-							{props.saving ? 'Saving…' : 'Save changes'}
+							{props.saving ? t('common.saving') : t('common.saveChanges')}
 						</button>
 					</div>
 				</form>

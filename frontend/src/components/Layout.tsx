@@ -7,7 +7,8 @@ import {
 	IconUsers,
 	IconX,
 } from '@tabler/icons-solidjs'
-import { type JSX, Show } from 'solid-js'
+import { For, type JSX, Show } from 'solid-js'
+import { LOCALES, type Locale, locale, setLocale, t } from '../i18n'
 import type { AppUser, Page } from '../types'
 import { userDisplayName } from '../utils/books'
 
@@ -27,18 +28,18 @@ export type LayoutProps = {
 export function Layout(props: LayoutProps) {
 	return (
 		<div class="page">
-			<aside class="sidebar" aria-label="Primary navigation">
+			<aside class="sidebar" aria-label={t('nav.primary')}>
 				<div class="sidebar-brand">
 					<strong>Hausmeister</strong>
 				</div>
-				<nav class="sidebar-nav" aria-label="Sections">
+				<nav class="sidebar-nav" aria-label={t('nav.sections')}>
 					<a
 						href="/library"
 						class={props.page === 'library' || props.page === 'add-book' ? 'active' : ''}
 						onClick={(e) => props.onNavigate('/library', e)}
 					>
 						<IconLibrary size={18} />
-						<span>Library</span>
+						<span>{t('nav.library')}</span>
 					</a>
 					<a
 						href="/catalog"
@@ -46,7 +47,7 @@ export function Layout(props: LayoutProps) {
 						onClick={(e) => props.onNavigate('/catalog', e)}
 					>
 						<IconDatabase size={18} />
-						<span>Data catalog</span>
+						<span>{t('nav.catalog')}</span>
 					</a>
 					<a
 						href="/locations"
@@ -54,7 +55,7 @@ export function Layout(props: LayoutProps) {
 						onClick={(e) => props.onNavigate('/locations', e)}
 					>
 						<IconMapPin size={18} />
-						<span>Locations</span>
+						<span>{t('nav.locations')}</span>
 					</a>
 					<Show when={props.isAdmin}>
 						<a
@@ -63,7 +64,7 @@ export function Layout(props: LayoutProps) {
 							onClick={(e) => props.onNavigate('/users', e)}
 						>
 							<IconUsers size={18} />
-							<span>Users</span>
+							<span>{t('nav.users')}</span>
 						</a>
 					</Show>
 				</nav>
@@ -73,34 +74,50 @@ export function Layout(props: LayoutProps) {
 					<div class="search">
 						<IconSearch size={17} class="search-icon" />
 						<input
-							placeholder="Search title, author, tag, publisher, location, owner, status…"
+							placeholder={t('search.placeholder')}
 							value={props.query}
 							onInput={(e) => props.onQueryChange(e.currentTarget.value)}
-							aria-label="Search books"
+							aria-label={t('search.label')}
 						/>
 						<Show when={props.query}>
 							<button
 								type="button"
 								class="clear"
 								onClick={props.onClearQuery}
-								aria-label="Clear search"
+								aria-label={t('search.clear')}
 							>
 								<IconX size={15} />
 							</button>
 						</Show>
 					</div>
 				</Show>
-				<Show when={props.user}>
-					<div class="topbar-user" style="display: flex; align-items: center; gap: 0.5rem">
-						<span class="muted small">
-							{props.user ? userDisplayName(props.user) : ''}
-							<Show when={props.user?.isAdmin}> (admin)</Show>
-						</span>
-						<button type="button" class="ghost small-btn" onClick={props.onLogout} title="Log out">
-							<IconLogout size={14} /> Log out
-						</button>
-					</div>
-				</Show>
+				<div class="topbar-end">
+					<select
+						class="language-select"
+						value={locale()}
+						onChange={(e) => setLocale(e.currentTarget.value as Locale)}
+						aria-label={t('language.label')}
+						title={t('language.label')}
+					>
+						<For each={LOCALES}>{(l) => <option value={l.id}>{l.label}</option>}</For>
+					</select>
+					<Show when={props.user}>
+						<div class="topbar-user">
+							<span class="muted small">
+								{props.user ? userDisplayName(props.user) : ''}
+								<Show when={props.user?.isAdmin}> {t('auth.adminSuffix')}</Show>
+							</span>
+							<button
+								type="button"
+								class="ghost small-btn"
+								onClick={props.onLogout}
+								title={t('auth.logout')}
+							>
+								<IconLogout size={14} /> {t('auth.logout')}
+							</button>
+						</div>
+					</Show>
+				</div>
 			</header>
 
 			<main class={props.page === 'catalog' ? 'catalog-page-layout' : undefined}>

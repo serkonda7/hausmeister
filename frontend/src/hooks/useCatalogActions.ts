@@ -1,5 +1,6 @@
 import { type Accessor, createSignal, type Setter } from 'solid-js'
 import { api } from '../api'
+import { t } from '../i18n'
 import type { Author, Language, Location, Publisher, Tag } from '../types'
 
 export type CatalogSelections = {
@@ -60,7 +61,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 			await deps.refetchAuthors()
 			return data.author
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not create author.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.authorCreateFailed'))
 			return null
 		}
 	}
@@ -78,7 +79,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 			await deps.refetchPublishers()
 			return data.publisher
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not create publisher.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.publisherCreateFailed'))
 			return null
 		}
 	}
@@ -96,7 +97,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 			await deps.refetchLocations()
 			return data.location
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not create location.')
+			setCatalogError(err instanceof Error ? err.message : t('locations.createFailed'))
 			return null
 		}
 	}
@@ -114,7 +115,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 			await deps.refetchTags()
 			return data.tag
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not create tag.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.tagCreateFailed'))
 			return null
 		}
 	}
@@ -129,7 +130,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 			await deps.refetchLanguages()
 			return data.language
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not create language.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.languageCreateFailed'))
 			return null
 		}
 	}
@@ -213,7 +214,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 	}
 
 	async function renameAuthor(id: string, current: string): Promise<void> {
-		const name = window.prompt('Rename author', current)
+		const name = window.prompt(t('catalog.authorRename'), current)
 		if (name === null || name.trim() === '' || name.trim() === current) {
 			return
 		}
@@ -225,12 +226,12 @@ export function useCatalogActions(deps: CatalogDeps) {
 			})
 			await Promise.all([deps.refetchAuthors(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not rename author.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.authorRenameFailed'))
 		}
 	}
 
 	async function removeAuthor(id: string, name: string): Promise<void> {
-		if (!window.confirm(`Delete author “${name}”? Books keep their other data.`)) {
+		if (!window.confirm(t('catalog.authorConfirmDelete', { name }))) {
 			return
 		}
 		setCatalogError(null)
@@ -239,12 +240,12 @@ export function useCatalogActions(deps: CatalogDeps) {
 			deps.setSelectedAuthorIds((ids) => ids.filter((a) => a !== id))
 			await Promise.all([deps.refetchAuthors(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not delete author.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.authorDeleteFailed'))
 		}
 	}
 
 	async function renameTag(id: string, current: string): Promise<void> {
-		const name = window.prompt('Rename tag', current)
+		const name = window.prompt(t('catalog.tagRename'), current)
 		if (name === null || name.trim() === '' || name.trim() === current) {
 			return
 		}
@@ -256,12 +257,12 @@ export function useCatalogActions(deps: CatalogDeps) {
 			})
 			await Promise.all([deps.refetchTags(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not rename tag.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.tagRenameFailed'))
 		}
 	}
 
 	async function removeTag(id: string, name: string): Promise<void> {
-		if (!window.confirm(`Delete tag “${name}”? Books keep their other data.`)) {
+		if (!window.confirm(t('catalog.tagConfirmDelete', { name }))) {
 			return
 		}
 		setCatalogError(null)
@@ -270,11 +271,11 @@ export function useCatalogActions(deps: CatalogDeps) {
 			deps.setSelectedTagIds((ids) => ids.filter((t) => t !== id))
 			await Promise.all([deps.refetchTags(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not delete tag.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.tagDeleteFailed'))
 		}
 	}
 	async function renameLanguage(id: string, current: string): Promise<void> {
-		const name = window.prompt('Rename language', current)
+		const name = window.prompt(t('catalog.languageRename'), current)
 		if (name === null || !name.trim() || name.trim() === current) return
 		try {
 			await api(`/languages/${encodeURIComponent(id)}`, {
@@ -283,22 +284,22 @@ export function useCatalogActions(deps: CatalogDeps) {
 			})
 			await Promise.all([deps.refetchLanguages(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not rename language.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.languageRenameFailed'))
 		}
 	}
 	async function removeLanguage(id: string, name: string): Promise<void> {
-		if (!window.confirm(`Delete language “${name}”? Books keep their other data.`)) return
+		if (!window.confirm(t('catalog.languageConfirmDelete', { name }))) return
 		try {
 			await api(`/languages/${encodeURIComponent(id)}`, { method: 'DELETE' })
 			deps.setSelectedLanguageIds((ids) => ids.filter((l) => l !== id))
 			await Promise.all([deps.refetchLanguages(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not delete language.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.languageDeleteFailed'))
 		}
 	}
 
 	async function renamePublisher(id: string, current: string): Promise<void> {
-		const name = window.prompt('Rename publisher', current)
+		const name = window.prompt(t('catalog.publisherRename'), current)
 		if (name === null || name.trim() === '' || name.trim() === current) {
 			return
 		}
@@ -310,12 +311,12 @@ export function useCatalogActions(deps: CatalogDeps) {
 			})
 			await Promise.all([deps.refetchPublishers(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not rename publisher.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.publisherRenameFailed'))
 		}
 	}
 
 	async function removePublisher(id: string, name: string): Promise<void> {
-		if (!window.confirm(`Delete publisher “${name}”? Books keep a null publisher.`)) {
+		if (!window.confirm(t('catalog.publisherConfirmDelete', { name }))) {
 			return
 		}
 		setCatalogError(null)
@@ -326,12 +327,12 @@ export function useCatalogActions(deps: CatalogDeps) {
 			}
 			await Promise.all([deps.refetchPublishers(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not delete publisher.')
+			setCatalogError(err instanceof Error ? err.message : t('catalog.publisherDeleteFailed'))
 		}
 	}
 
 	async function renameLocation(id: string, current: string): Promise<void> {
-		const name = window.prompt('Rename location', current)
+		const name = window.prompt(t('locations.rename'), current)
 		if (name === null || name.trim() === '' || name.trim() === current) {
 			return
 		}
@@ -343,7 +344,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 			})
 			await Promise.all([deps.refetchLocations(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not rename location.')
+			setCatalogError(err instanceof Error ? err.message : t('locations.renameFailed'))
 		}
 	}
 
@@ -356,16 +357,12 @@ export function useCatalogActions(deps: CatalogDeps) {
 			})
 			await Promise.all([deps.refetchLocations(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not move location.')
+			setCatalogError(err instanceof Error ? err.message : t('locations.moveFailed'))
 		}
 	}
 
 	async function removeLocation(id: string, name: string): Promise<void> {
-		if (
-			!window.confirm(
-				`Delete location “${name}”? Its sub-locations move up one level and its books become unlocated.`,
-			)
-		) {
+		if (!window.confirm(t('locations.confirmDelete', { name }))) {
 			return
 		}
 		setCatalogError(null)
@@ -379,7 +376,7 @@ export function useCatalogActions(deps: CatalogDeps) {
 			}
 			await Promise.all([deps.refetchLocations(), deps.refetchBooks()])
 		} catch (err) {
-			setCatalogError(err instanceof Error ? err.message : 'Could not delete location.')
+			setCatalogError(err instanceof Error ? err.message : t('locations.deleteFailed'))
 		}
 	}
 

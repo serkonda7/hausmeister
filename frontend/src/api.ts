@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 export const API_BASE = ''
 
 const TOKEN_KEY = 'hausmeister_token'
@@ -47,7 +49,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 	}
 	if (!res.ok) {
 		const body = (await res.json().catch(() => ({}))) as { error?: string }
-		throw new Error(body.error ?? `Request failed: ${res.status}`)
+		throw new Error(body.error ?? t('common.requestFailed', { status: res.status }))
 	}
 	return (await res.json()) as T
 }
@@ -59,7 +61,7 @@ export async function apiPublic<T>(path: string, init?: RequestInit): Promise<T>
 	})
 	if (!res.ok) {
 		const body = (await res.json().catch(() => ({}))) as { error?: string }
-		throw new Error(body.error ?? `Request failed: ${res.status}`)
+		throw new Error(body.error ?? t('common.requestFailed', { status: res.status }))
 	}
 	return (await res.json()) as T
 }

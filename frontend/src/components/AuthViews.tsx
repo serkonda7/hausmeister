@@ -1,4 +1,5 @@
 import { Show } from 'solid-js'
+import { t } from '../i18n'
 import { ClearableInput } from './ClearableInput'
 
 export function AuthLoading() {
@@ -26,16 +27,13 @@ export function SetupDialog(props: SetupDialogProps) {
 	return (
 		<div class="dialog-backdrop" role="presentation">
 			<section class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="setup-title">
-				<h2 id="setup-title">Welcome — create the admin user</h2>
-				<p class="hint">
-					First run: no users exist yet. Create the admin account. The admin can then create more
-					users (username + password) under Users.
-				</p>
+				<h2 id="setup-title">{t('auth.setupTitle')}</h2>
+				<p class="hint">{t('auth.setupHint')}</p>
 				<form onSubmit={props.onSubmit}>
 					<div class="form-grid">
 						<label for="setup-username">
 							<span>
-								Username <em>*</em>
+								{t('auth.username')} <em>*</em>
 							</span>
 							<ClearableInput
 								id="setup-username"
@@ -46,18 +44,18 @@ export function SetupDialog(props: SetupDialogProps) {
 							/>
 						</label>
 						<label for="setup-display-name">
-							<span>Display name (optional)</span>
+							<span>{t('auth.displayNameOptional')}</span>
 							<ClearableInput
 								id="setup-display-name"
 								value={props.displayName}
 								onInput={(e) => props.onDisplayName(e.currentTarget.value)}
 								autocomplete="nickname"
-								placeholder="e.g. Alex"
+								placeholder={t('auth.displayNamePlaceholder')}
 							/>
 						</label>
 						<label for="setup-password">
 							<span>
-								Password <em>*</em>
+								{t('auth.password')} <em>*</em>
 							</span>
 							<ClearableInput
 								id="setup-password"
@@ -74,7 +72,7 @@ export function SetupDialog(props: SetupDialogProps) {
 					</Show>
 					<div class="form-actions">
 						<button type="submit" class="primary" disabled={props.busy}>
-							{props.busy ? 'Creating…' : 'Create admin'}
+							{props.busy ? t('common.creating') : t('auth.setupSubmit')}
 						</button>
 					</div>
 				</form>
@@ -97,13 +95,13 @@ export function LoginDialog(props: LoginDialogProps) {
 	return (
 		<div class="dialog-backdrop" role="presentation">
 			<section class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="login-title">
-				<h2 id="login-title">Log in</h2>
-				<p class="hint">Everyone can see all books, but you can only edit your own.</p>
+				<h2 id="login-title">{t('auth.loginTitle')}</h2>
+				<p class="hint">{t('auth.loginHint')}</p>
 				<form onSubmit={props.onSubmit}>
 					<div class="form-grid">
 						<label for="login-username">
 							<span>
-								Username <em>*</em>
+								{t('auth.username')} <em>*</em>
 							</span>
 							<ClearableInput
 								id="login-username"
@@ -115,7 +113,7 @@ export function LoginDialog(props: LoginDialogProps) {
 						</label>
 						<label for="login-password">
 							<span>
-								Password <em>*</em>
+								{t('auth.password')} <em>*</em>
 							</span>
 							<ClearableInput
 								id="login-password"
@@ -132,7 +130,7 @@ export function LoginDialog(props: LoginDialogProps) {
 					</Show>
 					<div class="form-actions">
 						<button type="submit" class="primary" disabled={props.busy}>
-							{props.busy ? 'Logging in…' : 'Log in'}
+							{props.busy ? t('auth.loginBusy') : t('auth.loginSubmit')}
 						</button>
 					</div>
 				</form>

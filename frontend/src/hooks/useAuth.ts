@@ -1,5 +1,6 @@
 import { createSignal, onMount } from 'solid-js'
 import { type AuthUser, api, apiPublic, getToken, setToken } from '../api'
+import { t } from '../i18n'
 
 /**
  * Login / setup / session state.
@@ -31,7 +32,7 @@ export function useAuth() {
 			setAuthUser(data.user)
 			if (!data.user) setToken(null)
 		} catch {
-			setAuthError('Could not reach the server.')
+			setAuthError(t('common.serverUnreachable'))
 		} finally {
 			setAuthLoading(false)
 		}
@@ -46,7 +47,7 @@ export function useAuth() {
 		e.preventDefault()
 		setAuthError(null)
 		if (!loginUsername().trim() || !loginPassword()) {
-			setAuthError('Username and password are required.')
+			setAuthError(t('auth.credentialsRequired'))
 			return null
 		}
 		setLoginBusy(true)
@@ -61,7 +62,7 @@ export function useAuth() {
 			setLoginPassword('')
 			return data.user
 		} catch (err) {
-			setAuthError(err instanceof Error ? err.message : 'Login failed.')
+			setAuthError(err instanceof Error ? err.message : t('auth.loginFailed'))
 			return null
 		} finally {
 			setLoginBusy(false)
@@ -73,7 +74,7 @@ export function useAuth() {
 		e.preventDefault()
 		setAuthError(null)
 		if (!setupUsername().trim() || !setupPassword()) {
-			setAuthError('Username and password are required.')
+			setAuthError(t('auth.credentialsRequired'))
 			return null
 		}
 		setSetupBusy(true)
@@ -93,7 +94,7 @@ export function useAuth() {
 			setSetupPassword('')
 			return data.user
 		} catch (err) {
-			setAuthError(err instanceof Error ? err.message : 'Setup failed.')
+			setAuthError(err instanceof Error ? err.message : t('auth.setupFailed'))
 			return null
 		} finally {
 			setSetupBusy(false)

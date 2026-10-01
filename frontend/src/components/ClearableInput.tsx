@@ -1,4 +1,5 @@
 import { type JSX, Show, splitProps } from 'solid-js'
+import { t } from '../i18n'
 
 export function ClearableInput(props: JSX.InputHTMLAttributes<HTMLInputElement>) {
 	const [local, inputProps] = splitProps(props, ['value', 'type', 'class', 'classList'])
@@ -19,8 +20,8 @@ export function ClearableInput(props: JSX.InputHTMLAttributes<HTMLInputElement>)
 				<button
 					type="button"
 					class="input-clear"
-					aria-label="Clear input"
-					title="Clear"
+					aria-label={t('common.clearInput')}
+					title={t('common.clear')}
 					tabIndex={-1}
 					onMouseDown={(e) => e.preventDefault()}
 					onClick={(e) => {

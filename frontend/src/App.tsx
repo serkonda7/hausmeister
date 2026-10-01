@@ -8,6 +8,7 @@ import { useAuth } from './hooks/useAuth'
 import { useBookForm } from './hooks/useBookForm'
 import { useCatalogActions } from './hooks/useCatalogActions'
 import { useUserManagement } from './hooks/useUserManagement'
+import { t } from './i18n'
 import { AddBookPage } from './pages/AddBookPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { LibraryPage } from './pages/LibraryPage'
@@ -448,7 +449,7 @@ export default function App() {
 				<Show when={page() === 'users'}>
 					<Show
 						when={auth.authUser()?.isAdmin}
-						fallback={<p class="error">Only admins can manage users.</p>}
+						fallback={<p class="error">{t('users.adminOnly')}</p>}
 					>
 						<UsersPage
 							users={managedUsers() ?? []}

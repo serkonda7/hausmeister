@@ -99,9 +99,24 @@ body {
 	border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
 }
 
-.topbar-user {
+.topbar-end {
 	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.topbar-user {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 	white-space: nowrap;
+}
+
+.language-select {
+	width: auto;
+	padding: 0.35rem 0.5rem;
+	font-size: 0.85rem;
 }
 
 .topbar {

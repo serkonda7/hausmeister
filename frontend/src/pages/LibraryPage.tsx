@@ -1,6 +1,7 @@
 import { IconPlus, IconTag } from '@tabler/icons-solidjs'
 import { Show } from 'solid-js'
 import { BookTable } from '../components/BookTable'
+import { t } from '../i18n'
 import type { Book } from '../types'
 
 export type LibraryPageProps = {
@@ -22,14 +23,14 @@ export function LibraryPage(props: LibraryPageProps) {
 		<>
 			<section class="library-head">
 				<h2>
-					Library{' '}
+					{t('nav.library')}{' '}
 					<Show when={!props.booksLoading && !props.booksError}>
 						<span class="muted">({props.books.length})</span>
 					</Show>
 				</h2>
 				<Show when={props.debouncedQuery}>
 					<p class="muted">
-						Results for “<strong>{props.debouncedQuery}</strong>”
+						{t('library.resultsFor')} “<strong>{props.debouncedQuery}</strong>”
 					</p>
 				</Show>
 			</section>
@@ -42,7 +43,7 @@ export function LibraryPage(props: LibraryPageProps) {
 						onClick={(e) => props.onNavigate('/library/add', e)}
 					>
 						<IconPlus size={16} />
-						Add book
+						{t('library.addBook')}
 					</a>
 				</div>
 			</section>
@@ -61,9 +62,9 @@ export function LibraryPage(props: LibraryPageProps) {
 
 			<Show when={!props.booksLoading && props.booksError}>
 				<div class="empty">
-					<p>Could not load books.</p>
+					<p>{t('library.loadError')}</p>
 					<button type="button" class="ghost" onClick={() => window.location.reload()}>
-						Reload
+						{t('library.reload')}
 					</button>
 				</div>
 			</Show>
@@ -74,14 +75,14 @@ export function LibraryPage(props: LibraryPageProps) {
 					fallback={
 						<div class="empty">
 							<IconTag size={28} />
-							<h3>No books yet</h3>
-							<p class="muted">Add your first book to start the collection.</p>
+							<h3>{t('library.emptyTitle')}</h3>
+							<p class="muted">{t('library.emptyHint')}</p>
 							<a
 								href="/library/add"
 								class="btn primary"
 								onClick={(e) => props.onNavigate('/library/add', e)}
 							>
-								<IconPlus size={16} /> Add book
+								<IconPlus size={16} /> {t('library.addBook')}
 							</a>
 						</div>
 					}

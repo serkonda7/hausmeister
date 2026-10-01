@@ -1,5 +1,6 @@
 import { type Accessor, createSignal } from 'solid-js'
 import { api } from '../api'
+import { t } from '../i18n'
 import type { AppUser, ManagedUser } from '../types'
 
 export type UserManagementDeps = {
@@ -30,7 +31,7 @@ export function useUserManagement(deps: UserManagementDeps) {
 		e.preventDefault()
 		setUserError(null)
 		if (!newUsername().trim() || !newPassword()) {
-			setUserError('Username and password are required.')
+			setUserError(t('auth.credentialsRequired'))
 			return
 		}
 		setUserSaving(true)
@@ -50,20 +51,20 @@ export function useUserManagement(deps: UserManagementDeps) {
 			setNewIsAdmin(false)
 			await deps.refetchUsers()
 		} catch (err) {
-			setUserError(err instanceof Error ? err.message : 'Could not create user.')
+			setUserError(err instanceof Error ? err.message : t('users.createFailed'))
 		} finally {
 			setUserSaving(false)
 		}
 	}
 
 	async function removeUser(id: string, username: string): Promise<void> {
-		if (!window.confirm(`Delete user “${username}”? Their books become unowned.`)) return
+		if (!window.confirm(t('users.confirmDelete', { name: username }))) return
 		setUserError(null)
 		try {
 			await api(`/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
 			await Promise.all([deps.refetchUsers(), deps.refetchBooks()])
 		} catch (err) {
-			setUserError(err instanceof Error ? err.message : 'Could not delete user.')
+			setUserError(err instanceof Error ? err.message : t('users.deleteFailed'))
 		}
 	}
 
@@ -99,7 +100,7 @@ export function useUserManagement(deps: UserManagementDeps) {
 	function requestCloseEditUser(): void {
 		// Only used for backdrop clicks: Cancel / ✕ / Escape close unconditionally.
 		if (editUserSaving()) return
-		if (isEditUserDirty() && !window.confirm('Discard unsaved changes?')) return
+		if (isEditUserDirty() && !window.confirm(t('common.discardChanges'))) return
 		closeEditUser()
 	}
 
@@ -110,7 +111,7 @@ export function useUserManagement(deps: UserManagementDeps) {
 		setEditUserError(null)
 		const username = editUsername().trim()
 		if (!username) {
-			setEditUserError('Username is required.')
+			setEditUserError(t('users.usernameRequired'))
 			return
 		}
 		setEditUserSaving(true)
@@ -136,7 +137,7 @@ export function useUserManagement(deps: UserManagementDeps) {
 			closeEditUser()
 			await Promise.all([deps.refetchUsers(), deps.refetchBooks()])
 		} catch (err) {
-			setEditUserError(err instanceof Error ? err.message : 'Could not update user.')
+			setEditUserError(err instanceof Error ? err.message : t('users.updateFailed'))
 		} finally {
 			setEditUserSaving(false)
 		}

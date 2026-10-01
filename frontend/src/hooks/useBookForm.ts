@@ -1,5 +1,6 @@
 import { type Accessor, createSignal } from 'solid-js'
 import { api } from '../api'
+import { t } from '../i18n'
 import type { AppUser, Author, Book, BookFormState, Language, PageNote, Tag } from '../types'
 import { asPageNotes, EMPTY_FORM, priceToCents } from '../utils/books'
 
@@ -136,7 +137,7 @@ export function useBookForm(deps: BookFormDeps) {
 	function requestCloseEditBook(): void {
 		// Only used for backdrop clicks: Cancel / ✕ / Escape close unconditionally.
 		if (editSaving()) return
-		if (isEditDirty() && !window.confirm('Discard unsaved changes?')) return
+		if (isEditDirty() && !window.confirm(t('common.discardChanges'))) return
 		closeEditBook()
 	}
 
@@ -157,12 +158,12 @@ export function useBookForm(deps: BookFormDeps) {
 		if (!book) return
 		const f = form()
 		if (!f.title.trim()) {
-			setEditError('Title is required.')
+			setEditError(t('form.titleRequired'))
 			return
 		}
 		const parsedYear = Number.parseInt(f.printYear.trim(), 10)
 		if (f.printYear.trim() && !Number.isFinite(parsedYear)) {
-			setEditError('Print year must be a number.')
+			setEditError(t('form.printYearNumber'))
 			return
 		}
 		setEditSaving(true)
@@ -191,7 +192,7 @@ export function useBookForm(deps: BookFormDeps) {
 			if (f.provKind.trim()) {
 				const cents = priceToCents(f.provPrice)
 				if (f.provPrice.trim() && cents === undefined) {
-					throw new Error('Provenance price must be a non-negative number.')
+					throw new Error(t('form.priceInvalid'))
 				}
 				await api(`/books/${encodeURIComponent(book.id)}/provenance`, {
 					method: 'POST',
@@ -207,7 +208,7 @@ export function useBookForm(deps: BookFormDeps) {
 			closeEditBook()
 			await Promise.all([deps.refetchBooks(), deps.refetchLocations()])
 		} catch (err) {
-			setEditError(err instanceof Error ? err.message : 'Could not update the book.')
+			setEditError(err instanceof Error ? err.message : t('editBook.saveFailed'))
 		} finally {
 			setEditSaving(false)
 		}
@@ -225,22 +226,22 @@ export function useBookForm(deps: BookFormDeps) {
 		setActionError(null)
 		const f = form()
 		if (!f.title.trim()) {
-			setFormError('Title is required.')
+			setFormError(t('form.titleRequired'))
 			return false
 		}
 		const parsedYear = Number.parseInt(f.printYear.trim(), 10)
 		if (f.printYear.trim() && !Number.isFinite(parsedYear)) {
-			setFormError('Print year must be a number.')
+			setFormError(t('form.printYearNumber'))
 			return false
 		}
 		setSaving(true)
 		try {
 			if (f.provKind.trim() && !['buy', 'sell', 'other'].includes(f.provKind.trim())) {
-				throw new Error('Invalid provenance kind.')
+				throw new Error(t('form.kindInvalid'))
 			}
 			const cents = priceToCents(f.provPrice)
 			if (f.provPrice.trim() && cents === undefined) {
-				throw new Error('Provenance price must be a non-negative number.')
+				throw new Error(t('form.priceInvalid'))
 			}
 			const created = await api<{ book: Book }>('/books', {
 				method: 'POST',
@@ -277,7 +278,7 @@ export function useBookForm(deps: BookFormDeps) {
 			await Promise.all([deps.refetchBooks(), deps.refetchLocations()])
 			return true
 		} catch (err) {
-			setFormError(err instanceof Error ? err.message : 'Could not save the book.')
+			setFormError(err instanceof Error ? err.message : t('addBook.saveFailed'))
 			return false
 		} finally {
 			setSaving(false)
@@ -285,7 +286,7 @@ export function useBookForm(deps: BookFormDeps) {
 	}
 
 	async function removeBook(id: string): Promise<void> {
-		if (!window.confirm('Delete this book?')) {
+		if (!window.confirm(t('library.confirmDelete'))) {
 			return
 		}
 		setActionError(null)
@@ -294,14 +295,14 @@ export function useBookForm(deps: BookFormDeps) {
 			await api(`/books/${encodeURIComponent(id)}`, { method: 'DELETE' })
 			await Promise.all([deps.refetchBooks(), deps.refetchLocations()])
 		} catch (err) {
-			setActionError(err instanceof Error ? err.message : 'Could not delete the book.')
+			setActionError(err instanceof Error ? err.message : t('library.deleteFailed'))
 		} finally {
 			setDeletingId(null)
 		}
 	}
 
 	async function removeProvenanceEvent(bookId: string, eventId: string): Promise<void> {
-		if (!window.confirm('Delete this lifecycle event?')) {
+		if (!window.confirm(t('editBook.confirmDeleteEvent'))) {
 			return
 		}
 		setEditError(null)
@@ -313,7 +314,7 @@ export function useBookForm(deps: BookFormDeps) {
 			setEditingBook(updated.book)
 			await deps.refetchBooks()
 		} catch (err) {
-			setEditError(err instanceof Error ? err.message : 'Could not delete the event.')
+			setEditError(err instanceof Error ? err.message : t('editBook.deleteEventFailed'))
 		}
 	}
 
@@ -321,22 +322,22 @@ export function useBookForm(deps: BookFormDeps) {
 		const selected = (deps.getAuthors() ?? []).filter((author) =>
 			selectedAuthorIds().includes(author.id),
 		)
-		if (selected.length === 0) return 'Select authors'
+		if (selected.length === 0) return t('form.selectAuthors')
 		if (selected.length <= 2) return selected.map((author) => author.name).join(', ')
-		return `${selected.length} authors selected`
+		return t('form.authorsSelected', { count: selected.length })
 	}
 
 	const selectedTagLabel = (): string => {
 		const selected = (deps.getTags() ?? []).filter((tag) => selectedTagIds().includes(tag.id))
-		if (selected.length === 0) return 'Select tags'
+		if (selected.length === 0) return t('form.selectTags')
 		if (selected.length <= 2) return selected.map((tag) => tag.name).join(', ')
-		return `${selected.length} tags selected`
+		return t('form.tagsSelected', { count: selected.length })
 	}
 	const selectedLanguageLabel = (): string => {
 		const selected = (deps.getLanguages() ?? []).filter((l) => selectedLanguageIds().includes(l.id))
-		if (!selected.length) return 'Select languages'
+		if (!selected.length) return t('form.selectLanguages')
 		if (selected.length <= 2) return selected.map((l) => l.name).join(', ')
-		return `${selected.length} languages selected`
+		return t('form.languagesSelected', { count: selected.length })
 	}
 
 	return {

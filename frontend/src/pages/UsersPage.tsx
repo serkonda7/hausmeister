@@ -1,6 +1,7 @@
 import { IconEdit, IconLoader2, IconTrash, IconX } from '@tabler/icons-solidjs'
 import { For, Show } from 'solid-js'
 import { ClearableInput } from '../components/ClearableInput'
+import { t } from '../i18n'
 import type { ManagedUser } from '../types'
 import { userDisplayName } from '../utils/books'
 
@@ -28,19 +29,21 @@ export function UsersPage(props: UsersPageProps) {
 		<>
 			<section class="library-head">
 				<div>
-					<h2>Users ({props.users.length})</h2>
+					<h2>
+						{t('nav.users')} ({props.users.length})
+					</h2>
 				</div>
 			</section>
 			<Show when={props.userError}>
 				<p class="error">{props.userError}</p>
 			</Show>
 			<section class="panel catalog-section">
-				<h3>Create user</h3>
+				<h3>{t('users.create')}</h3>
 				<form onSubmit={props.onCreateUser}>
 					<div class="form-grid user-create-grid">
 						<label for="new-user-username">
 							<span>
-								Username <em>*</em>
+								{t('auth.username')} <em>*</em>
 							</span>
 							<ClearableInput
 								id="new-user-username"
@@ -51,18 +54,18 @@ export function UsersPage(props: UsersPageProps) {
 							/>
 						</label>
 						<label for="new-user-display-name">
-							<span>Display name (optional)</span>
+							<span>{t('auth.displayNameOptional')}</span>
 							<ClearableInput
 								id="new-user-display-name"
 								value={props.newDisplayName}
 								onInput={(e) => props.onNewDisplayName(e.currentTarget.value)}
 								autocomplete="off"
-								placeholder="e.g. Alex"
+								placeholder={t('auth.displayNamePlaceholder')}
 							/>
 						</label>
 						<label for="new-user-password">
 							<span>
-								Password <em>*</em>
+								{t('auth.password')} <em>*</em>
 							</span>
 							<ClearableInput
 								id="new-user-password"
@@ -80,22 +83,22 @@ export function UsersPage(props: UsersPageProps) {
 									checked={props.newIsAdmin}
 									onChange={(e) => props.onNewIsAdmin(e.currentTarget.checked)}
 								/>
-								<span>Admin (can manage users and all books)</span>
+								<span>{t('users.adminCheckbox')}</span>
 							</span>
 						</label>
 					</div>
 					<div class="form-actions">
 						<button type="submit" class="primary" disabled={props.userSaving}>
-							{props.userSaving ? 'Creating…' : 'Create user'}
+							{props.userSaving ? t('common.creating') : t('users.create')}
 						</button>
 					</div>
 				</form>
 			</section>
 			<section class="panel catalog-section">
-				<h3>All users</h3>
+				<h3>{t('users.all')}</h3>
 				<Show
 					when={!props.usersLoading && props.users.length > 0}
-					fallback={<p class="muted small">No users yet.</p>}
+					fallback={<p class="muted small">{t('users.empty')}</p>}
 				>
 					<ul class="manage-list">
 						<For each={props.users}>
@@ -107,10 +110,10 @@ export function UsersPage(props: UsersPageProps) {
 											<span class="muted small">({u.username}) </span>
 										</Show>
 										<Show when={u.isAdmin}>
-											<span class="muted small">· admin</span>
+											<span class="muted small">{t('users.adminBadge')}</span>
 										</Show>
 										<Show when={u.id === props.currentUserId}>
-											<span class="muted small"> · you</span>
+											<span class="muted small"> {t('users.youBadge')}</span>
 										</Show>
 									</span>
 									<span class="manage-actions">
@@ -118,19 +121,19 @@ export function UsersPage(props: UsersPageProps) {
 											type="button"
 											class="ghost small-btn"
 											onClick={() => props.onStartEditUser(u)}
-											aria-label={`Edit ${u.username}`}
+											aria-label={t('library.editAria', { title: u.username })}
 										>
-											<IconEdit size={14} /> Edit
+											<IconEdit size={14} /> {t('common.edit')}
 										</button>
 										<Show
 											when={u.id !== props.currentUserId}
-											fallback={<span class="muted small">current</span>}
+											fallback={<span class="muted small">{t('users.current')}</span>}
 										>
 											<button
 												type="button"
 												class="danger-ghost"
 												onClick={() => props.onRemoveUser(u.id, u.username)}
-												aria-label={`Delete ${u.username}`}
+												aria-label={t('common.delete', { name: u.username })}
 											>
 												<IconTrash size={14} />
 											</button>
@@ -181,13 +184,13 @@ export function EditUserDialog(props: EditUserDialogProps) {
 			>
 				<div class="dialog-heading">
 					<div>
-						<h2 id="edit-user-title">Edit user</h2>
+						<h2 id="edit-user-title">{t('users.editTitle')}</h2>
 					</div>
 					<button
 						type="button"
 						class="clear"
 						onClick={props.onClose}
-						aria-label="Close edit user dialog"
+						aria-label={t('users.editClose')}
 					>
 						<IconX size={18} />
 					</button>
@@ -196,7 +199,7 @@ export function EditUserDialog(props: EditUserDialogProps) {
 					<div class="form-grid">
 						<label for="edit-user-username">
 							<span>
-								Username <em>*</em>
+								{t('auth.username')} <em>*</em>
 							</span>
 							<ClearableInput
 								id="edit-user-username"
@@ -207,17 +210,17 @@ export function EditUserDialog(props: EditUserDialogProps) {
 							/>
 						</label>
 						<label for="edit-user-display-name">
-							<span>Display name (empty = username)</span>
+							<span>{t('users.displayNameEdit')}</span>
 							<ClearableInput
 								id="edit-user-display-name"
 								value={props.displayName}
 								onInput={(e) => props.onDisplayName(e.currentTarget.value)}
 								autocomplete="off"
-								placeholder="e.g. Alex"
+								placeholder={t('auth.displayNamePlaceholder')}
 							/>
 						</label>
 						<label for="edit-user-password">
-							<span>New password (empty = keep)</span>
+							<span>{t('users.newPassword')}</span>
 							<ClearableInput
 								id="edit-user-password"
 								type="password"
@@ -232,7 +235,7 @@ export function EditUserDialog(props: EditUserDialogProps) {
 								checked={props.isAdmin}
 								onChange={(e) => props.onIsAdmin(e.currentTarget.checked)}
 							/>
-							<span>Admin (can manage users and all books)</span>
+							<span>{t('users.adminCheckbox')}</span>
 						</label>
 					</div>
 					<Show when={props.error}>
@@ -240,13 +243,13 @@ export function EditUserDialog(props: EditUserDialogProps) {
 					</Show>
 					<div class="form-actions">
 						<button type="button" class="ghost" onClick={props.onClose}>
-							Cancel
+							{t('common.cancel')}
 						</button>
 						<button type="submit" class="primary" disabled={props.saving}>
 							<Show when={props.saving} fallback={<IconEdit size={16} />}>
 								<IconLoader2 size={16} class="spin" />
 							</Show>
-							{props.saving ? 'Saving…' : 'Save changes'}
+							{props.saving ? t('common.saving') : t('common.saveChanges')}
 						</button>
 					</div>
 				</form>

@@ -1,4 +1,5 @@
 import { createMemo, For, Index, Show } from 'solid-js'
+import { t } from '../i18n'
 import type { Author, BookFormState, Language, Location, PageNote, Publisher, Tag } from '../types'
 import { locationOptions } from '../utils/books'
 import { ClearableInput } from './ClearableInput'
@@ -50,34 +51,34 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 		const id = props.selectedLocationId
 		if (!id) return undefined
 		const parent = locationOptions(props.locations).find((l) => l.id === id)
-		return parent ? `under “${parent.fullPath ?? parent.name}”` : undefined
+		return parent ? t('form.underLocation', { name: parent.fullPath ?? parent.name }) : undefined
 	}
 
 	return (
 		<>
 			<label class="span-2" for={fieldId('title')}>
 				<span>
-					Title <em>*</em>
+					{t('book.title')} <em>*</em>
 				</span>
 				<ClearableInput
 					id={fieldId('title')}
-					placeholder="e.g. The Left Hand of Darkness"
+					placeholder={t('book.titlePlaceholder')}
 					value={props.form.title}
 					onInput={(e) => props.onField('title', e.currentTarget.value)}
 					required
 				/>
 			</label>
 			<label class="span-2" for={fieldId('subtitle')}>
-				<span>Subtitle</span>
+				<span>{t('book.subtitle')}</span>
 				<ClearableInput
 					id={fieldId('subtitle')}
-					placeholder="Optional"
+					placeholder={t('common.optional')}
 					value={props.form.subtitle}
 					onInput={(e) => props.onField('subtitle', e.currentTarget.value)}
 				/>
 			</label>
 			<div class="span-2 field-group">
-				<span class="field-label">Author(s)</span>
+				<span class="field-label">{t('book.authors')}</span>
 				<MultiSelect
 					summary={props.authorSummary}
 					items={props.authors}
@@ -85,26 +86,26 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 					onToggle={props.onToggleAuthor}
 					search={props.newAuthorName}
 					onSearch={props.onNewAuthorName}
-					searchLabel="Search or add author"
+					searchLabel={t('form.searchAddAuthor')}
 					onCreate={props.onAddAuthor}
 				/>
 			</div>
 			<div class="field-group">
-				<span class="field-label">Publisher</span>
+				<span class="field-label">{t('book.publisher')}</span>
 				<CreatableSingleSelect
-					placeholder="— No publisher —"
-					clearLabel="— No publisher —"
+					placeholder={t('form.noPublisher')}
+					clearLabel={t('form.noPublisher')}
 					options={props.publishers.map((pub) => ({ id: pub.id, label: pub.name }))}
 					value={props.selectedPublisherId}
 					onSelect={props.onSelectPublisher}
 					search={props.newPublisherName}
 					onSearch={props.onNewPublisherName}
-					searchLabel="Search or add publisher"
+					searchLabel={t('form.searchAddPublisher')}
 					onCreate={props.onAddPublisher}
 				/>
 			</div>
 			<label for={fieldId('print-year')}>
-				<span>Print year</span>
+				<span>{t('book.printYear')}</span>
 				<ClearableInput
 					id={fieldId('print-year')}
 					type="number"
@@ -115,16 +116,16 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 				/>
 			</label>
 			<label for={fieldId('isbn')}>
-				<span>ISBN</span>
+				<span>{t('book.isbn')}</span>
 				<ClearableInput
 					id={fieldId('isbn')}
-					placeholder="Optional"
+					placeholder={t('common.optional')}
 					value={props.form.isbn}
 					onInput={(e) => props.onField('isbn', e.currentTarget.value)}
 				/>
 			</label>
 			<div class="field-group">
-				<span class="field-label">Tag(s)</span>
+				<span class="field-label">{t('book.tags')}</span>
 				<MultiSelect
 					summary={props.tagSummary}
 					items={props.tags}
@@ -132,12 +133,12 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 					onToggle={props.onToggleTag}
 					search={props.newTagName}
 					onSearch={props.onNewTagName}
-					searchLabel="Search or add tag"
+					searchLabel={t('form.searchAddTag')}
 					onCreate={props.onAddTag}
 				/>
 			</div>
 			<div class="field-group">
-				<span class="field-label">Language(s)</span>
+				<span class="field-label">{t('book.languages')}</span>
 				<MultiSelect
 					summary={props.languageSummary}
 					items={props.languages}
@@ -145,35 +146,35 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 					onToggle={props.onToggleLanguage}
 					search={props.newLanguageName}
 					onSearch={props.onNewLanguageName}
-					searchLabel="Search or add language"
+					searchLabel={t('form.searchAddLanguage')}
 					onCreate={props.onAddLanguage}
 				/>
 			</div>
 			<PageNoteEditor
-				title="Dedications"
+				title={t('book.dedications')}
 				notes={props.form.dedications}
 				onChange={(notes) => props.onField('dedications', notes)}
-				pagePlaceholder="Page"
-				textPlaceholder="Inscription"
-				addLabel="Add dedication"
-				kind="dedication"
+				pagePlaceholder={t('pageNote.page')}
+				textPlaceholder={t('pageNote.dedicationText')}
+				addLabel={t('pageNote.addDedication')}
+				kindLabel={t('pageNote.dedication')}
 				fieldIdPrefix={`${fieldId('dedications')}`}
 			/>
 			<PageNoteEditor
-				title="Damages"
+				title={t('book.damages')}
 				notes={props.form.damages}
 				onChange={(notes) => props.onField('damages', notes)}
-				pagePlaceholder="Page"
-				textPlaceholder="Damage"
-				addLabel="Add damage"
-				kind="damage"
+				pagePlaceholder={t('pageNote.page')}
+				textPlaceholder={t('pageNote.damageText')}
+				addLabel={t('pageNote.addDamage')}
+				kindLabel={t('pageNote.damage')}
 				fieldIdPrefix={`${fieldId('damages')}`}
 			/>
 			<div class="field-group">
-				<span class="field-label">Location</span>
+				<span class="field-label">{t('book.location')}</span>
 				<CreatableSingleSelect
-					placeholder="— No location —"
-					clearLabel="— No location —"
+					placeholder={t('form.noLocation')}
+					clearLabel={t('form.noLocation')}
 					options={locationOptions(props.locations).map((l) => ({
 						id: l.id,
 						label: l.fullPath ?? l.name,
@@ -182,7 +183,7 @@ export function BookMetadataFields(props: BookMetadataFieldsProps) {
 					onSelect={props.onSelectLocation}
 					search={props.newLocationName}
 					onSearch={props.onNewLocationName}
-					searchLabel="Search or add location"
+					searchLabel={t('form.searchAddLocation')}
 					onCreate={props.onAddLocation}
 					createHint={locationParentHint()}
 				/>
@@ -203,31 +204,31 @@ export type ProvenanceDraftFieldsProps = {
 export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 	const eventField = () => (
 		<label for={`provenance-kind-${props.gridClass}`}>
-			<span>Event</span>
+			<span>{t('prov.event')}</span>
 			<select
 				id={`provenance-kind-${props.gridClass}`}
 				value={props.form.provKind}
 				onChange={(e) => props.onField('provKind', e.currentTarget.value)}
 				aria-label={props.eventAriaLabel}
 			>
-				<option value="">— None —</option>
-				<option value="buy">Bought / got it</option>
+				<option value="">{t('prov.none')}</option>
+				<option value="buy">{t('prov.buyOption')}</option>
 				<Show when={props.includeSell}>
-					<option value="sell">Sold / gave away</option>
+					<option value="sell">{t('prov.sellOption')}</option>
 				</Show>
-				<option value="other">Other</option>
+				<option value="other">{t('prov.other')}</option>
 			</select>
 		</label>
 	)
 	const priceField = () => (
 		<label for={`provenance-price-${props.gridClass}`}>
-			<span>Price (EUR)</span>
+			<span>{t('prov.price')}</span>
 			<ClearableInput
 				id={`provenance-price-${props.gridClass}`}
 				type="number"
 				min="0"
 				step="0.01"
-				placeholder="0 = free, empty = unknown"
+				placeholder={t('prov.pricePlaceholder')}
 				value={props.form.provPrice}
 				onInput={(e) => props.onField('provPrice', e.currentTarget.value)}
 			/>
@@ -235,7 +236,7 @@ export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 	)
 	const dateField = () => (
 		<label for={`provenance-date-${props.gridClass}`}>
-			<span>Date</span>
+			<span>{t('prov.date')}</span>
 			<ClearableInput
 				id={`provenance-date-${props.gridClass}`}
 				type="date"
@@ -246,10 +247,10 @@ export function ProvenanceDraftFields(props: ProvenanceDraftFieldsProps) {
 	)
 	const partyField = () => (
 		<label for={`provenance-party-${props.gridClass}`}>
-			<span>From whom / where</span>
+			<span>{t('prov.party')}</span>
 			<ClearableInput
 				id={`provenance-party-${props.gridClass}`}
-				placeholder="Bookstore, Person..."
+				placeholder={t('prov.partyPlaceholder')}
 				value={props.form.provParty}
 				onInput={(e) => props.onField('provParty', e.currentTarget.value)}
 			/>
@@ -274,7 +275,8 @@ export type PageNoteEditorProps = {
 	pagePlaceholder: string
 	textPlaceholder: string
 	addLabel: string
-	kind: 'dedication' | 'damage'
+	/** Entry name used in per-row accessible labels. */
+	kindLabel: string
 	fieldIdPrefix: string
 }
 
@@ -310,7 +312,7 @@ export function PageNoteEditor(props: PageNoteEditorProps) {
 								placeholder={props.pagePlaceholder}
 								value={note().page}
 								onInput={(e) => update(i, { page: e.currentTarget.value })}
-								aria-label={`${props.kind} ${i + 1} page`}
+								aria-label={t('pageNote.pageAria', { kind: props.kindLabel, n: i + 1 })}
 							/>
 							<ClearableInput
 								id={`${props.fieldIdPrefix}-text-${i}`}
@@ -318,14 +320,14 @@ export function PageNoteEditor(props: PageNoteEditorProps) {
 								placeholder={props.textPlaceholder}
 								value={note().text}
 								onInput={(e) => update(i, { text: e.currentTarget.value })}
-								aria-label={`${props.kind} ${i + 1} text`}
+								aria-label={t('pageNote.textAria', { kind: props.kindLabel, n: i + 1 })}
 							/>
 							<button
 								type="button"
 								class="danger-ghost icon-btn"
 								onClick={() => remove(i)}
-								aria-label={`Remove ${props.kind} ${i + 1}`}
-								title={`Remove ${props.kind}`}
+								aria-label={t('pageNote.removeAria', { kind: props.kindLabel, n: i + 1 })}
+								title={t('pageNote.removeTitle', { kind: props.kindLabel })}
 							>
 								×
 							</button>
@@ -477,7 +479,7 @@ export function MultiSelect(props: MultiSelectProps) {
 								<button
 									type="button"
 									class="multi-select-chip-remove"
-									aria-label={`Remove ${item.name}`}
+									aria-label={t('common.remove', { name: item.name })}
 									onClick={(e) => {
 										e.preventDefault()
 										e.stopPropagation()
@@ -513,11 +515,11 @@ export function MultiSelect(props: MultiSelectProps) {
 				<div class="multi-select-options">
 					<ClearableInput
 						class="multi-select-filter"
-						placeholder="Search or type a new name…"
+						placeholder={t('form.searchOrCreate')}
 						value={props.search ?? ''}
 						onInput={(e) => props.onSearch?.(e.currentTarget.value)}
 						onKeyDown={handleSearchKeyDown}
-						aria-label={props.searchLabel ?? 'Search'}
+						aria-label={props.searchLabel ?? t('common.search')}
 					/>
 					<For each={filtered()}>
 						{(item) => (
@@ -538,7 +540,7 @@ export function MultiSelect(props: MultiSelectProps) {
 							class="create-row"
 							onClick={(e) => createItem((e.currentTarget as HTMLElement).closest('details'))}
 						>
-							+ Create “{trimmedSearch()}”
+							{t('form.create', { name: trimmedSearch() })}
 						</button>
 					</Show>
 				</div>
@@ -650,7 +652,7 @@ export function CreatableSingleSelect(props: CreatableSingleSelectProps) {
 			<div class="multi-select-options" role="listbox">
 				<ClearableInput
 					class="multi-select-filter"
-					placeholder="Search or type a new name…"
+					placeholder={t('form.searchOrCreate')}
 					value={props.search}
 					onInput={(e) => props.onSearch(e.currentTarget.value)}
 					onKeyDown={handleSearchKeyDown}
@@ -679,7 +681,8 @@ export function CreatableSingleSelect(props: CreatableSingleSelectProps) {
 				</For>
 				<Show when={canCreate()}>
 					<button type="button" class="create-row" onClick={() => props.onCreate()}>
-						+ Create “{trimmedSearch()}”<Show when={props.createHint}> ({props.createHint})</Show>
+						{t('form.create', { name: trimmedSearch() })}
+						<Show when={props.createHint}> ({props.createHint})</Show>
 					</button>
 				</Show>
 			</div>

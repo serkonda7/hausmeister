@@ -1,5 +1,6 @@
 import { IconLoader2, IconPlus } from '@tabler/icons-solidjs'
 import { Show } from 'solid-js'
+import { t } from '../i18n'
 import {
 	BookMetadataFields,
 	type BookMetadataFieldsProps,
@@ -54,17 +55,17 @@ export function AddBookPanel(props: AddBookPanelProps) {
 
 	return (
 		<section class="panel form-panel">
-			<h2>Add a book</h2>
+			<h2>{t('addBook.title')}</h2>
 			<form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown}>
 				<div class="form-grid book-form-grid">
 					<BookMetadataFields {...props} fieldIdPrefix="add-book" />
 					<div class="span-2 field-group">
-						<span class="field-label">Acquisition (optional)</span>
+						<span class="field-label">{t('addBook.acquisition')}</span>
 						<ProvenanceDraftFields
 							form={props.form}
 							onField={props.onField}
 							gridClass="add-book-acquisition-grid"
-							eventAriaLabel="Initial lifecycle event"
+							eventAriaLabel={t('addBook.initialEvent')}
 							includeSell={false}
 							priceFirst
 						/>
@@ -75,33 +76,33 @@ export function AddBookPanel(props: AddBookPanelProps) {
 				</Show>
 				<div class="form-actions">
 					<button type="button" class="ghost" onClick={props.onCancel}>
-						Cancel
+						{t('common.cancel')}
 					</button>
 					<button
 						type="submit"
 						data-action="save"
 						class="primary"
 						disabled={props.saving}
-						title="Save (Ctrl+Enter)"
+						title={t('addBook.saveTitle')}
 						aria-keyshortcuts="Control+Enter Meta+Enter"
 					>
 						<Show when={props.saving} fallback={<IconPlus size={16} />}>
 							<IconLoader2 size={16} class="spin" />
 						</Show>
-						{props.saving ? 'Saving…' : 'Save'}
+						{props.saving ? t('common.saving') : t('common.save')}
 					</button>
 					<button
 						type="submit"
 						data-action="another"
 						class="secondary save-another"
 						disabled={props.saving}
-						title="Save & create another (Enter)"
+						title={t('addBook.saveAnotherTitle')}
 						aria-keyshortcuts="Enter"
 					>
 						<Show when={props.saving} fallback={<IconPlus size={16} />}>
 							<IconLoader2 size={16} class="spin" />
 						</Show>
-						{props.saving ? 'Saving…' : 'Save & create another'}
+						{props.saving ? t('common.saving') : t('addBook.saveAnother')}
 					</button>
 				</div>
 			</form>
