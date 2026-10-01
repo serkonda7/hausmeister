@@ -68,9 +68,38 @@ export function Layout(props: LayoutProps) {
 						</a>
 					</Show>
 				</nav>
+				<div class="sidebar-footer">
+					<Show when={props.user}>
+						<span class="sidebar-user-name">
+							{props.user ? userDisplayName(props.user) : ''}
+							<Show when={props.user?.isAdmin}>
+								<span class="muted"> {t('auth.adminSuffix')}</span>
+							</Show>
+						</span>
+					</Show>
+					<select
+						class="language-select"
+						value={locale()}
+						onChange={(e) => setLocale(e.currentTarget.value as Locale)}
+						aria-label={t('language.label')}
+						title={t('language.label')}
+					>
+						<For each={LOCALES}>{(l) => <option value={l.id}>{l.label}</option>}</For>
+					</select>
+					<Show when={props.user}>
+						<button
+							type="button"
+							class="ghost small-btn"
+							onClick={props.onLogout}
+							title={t('auth.logout')}
+						>
+							<IconLogout size={14} /> {t('auth.logout')}
+						</button>
+					</Show>
+				</div>
 			</aside>
-			<header class="topbar">
-				<Show when={props.showSearch}>
+			<Show when={props.showSearch}>
+				<header class="topbar">
 					<div class="search">
 						<IconSearch size={17} class="search-icon" />
 						<input
@@ -90,35 +119,8 @@ export function Layout(props: LayoutProps) {
 							</button>
 						</Show>
 					</div>
-				</Show>
-				<div class="topbar-end">
-					<select
-						class="language-select"
-						value={locale()}
-						onChange={(e) => setLocale(e.currentTarget.value as Locale)}
-						aria-label={t('language.label')}
-						title={t('language.label')}
-					>
-						<For each={LOCALES}>{(l) => <option value={l.id}>{l.label}</option>}</For>
-					</select>
-					<Show when={props.user}>
-						<div class="topbar-user">
-							<span class="muted small">
-								{props.user ? userDisplayName(props.user) : ''}
-								<Show when={props.user?.isAdmin}> {t('auth.adminSuffix')}</Show>
-							</span>
-							<button
-								type="button"
-								class="ghost small-btn"
-								onClick={props.onLogout}
-								title={t('auth.logout')}
-							>
-								<IconLogout size={14} /> {t('auth.logout')}
-							</button>
-						</div>
-					</Show>
-				</div>
-			</header>
+				</header>
+			</Show>
 
 			<main class={props.page === 'catalog' ? 'catalog-page-layout' : undefined}>
 				{props.children}

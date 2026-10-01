@@ -99,22 +99,26 @@ body {
 	border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
 }
 
-.topbar-end {
-	margin-left: auto;
+.sidebar-footer {
 	display: flex;
-	align-items: center;
-	gap: 0.75rem;
+	flex-direction: column;
+	gap: 0.6rem;
+	margin-top: auto;
+	padding: 1rem 0.45rem 0;
+	border-top: 1px solid var(--border);
 }
 
-.topbar-user {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
+.sidebar-user-name {
+	display: block;
+	overflow: hidden;
+	font-size: 0.88rem;
+	font-weight: 650;
+	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 .language-select {
-	width: auto;
+	width: 100%;
 	padding: 0.35rem 0.5rem;
 	font-size: 0.85rem;
 }
@@ -1232,6 +1236,10 @@ select {
 
 	.sidebar-nav a {
 		white-space: nowrap;
+	}
+
+	.sidebar-footer {
+		padding: 0.75rem 0;
 	}
 
 	.topbar {
