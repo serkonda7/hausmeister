@@ -59,6 +59,15 @@ function namedCatalogApp({ table, bookRef, schemas, many, one, label }: NamedCat
 				.map((r) => ({ ...r, bookCount: countById.get(r.id) ?? 0 }))
 			return c.json({ [many]: rows })
 		})
+		.get('/:id', (c) => {
+			const db = getDb()
+			const row = findById(db, c.req.param('id'))
+			if (!row) fail(404, 'Not found')
+			const bookCount =
+				db.select({ count: count() }).from(bookRef.table).where(eq(bookRef, row.id)).get()?.count ??
+				0
+			return c.json({ [one]: { ...row, bookCount } })
+		})
 		.post('/', vValidator('json', schemas.create), (c) => {
 			const db = getDb()
 			const { name } = c.req.valid('json')

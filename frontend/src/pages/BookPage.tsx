@@ -2,10 +2,11 @@ import { IconEdit, IconExternalLink, IconLoader2, IconTrash } from '@tabler/icon
 import { canEditBook } from 'shared/src/book'
 import { For, type JSX, Show } from 'solid-js'
 import { ErrorText, LoadingRows, orDash } from '../components/common'
+import { EntryLinks } from '../components/EntryLinks'
 import { ReadCheckbox } from '../components/ReadCheckbox'
 import { t } from '../i18n'
 import { PAGE_PATHS } from '../routes'
-import type { Book, PageNote, PublicUser } from '../types'
+import type { Book, NamedEntry, PageNote, PublicUser } from '../types'
 import {
 	formatPageNote,
 	formatRecordDate,
@@ -122,7 +123,11 @@ function BookDetails(props: Omit<BookPageProps, 'book'> & { book: Book }) {
 					<Show when={b().subtitle}>
 						<p class="book-page-subtitle">{b().subtitle}</p>
 					</Show>
-					<p class="muted">{joinNames(b().authors) || t('common.unknown')}</p>
+					<p class="muted">
+						<Show when={b().authors.length > 0} fallback={t('common.unknown')}>
+							<EntryLinks kind="author" entries={b().authors} onNavigate={props.onNavigate} />
+						</Show>
+					</p>
 					{actions}
 				</div>
 			</header>
@@ -133,7 +138,15 @@ function BookDetails(props: Omit<BookPageProps, 'book'> & { book: Book }) {
 
 			<dl class="book-details">
 				<Detail label={t('book.isbn')}>{b().isbn}</Detail>
-				<Detail label={t('book.publisher')}>{b().publisher?.name}</Detail>
+				<Detail label={t('book.publisher')}>
+					{b().publisher && (
+						<EntryLinks
+							kind="publisher"
+							entries={[b().publisher as NamedEntry]}
+							onNavigate={props.onNavigate}
+						/>
+					)}
+				</Detail>
 				<Detail label={t('book.printYear')}>{b().printYear}</Detail>
 				<Detail label={t('catalog.languages')}>{joinNames(b().languages)}</Detail>
 				<Detail label={t('catalog.tags')}>{joinNames(b().tags)}</Detail>

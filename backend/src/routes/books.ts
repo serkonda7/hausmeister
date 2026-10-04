@@ -74,6 +74,8 @@ export const bookApp = new Hono<AppEnv>()
 			q: c.req.query('q'),
 			owner: c.req.query('owner'),
 			location: c.req.query('location'),
+			author: c.req.query('author'),
+			publisher: c.req.query('publisher'),
 		})
 		return c.json({ books: filtered })
 	})

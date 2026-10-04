@@ -140,16 +140,26 @@ function searchText(b: BookJson): string {
 		.toLowerCase()
 }
 
-export type BookFilter = { q?: string; owner?: string; location?: string }
+export type BookFilter = {
+	q?: string
+	owner?: string
+	location?: string
+	author?: string
+	publisher?: string
+}
 
 export function filterBooks(books: BookJson[], filter: BookFilter): BookJson[] {
 	const q = filter.q?.trim().toLowerCase()
 	const owner = filter.owner?.trim()
 	const location = filter.location?.trim()
+	const author = filter.author?.trim()
+	const publisher = filter.publisher?.trim()
 	return books.filter(
 		(b) =>
 			(!owner || b.ownerId === owner) &&
 			(!location || b.locationId === location) &&
+			(!author || b.authorIds.includes(author)) &&
+			(!publisher || b.publisherId === publisher) &&
 			(!q || searchText(b).includes(q)),
 	)
 }

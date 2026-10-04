@@ -2,15 +2,23 @@ import { IconPlus } from '@tabler/icons-solidjs'
 import { createMemo, createSignal, For, Show } from 'solid-js'
 import { ClearableInput } from '../components/ClearableInput'
 import { ErrorText } from '../components/common'
+import { EntryLinks, type LinkedKind } from '../components/EntryLinks'
 import { EntryTable } from '../components/EntryTable'
 import type { CatalogActions, CatalogLists, NamedKind } from '../hooks/useCatalog'
 import { t } from '../i18n'
 
 const SECTIONS: NamedKind[] = ['authors', 'publishers', 'tags', 'languages']
 
+/** Kinds whose entries have their own page. */
+const LINKED: Partial<Record<NamedKind, LinkedKind>> = {
+	authors: 'author',
+	publishers: 'publisher',
+}
+
 export type CatalogPageProps = {
 	lists: CatalogLists
 	actions: CatalogActions
+	onNavigate: (path: string, event: MouseEvent) => void
 }
 
 export function CatalogPage(props: CatalogPageProps) {
@@ -87,6 +95,14 @@ function CatalogSection(props: CatalogPageProps & { kind: NamedKind }) {
 					items={matching()}
 					onRename={(id, current) => void props.actions.rename(props.kind, id, current)}
 					onRemove={(id, name) => void props.actions.remove(props.kind, id, name)}
+					renderName={(item) => {
+						const kind = LINKED[props.kind]
+						return kind ? (
+							<EntryLinks kind={kind} entries={[item]} onNavigate={props.onNavigate} />
+						) : (
+							item.name
+						)
+					}}
 				/>
 			</Show>
 		</section>

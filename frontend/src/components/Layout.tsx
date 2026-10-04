@@ -41,9 +41,12 @@ export type LayoutProps = {
 }
 
 export function Layout(props: LayoutProps) {
-	// The add-book and book pages belong to the library section.
-	const section = () =>
-		props.page === 'add-book' || props.page === 'book' ? 'library' : props.page
+	// The add-book and book pages belong to the library section, author and publisher pages to the catalog.
+	const section = () => {
+		if (props.page === 'add-book' || props.page === 'book') return 'library'
+		if (props.page === 'author' || props.page === 'publisher') return 'catalog'
+		return props.page
+	}
 	const visibleItems = () => NAV_ITEMS.filter((item) => !item.adminOnly || props.user?.isAdmin)
 
 	return (

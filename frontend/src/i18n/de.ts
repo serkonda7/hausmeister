@@ -152,6 +152,15 @@ export const de: Record<TranslationKey, string> = {
 	'bookPage.cover': 'Cover von {title}',
 	'bookPage.openLibrary': 'Bei Open Library ansehen',
 
+	// Autoren- / Verlagsseite
+	'entryPage.author': 'Autor',
+	'entryPage.publisher': 'Verlag',
+	'entryPage.authorLoadError': 'Dieser Autor konnte nicht geladen werden.',
+	'entryPage.publisherLoadError': 'Dieser Verlag konnte nicht geladen werden.',
+	'entryPage.bookCountOne': '(1 Buch)',
+	'entryPage.bookCount': '({count} Bücher)',
+	'entryPage.empty': 'Noch keine Bücher.',
+
 	// Leseliste
 	'reading.progress': '({read} / {total} gelesen)',
 	'reading.progressAria': 'Anteil gelesener Bücher',

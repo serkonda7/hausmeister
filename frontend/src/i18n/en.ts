@@ -150,6 +150,15 @@ export const en = {
 	'bookPage.cover': 'Cover of {title}',
 	'bookPage.openLibrary': 'View on Open Library',
 
+	// Author / publisher page
+	'entryPage.author': 'Author',
+	'entryPage.publisher': 'Publisher',
+	'entryPage.authorLoadError': 'Could not load this author.',
+	'entryPage.publisherLoadError': 'Could not load this publisher.',
+	'entryPage.bookCountOne': '(1 book)',
+	'entryPage.bookCount': '({count} books)',
+	'entryPage.empty': 'No books yet.',
+
 	// Reading list
 	'reading.progress': '({read} / {total} read)',
 	'reading.progressAria': 'Share of books read',

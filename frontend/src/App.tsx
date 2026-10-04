@@ -27,18 +27,26 @@ import { useUserManagement } from './hooks/useUserManagement'
 import { t } from './i18n'
 import { AddBookPage } from './pages/AddBookPage'
 import { BookPage } from './pages/BookPage'
+import { type CatalogEntry, CatalogEntryPage } from './pages/CatalogEntryPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { LocationsPage } from './pages/LocationsPage'
 import { ReadingListPage } from './pages/ReadingListPage'
 import { EditUserDialog, UsersPage } from './pages/UsersPage'
-import { bookIdFromPath, PAGE_PATHS, pageFromPath } from './routes'
-import type { Book, PublicUser } from './types'
+import { entityIdFromPath, PAGE_PATHS, pageFromPath } from './routes'
+import type { Book, NamedEntry, PublicUser } from './types'
 
 export default function App() {
 	const [path, setPath] = createSignal(window.location.pathname)
 	const page = () => pageFromPath(path())
-	const bookId = () => bookIdFromPath(path())
+	const bookId = () => entityIdFromPath('book', path())
+	/** Author or publisher shown on the current page, if any. */
+	const entryRef = () => {
+		const p = page()
+		if (p !== 'author' && p !== 'publisher') return null
+		const id = entityIdFromPath(p, path())
+		return id ? { kind: p, id } : null
+	}
 	const [query, setQuery] = createSignal('')
 	const [debouncedQuery, setDebouncedQuery] = createSignal('')
 
@@ -60,6 +68,24 @@ export default function App() {
 		const b = fetchedBook()
 		return b?.id === bookId() ? b : undefined
 	}
+	const [fetchedEntry, { refetch: refetchEntry, mutate: mutateEntry }] = createResource(
+		() => (userId() && entryRef()) || null,
+		async ({ kind, id }): Promise<CatalogEntry & { id: string }> => {
+			const enc = encodeURIComponent(id)
+			const [entry, list] = await Promise.all([
+				api<Record<string, NamedEntry>>(`/${kind}s/${enc}`),
+				api<{ books: Book[] }>(`/books?${kind}=${enc}`),
+			])
+			return { id, kind, entry: entry[kind], books: list.books }
+		},
+	)
+	/** The author or publisher on its page; undefined while loading, on error, or when stale. */
+	const viewedEntry = (): CatalogEntry | undefined => {
+		if (fetchedEntry.error) return undefined
+		const e = fetchedEntry()
+		const ref = entryRef()
+		return e && ref && e.kind === ref.kind && e.id === ref.id ? e : undefined
+	}
 	const lists = createCatalogLists(userId)
 	const users = createUserList(auth.user)
 
@@ -70,6 +96,7 @@ export default function App() {
 			...Object.values(lists).map((list) => list.refetch()),
 			// A deleted book fails to load; the resource keeps that error for the book page.
 			bookId() ? Promise.resolve(refetchBook()).catch(() => undefined) : undefined,
+			entryRef() ? Promise.resolve(refetchEntry()).catch(() => undefined) : undefined,
 		])
 	}
 
@@ -83,6 +110,7 @@ export default function App() {
 		mutateBooks: (update) => {
 			books.mutate(update)
 			mutateBook((b) => (b ? update([b])?.[0] : b))
+			mutateEntry((e) => (e ? { ...e, books: update(e.books) ?? e.books } : e))
 		},
 	})
 	const userManagement = useUserManagement({
@@ -188,6 +216,27 @@ export default function App() {
 					onToggleRead={(b) => void reading.toggleRead(b)}
 				/>
 			</Match>
+			<Match when={page() === 'author' || page() === 'publisher'}>
+				<CatalogEntryPage
+					kind={page() === 'publisher' ? 'publisher' : 'author'}
+					data={viewedEntry()}
+					loading={fetchedEntry.loading}
+					loadError={
+						fetchedEntry.error
+							? errorMessage(
+									fetchedEntry.error,
+									page() === 'publisher'
+										? 'entryPage.publisherLoadError'
+										: 'entryPage.authorLoadError',
+								)
+							: null
+					}
+					actionError={reading.readError()}
+					readPendingIds={reading.pendingIds()}
+					onToggleRead={(b) => void reading.toggleRead(b)}
+					onNavigate={navigate}
+				/>
+			</Match>
 			<Match when={page() === 'reading'}>
 				<ReadingListPage
 					{...bookListState}
@@ -206,7 +255,7 @@ export default function App() {
 				/>
 			</Match>
 			<Match when={page() === 'catalog'}>
-				<CatalogPage lists={lists} actions={catalog} />
+				<CatalogPage lists={lists} actions={catalog} onNavigate={navigate} />
 			</Match>
 			<Match when={page() === 'locations'}>
 				<LocationsPage list={lists.locations} actions={catalog} />
