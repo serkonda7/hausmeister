@@ -1,7 +1,7 @@
 import { DataTable, type DataTableColumn } from '@serkonda7/solid-components'
 import { IconBook } from '@tabler/icons-solidjs'
 import { createMemo, createSignal, For, Show } from 'solid-js'
-import { authorsColumn } from '../components/BookTable'
+import { authorsColumn, BookTitleCell } from '../components/BookTable'
 import { orDash } from '../components/common'
 import { ReadCheckbox } from '../components/ReadCheckbox'
 import { t } from '../i18n'
@@ -25,6 +25,7 @@ export type ReadingListPageProps = BookListState & {
 	pendingIds: ReadonlySet<string>
 	error: string | null
 	onToggleRead: (book: Book) => void
+	onNavigate: (path: string, event: MouseEvent) => void
 }
 
 export function ReadingListPage(props: ReadingListPageProps) {
@@ -55,9 +56,7 @@ export function ReadingListPage(props: ReadingListPageProps) {
 			sortable: true,
 			sortValue: (b) => b.title,
 			getValue: (b) => (
-				<span class="cell-title" classList={{ muted: b.readAt !== null }}>
-					{b.title}
-				</span>
+				<BookTitleCell book={b} muted={b.readAt !== null} onNavigate={props.onNavigate} />
 			),
 		},
 		authorsColumn(),

@@ -10,12 +10,12 @@ import {
 } from '@tabler/icons-solidjs'
 import { For, type JSX, Show } from 'solid-js'
 import { LOCALES, type Locale, locale, setLocale, type TranslationKey, t } from '../i18n'
-import { PAGE_PATHS, type Page } from '../routes'
+import { PAGE_PATHS, type Page, type StaticPage } from '../routes'
 import type { PublicUser } from '../types'
 import { userDisplayName } from '../utils/books'
 
 type NavItem = {
-	page: Page
+	page: StaticPage
 	label: TranslationKey
 	icon: (props: { size: number }) => JSX.Element
 	adminOnly?: boolean
@@ -41,8 +41,9 @@ export type LayoutProps = {
 }
 
 export function Layout(props: LayoutProps) {
-	// The add-book page belongs to the library section.
-	const section = () => (props.page === 'add-book' ? 'library' : props.page)
+	// The add-book and book pages belong to the library section.
+	const section = () =>
+		props.page === 'add-book' || props.page === 'book' ? 'library' : props.page
 	const visibleItems = () => NAV_ITEMS.filter((item) => !item.adminOnly || props.user?.isAdmin)
 
 	return (

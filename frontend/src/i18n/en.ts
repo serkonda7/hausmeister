@@ -145,6 +145,11 @@ export const en = {
 	'library.confirmDelete': 'Delete this book?',
 	'library.deleteFailed': 'Could not delete the book.',
 
+	// Book page
+	'bookPage.loadError': 'Could not load this book.',
+	'bookPage.cover': 'Cover of {title}',
+	'bookPage.openLibrary': 'View on Open Library',
+
 	// Reading list
 	'reading.progress': '({read} / {total} read)',
 	'reading.progressAria': 'Share of books read',

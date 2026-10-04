@@ -147,6 +147,11 @@ export const de: Record<TranslationKey, string> = {
 	'library.confirmDelete': 'Dieses Buch löschen?',
 	'library.deleteFailed': 'Buch konnte nicht gelöscht werden.',
 
+	// Book page
+	'bookPage.loadError': 'Dieses Buch konnte nicht geladen werden.',
+	'bookPage.cover': 'Cover von {title}',
+	'bookPage.openLibrary': 'Bei Open Library ansehen',
+
 	// Leseliste
 	'reading.progress': '({read} / {total} gelesen)',
 	'reading.progressAria': 'Anteil gelesener Bücher',

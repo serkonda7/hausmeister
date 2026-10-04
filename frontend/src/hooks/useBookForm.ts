@@ -233,15 +233,18 @@ export function useBookForm(deps: BookFormDeps) {
 		return true
 	}
 
-	async function removeBook(id: string): Promise<void> {
-		if (!window.confirm(t('library.confirmDelete'))) return
+	/** Resolves to whether the book was deleted. */
+	async function removeBook(id: string): Promise<boolean> {
+		if (!window.confirm(t('library.confirmDelete'))) return false
 		setActionError(null)
 		setDeletingId(id)
 		try {
 			await api(`/books/${encodeURIComponent(id)}`, { method: 'DELETE' })
 			await deps.refresh()
+			return true
 		} catch (err) {
 			setActionError(errorMessage(err, 'library.deleteFailed'))
+			return false
 		} finally {
 			setDeletingId(null)
 		}

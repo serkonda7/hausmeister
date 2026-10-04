@@ -1097,6 +1097,86 @@ select {
 	font-size: 0.875em;
 }
 
+.book-link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.book-link:hover {
+	text-decoration: underline;
+}
+
+.book-page {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.book-page-head {
+	display: flex;
+	gap: 1.25rem;
+	align-items: flex-start;
+}
+
+.book-cover {
+	width: 8rem;
+	border-radius: 6px;
+	box-shadow: var(--shadow);
+}
+
+.book-page-heading {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	min-width: 0;
+}
+
+.book-page-heading h2,
+.book-page-heading p {
+	margin: 0;
+}
+
+.book-page-subtitle {
+	color: var(--muted);
+	font-size: 1.05rem;
+}
+
+.book-page-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+}
+
+.book-page-read {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin-right: 0.5rem;
+}
+
+.book-description {
+	margin: 0;
+	white-space: pre-line;
+}
+
+.book-details {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+	gap: 0.9rem 1.25rem;
+	margin: 0;
+}
+
+.book-details dt {
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+.book-details dd {
+	margin: 0.15rem 0 0;
+}
+
 .damages {
 	color: var(--danger);
 }

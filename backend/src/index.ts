@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
+import { serveStatic } from 'hono/bun'
 import { HTTPException } from 'hono/http-exception'
-import { BACKEND_HOST, BACKEND_PORT } from './constants'
+import { BACKEND_HOST, BACKEND_PORT, FRONTEND_DIST } from './constants'
 import { initDb } from './db'
 import { authApp } from './routes/auth'
 import { bookApp } from './routes/books'
@@ -35,6 +36,12 @@ export function createApp() {
 			.route('/api', readingApp)
 			.route('/api', loanApp)
 			.route('/api', provenanceApp)
+			// Production: serve the built frontend; unknown non-API paths fall back to the SPA.
+			.use('/*', serveStatic({ root: FRONTEND_DIST }))
+			.get('*', async (c, next) => {
+				if (c.req.path.startsWith('/api/')) return next()
+				return serveStatic({ root: FRONTEND_DIST, path: 'index.html' })(c, next)
+			})
 	)
 }
 

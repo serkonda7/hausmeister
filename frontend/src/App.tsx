@@ -1,5 +1,15 @@
 import '@serkonda7/solid-components/styles.css'
-import { type Accessor, createEffect, createSignal, Match, onCleanup, Show, Switch } from 'solid-js'
+import {
+	type Accessor,
+	createEffect,
+	createResource,
+	createSignal,
+	Match,
+	onCleanup,
+	Show,
+	Switch,
+} from 'solid-js'
+import { api, errorMessage } from './api'
 import { AuthDialog, AuthLoading } from './components/AuthViews'
 import { EditBookDialog } from './components/EditBookDialog'
 import { Layout } from './components/Layout'
@@ -16,16 +26,19 @@ import { useReadingList } from './hooks/useReadingList'
 import { useUserManagement } from './hooks/useUserManagement'
 import { t } from './i18n'
 import { AddBookPage } from './pages/AddBookPage'
+import { BookPage } from './pages/BookPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { LocationsPage } from './pages/LocationsPage'
 import { ReadingListPage } from './pages/ReadingListPage'
 import { EditUserDialog, UsersPage } from './pages/UsersPage'
-import { PAGE_PATHS, type Page, pageFromPath } from './routes'
+import { bookIdFromPath, PAGE_PATHS, pageFromPath } from './routes'
 import type { Book, PublicUser } from './types'
 
 export default function App() {
-	const [page, setPage] = createSignal<Page>(pageFromPath(window.location.pathname))
+	const [path, setPath] = createSignal(window.location.pathname)
+	const page = () => pageFromPath(path())
+	const bookId = () => bookIdFromPath(path())
 	const [query, setQuery] = createSignal('')
 	const [debouncedQuery, setDebouncedQuery] = createSignal('')
 
@@ -36,12 +49,28 @@ export default function App() {
 		() => userId() && `${userId()}:${debouncedQuery()}`,
 		() => `/books?q=${encodeURIComponent(debouncedQuery())}`,
 	)
+	// Fetched on its own: the book page must work for books outside the current search.
+	const [fetchedBook, { refetch: refetchBook, mutate: mutateBook }] = createResource(
+		() => (userId() && bookId()) || null,
+		async (id) => (await api<{ book: Book }>(`/books/${encodeURIComponent(id)}`)).book,
+	)
+	/** The book on the book page; undefined while loading, on error, or for a stale id. */
+	const viewedBook = (): Book | undefined => {
+		if (fetchedBook.error) return undefined
+		const b = fetchedBook()
+		return b?.id === bookId() ? b : undefined
+	}
 	const lists = createCatalogLists(userId)
 	const users = createUserList(auth.user)
 
 	/** Reload books and the catalog lists, whose book counts may have changed. */
 	function refreshBooks() {
-		return Promise.all([books.refetch(), ...Object.values(lists).map((list) => list.refetch())])
+		return Promise.all([
+			books.refetch(),
+			...Object.values(lists).map((list) => list.refetch()),
+			// A deleted book fails to load; the resource keeps that error for the book page.
+			bookId() ? Promise.resolve(refetchBook()).catch(() => undefined) : undefined,
+		])
 	}
 
 	const book = useBookForm({ user: auth.user, refresh: refreshBooks })
@@ -50,7 +79,12 @@ export default function App() {
 		refetchBooks: books.refetch,
 		onRemoved: book.deselect,
 	})
-	const reading = useReadingList({ mutateBooks: books.mutate })
+	const reading = useReadingList({
+		mutateBooks: (update) => {
+			books.mutate(update)
+			mutateBook((b) => (b ? update([b])?.[0] : b))
+		},
+	})
 	const userManagement = useUserManagement({
 		user: auth.user,
 		setUser: auth.setUser,
@@ -67,7 +101,7 @@ export default function App() {
 
 	function navigateTo(path: string): void {
 		window.history.pushState({}, '', path)
-		setPage(pageFromPath(path))
+		setPath(path)
 		window.scrollTo({ top: 0, behavior: 'smooth' })
 	}
 
@@ -87,12 +121,16 @@ export default function App() {
 		return ok
 	}
 
+	async function deleteViewedBook(b: Book): Promise<void> {
+		if (await book.removeBook(b.id)) navigateTo(PAGE_PATHS.library)
+	}
+
 	function cancelAddBook(): void {
 		book.resetForm()
 		navigateTo(PAGE_PATHS.library)
 	}
 
-	const onPopState = () => setPage(pageFromPath(window.location.pathname))
+	const onPopState = () => setPath(window.location.pathname)
 	window.addEventListener('popstate', onPopState)
 	onCleanup(() => window.removeEventListener('popstate', onPopState))
 
@@ -133,12 +171,30 @@ export default function App() {
 					onToggleRead={(b) => void reading.toggleRead(b)}
 				/>
 			</Match>
+			<Match when={page() === 'book'}>
+				<BookPage
+					book={viewedBook()}
+					loading={fetchedBook.loading}
+					loadError={
+						fetchedBook.error ? errorMessage(fetchedBook.error, 'bookPage.loadError') : null
+					}
+					user={user()}
+					actionError={book.actionError() ?? reading.readError()}
+					deletingId={book.deletingId()}
+					readPending={reading.pendingIds().has(bookId() ?? '')}
+					onNavigate={navigate}
+					onEdit={book.editBook}
+					onDelete={(b) => void deleteViewedBook(b)}
+					onToggleRead={(b) => void reading.toggleRead(b)}
+				/>
+			</Match>
 			<Match when={page() === 'reading'}>
 				<ReadingListPage
 					{...bookListState}
 					pendingIds={reading.pendingIds()}
 					error={reading.readError()}
 					onToggleRead={(b) => void reading.toggleRead(b)}
+					onNavigate={navigate}
 				/>
 			</Match>
 			<Match when={page() === 'add-book'}>

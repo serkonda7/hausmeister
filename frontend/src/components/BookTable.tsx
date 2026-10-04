@@ -3,6 +3,7 @@ import { IconEdit, IconLoader2, IconTrash } from '@tabler/icons-solidjs'
 import { canEditBook } from 'shared/src/book'
 import { createEffect, createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { t } from '../i18n'
+import { bookPath } from '../routes'
 import type { Book, PageNote, PublicUser } from '../types'
 import {
 	formatPageNote,
@@ -86,6 +87,7 @@ export type BookTableProps = {
 	onEdit: (book: Book) => void
 	readPendingIds: ReadonlySet<string>
 	onToggleRead: (book: Book) => void
+	onNavigate: (path: string, event: MouseEvent) => void
 }
 
 export function BookTable(props: BookTableProps) {
@@ -113,14 +115,7 @@ export function BookTable(props: BookTableProps) {
 			sortable: true,
 			toggleable: false,
 			sortValue: (b) => b.title,
-			getValue: (b) => (
-				<span class="book-title-cell">
-					<span class="cell-title">{b.title}</span>
-					<Show when={b.subtitle}>
-						<span class="cell-subtitle">{b.subtitle}</span>
-					</Show>
-				</span>
-			),
+			getValue: (b) => <BookTitleCell book={b} onNavigate={props.onNavigate} />,
 		},
 		{ ...textColumn('isbn', t('book.isbn'), (b) => b.isbn ?? ''), defaultVisible: false },
 		authorsColumn(),
@@ -226,4 +221,28 @@ export function authorsColumn(): DataTableColumn<Book> {
 		sortValue: (b) => joinNames(b.authors),
 		getValue: (b) => joinNames(b.authors) || <span class="muted">{t('common.unknown')}</span>,
 	}
+}
+
+/** Title linking to the book page, with the subtitle below. Shared with the reading list. */
+export function BookTitleCell(props: {
+	book: Book
+	muted?: boolean
+	onNavigate: (path: string, event: MouseEvent) => void
+}) {
+	const path = () => bookPath(props.book.id)
+	return (
+		<span class="book-title-cell">
+			<a
+				href={path()}
+				class="cell-title book-link"
+				classList={{ muted: props.muted }}
+				onClick={(e) => props.onNavigate(path(), e)}
+			>
+				{props.book.title}
+			</a>
+			<Show when={props.book.subtitle}>
+				<span class="cell-subtitle">{props.book.subtitle}</span>
+			</Show>
+		</span>
+	)
 }
