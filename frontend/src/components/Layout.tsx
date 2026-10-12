@@ -42,6 +42,20 @@ export type LayoutProps = {
 	children: JSX.Element
 }
 
+export function LanguageSelect() {
+	return (
+		<select
+			class="language-select"
+			value={locale()}
+			onChange={(e) => setLocale(e.currentTarget.value as Locale)}
+			aria-label={t('language.label')}
+			title={t('language.label')}
+		>
+			<For each={LOCALES}>{(l) => <option value={l.id}>{l.label}</option>}</For>
+		</select>
+	)
+}
+
 export function Layout(props: LayoutProps) {
 	// The add-book and book pages belong to the library section, author and publisher pages to the catalog.
 	const section = () => {
@@ -80,15 +94,7 @@ export function Layout(props: LayoutProps) {
 							</Show>
 						</span>
 					</Show>
-					<select
-						class="language-select"
-						value={locale()}
-						onChange={(e) => setLocale(e.currentTarget.value as Locale)}
-						aria-label={t('language.label')}
-						title={t('language.label')}
-					>
-						<For each={LOCALES}>{(l) => <option value={l.id}>{l.label}</option>}</For>
-					</select>
+					<LanguageSelect />
 					<Show when={props.user}>
 						<button
 							type="button"

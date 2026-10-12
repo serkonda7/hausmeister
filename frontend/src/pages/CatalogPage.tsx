@@ -27,10 +27,7 @@ export function CatalogPage(props: CatalogPageProps) {
 	return (
 		<>
 			<section class="library-head">
-				<div>
-					<h2>{t('nav.catalog')}</h2>
-					<p class="muted">{t('catalog.intro')}</p>
-				</div>
+				<h2>{t('nav.catalog')}</h2>
 			</section>
 			<ErrorText message={props.actions.error()} />
 			<div class="catalog-grid">

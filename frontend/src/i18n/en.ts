@@ -44,12 +44,9 @@ export const en = {
 	'auth.adminSuffix': '(admin)',
 	'auth.logout': 'Log out',
 	'auth.setupTitle': 'Welcome — create the admin user',
-	'auth.setupHint':
-		'First run: no users exist yet. Create the admin account. The admin can then create more users (username + password) under Users.',
 	'auth.setupSubmit': 'Create admin',
 	'auth.setupFailed': 'Setup failed.',
 	'auth.loginTitle': 'Log in',
-	'auth.loginHint': 'Everyone can see all books, but you can only edit your own.',
 	'auth.loginBusy': 'Logging in…',
 	'auth.loginSubmit': 'Log in',
 	'auth.loginFailed': 'Login failed.',
@@ -204,7 +201,6 @@ export const en = {
 	'editBook.deleteEventFailed': 'Could not delete the event.',
 
 	// Catalog
-	'catalog.intro': 'Manage the authors, publishers, tags, and languages used in your library.',
 	'catalog.listLabel': '{label} list',
 	'catalog.authors': 'Authors',
 	'catalog.authorsSearch': 'Search or add an author',

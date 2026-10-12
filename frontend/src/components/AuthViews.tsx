@@ -5,12 +5,13 @@ import type { Credentials } from '../hooks/useAuth'
 import { t } from '../i18n'
 import { ErrorText, LoadingRows, SubmitButton, TextField } from './common'
 import { Dialog } from './Dialog'
+import { LanguageSelect } from './Layout'
 
 export function AuthLoading() {
 	return <LoadingRows count={2} />
 }
 
-export type AuthDialogProps = {
+export type AuthPageProps = {
 	/** `setup` creates the first (admin) user; `login` signs in. */
 	mode: 'setup' | 'login'
 	busy: boolean
@@ -18,7 +19,8 @@ export type AuthDialogProps = {
 	onSubmit: (credentials: Credentials) => void
 }
 
-export function AuthDialog(props: AuthDialogProps) {
+/** Full-screen sign-in page, shown instead of the app layout while logged out. */
+export function AuthPage(props: AuthPageProps) {
 	const [username, setUsername] = createSignal('')
 	const [displayName, setDisplayName] = createSignal('')
 	const [password, setPassword] = createSignal('')
@@ -30,53 +32,55 @@ export function AuthDialog(props: AuthDialogProps) {
 	}
 
 	return (
-		<Dialog
-			id={props.mode}
-			title={isSetup() ? t('auth.setupTitle') : t('auth.loginTitle')}
-			hint={isSetup() ? t('auth.setupHint') : t('auth.loginHint')}
-		>
-			<form onSubmit={submit}>
-				<div class="form-grid">
-					<TextField
-						id={`${props.mode}-username`}
-						label={t('auth.username')}
-						value={username()}
-						onInput={setUsername}
-						required
-						autocomplete="username"
-					/>
-					<Show when={isSetup()}>
+		<main class="auth-page">
+			<div class="auth-brand">Hausmeister</div>
+			<section class="auth-card panel" aria-labelledby="auth-heading">
+				<h1 id="auth-heading">{isSetup() ? t('auth.setupTitle') : t('auth.loginTitle')}</h1>
+				<form onSubmit={submit}>
+					<div class="auth-fields">
 						<TextField
-							id="setup-display-name"
-							label={t('auth.displayNameOptional')}
-							value={displayName()}
-							onInput={setDisplayName}
-							autocomplete="nickname"
-							placeholder={t('auth.displayNamePlaceholder')}
+							id={`${props.mode}-username`}
+							label={t('auth.username')}
+							value={username()}
+							onInput={setUsername}
+							required
+							autofocus
+							autocomplete="username"
 						/>
-					</Show>
-					<TextField
-						id={`${props.mode}-password`}
-						label={t('auth.password')}
-						type="password"
-						value={password()}
-						onInput={setPassword}
-						required
-						minlength={isSetup() ? PASSWORD_MIN_LENGTH : undefined}
-						autocomplete={isSetup() ? 'new-password' : 'current-password'}
-					/>
-				</div>
-				<ErrorText message={props.error} />
-				<div class="form-actions">
+						<Show when={isSetup()}>
+							<TextField
+								id="setup-display-name"
+								label={t('auth.displayNameOptional')}
+								value={displayName()}
+								onInput={setDisplayName}
+								autocomplete="nickname"
+								placeholder={t('auth.displayNamePlaceholder')}
+							/>
+						</Show>
+						<TextField
+							id={`${props.mode}-password`}
+							label={t('auth.password')}
+							type="password"
+							value={password()}
+							onInput={setPassword}
+							required
+							minlength={isSetup() ? PASSWORD_MIN_LENGTH : undefined}
+							autocomplete={isSetup() ? 'new-password' : 'current-password'}
+						/>
+					</div>
+					<ErrorText message={props.error} />
 					<SubmitButton
 						busy={props.busy}
 						busyLabel={isSetup() ? t('common.creating') : t('auth.loginBusy')}
 					>
 						{isSetup() ? t('auth.setupSubmit') : t('auth.loginSubmit')}
 					</SubmitButton>
-				</div>
-			</form>
-		</Dialog>
+				</form>
+			</section>
+			<div class="auth-footer">
+				<LanguageSelect />
+			</div>
+		</main>
 	)
 }
 

@@ -8,6 +8,7 @@ export type Page =
 	| 'catalog'
 	| 'locations'
 	| 'users'
+	| 'login'
 
 /** Pages reachable under a fixed path; the rest carry an id in their path. */
 export type StaticPage = Exclude<Page, EntityPage>
@@ -22,6 +23,7 @@ export const PAGE_PATHS: Record<StaticPage, string> = {
 	catalog: '/catalog',
 	locations: '/locations',
 	users: '/users',
+	login: '/login',
 }
 
 const ENTITY_PATH_PREFIXES: Record<EntityPage, string> = {

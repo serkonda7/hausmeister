@@ -46,12 +46,9 @@ export const de: Record<TranslationKey, string> = {
 	'auth.adminSuffix': '(Admin)',
 	'auth.logout': 'Abmelden',
 	'auth.setupTitle': 'Willkommen — Admin-Konto anlegen',
-	'auth.setupHint':
-		'Erster Start: Es gibt noch keine Benutzer. Lege das Admin-Konto an. Der Admin kann danach unter „Benutzer“ weitere Konten (Benutzername + Passwort) erstellen.',
 	'auth.setupSubmit': 'Admin anlegen',
 	'auth.setupFailed': 'Einrichtung fehlgeschlagen.',
 	'auth.loginTitle': 'Anmelden',
-	'auth.loginHint': 'Alle können alle Bücher sehen, bearbeiten kannst du aber nur deine eigenen.',
 	'auth.loginBusy': 'Anmeldung läuft…',
 	'auth.loginSubmit': 'Anmelden',
 	'auth.loginFailed': 'Anmeldung fehlgeschlagen.',
@@ -206,7 +203,6 @@ export const de: Record<TranslationKey, string> = {
 	'editBook.deleteEventFailed': 'Ereignis konnte nicht gelöscht werden.',
 
 	// Catalog
-	'catalog.intro': 'Verwalte die Autoren, Verlage, Tags und Sprachen deiner Bibliothek.',
 	'catalog.listLabel': 'Liste: {label}',
 	'catalog.authors': 'Autoren',
 	'catalog.authorsSearch': 'Autor suchen oder hinzufügen',

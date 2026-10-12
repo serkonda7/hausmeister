@@ -10,7 +10,7 @@ import {
 	Switch,
 } from 'solid-js'
 import { api, errorMessage } from './api'
-import { AuthDialog, AuthLoading, ChangePasswordDialog } from './components/AuthViews'
+import { AuthLoading, AuthPage, ChangePasswordDialog } from './components/AuthViews'
 import { EditBookDialog } from './components/EditBookDialog'
 import { Layout } from './components/Layout'
 import { useAuth } from './hooks/useAuth'
@@ -139,9 +139,26 @@ export default function App() {
 		navigateTo(path)
 	}
 
+	/** Where to go after logging in: the page that sent the visitor to the login page. */
+	let returnPath: string = PAGE_PATHS.library
+
+	createEffect(() => {
+		if (auth.loading()) return
+		const loggedIn = !!auth.user()
+		if (!loggedIn && page() !== 'login') {
+			returnPath = path()
+			window.history.replaceState({}, '', PAGE_PATHS.login)
+			setPath(PAGE_PATHS.login)
+		} else if (loggedIn && page() === 'login') {
+			window.history.replaceState({}, '', returnPath)
+			setPath(returnPath)
+		}
+	})
+
 	async function handleLogout(): Promise<void> {
 		await auth.logout()
-		navigateTo(PAGE_PATHS.library)
+		// The next user starts on the library, not on the page this one left off.
+		returnPath = PAGE_PATHS.library
 	}
 
 	async function saveNewBook(another: boolean): Promise<boolean> {
@@ -296,39 +313,38 @@ export default function App() {
 	)
 
 	return (
-		<Layout
-			page={page()}
-			user={auth.user()}
-			showSearch={(page() === 'library' || page() === 'reading') && !!auth.user()}
-			query={query()}
-			onQueryChange={setQuery}
-			onLogout={handleLogout}
-			onChangePassword={() => setChangingPassword(true)}
-			onNavigate={navigate}
+		<Show
+			when={auth.loading() || auth.user()}
+			fallback={
+				<AuthPage
+					mode={auth.setupRequired() ? 'setup' : 'login'}
+					busy={auth.busy()}
+					error={auth.error()}
+					onSubmit={(credentials) =>
+						void (auth.setupRequired() ? auth.setup(credentials) : auth.login(credentials))
+					}
+				/>
+			}
 		>
-			<Switch>
-				<Match when={auth.loading()}>
-					<AuthLoading />
-				</Match>
-				<Match when={!auth.user()}>
-					<AuthDialog
-						mode={auth.setupRequired() ? 'setup' : 'login'}
-						busy={auth.busy()}
-						error={auth.error()}
-						onSubmit={(credentials) =>
-							void (auth.setupRequired() ? auth.setup(credentials) : auth.login(credentials))
-						}
-					/>
-				</Match>
-				<Match when={auth.user()}>
+			<Layout
+				page={page()}
+				user={auth.user()}
+				showSearch={(page() === 'library' || page() === 'reading') && !!auth.user()}
+				query={query()}
+				onQueryChange={setQuery}
+				onLogout={handleLogout}
+				onChangePassword={() => setChangingPassword(true)}
+				onNavigate={navigate}
+			>
+				<Show when={auth.user()} fallback={<AuthLoading />}>
 					{(user) => (
 						<>
 							{currentPage(user)}
 							{dialogs(user)}
 						</>
 					)}
-				</Match>
-			</Switch>
-		</Layout>
+				</Show>
+			</Layout>
+		</Show>
 	)
 }
