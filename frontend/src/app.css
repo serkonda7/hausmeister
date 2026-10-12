@@ -1008,6 +1008,11 @@ select {
 	font-size: 0.9rem;
 }
 
+/* Tables with only a few columns fit their container without scrolling. */
+.compact-table .data-table {
+	min-width: 0;
+}
+
 .book-table thead th,
 .data-table thead th {
 	text-align: left;

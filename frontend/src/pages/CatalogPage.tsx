@@ -13,6 +13,7 @@ const SECTIONS: NamedKind[] = ['authors', 'publishers', 'tags', 'languages']
 const LINKED: Partial<Record<NamedKind, LinkedKind>> = {
 	authors: 'author',
 	publishers: 'publisher',
+	tags: 'tag',
 }
 
 export type CatalogPageProps = {

@@ -154,11 +154,13 @@ export const de: Record<TranslationKey, string> = {
 	'bookPage.loadError': 'Dieses Buch konnte nicht geladen werden.',
 	'bookPage.openLibrary': 'Bei Open Library ansehen',
 
-	// Autoren- / Verlagsseite
+	// Autoren- / Verlags- / Tagseite
 	'entryPage.author': 'Autor',
 	'entryPage.publisher': 'Verlag',
+	'entryPage.tag': 'Tag',
 	'entryPage.authorLoadError': 'Dieser Autor konnte nicht geladen werden.',
 	'entryPage.publisherLoadError': 'Dieser Verlag konnte nicht geladen werden.',
+	'entryPage.tagLoadError': 'Dieser Tag konnte nicht geladen werden.',
 	'entryPage.bookCountOne': '(1 Buch)',
 	'entryPage.bookCount': '({count} Bücher)',
 	'entryPage.empty': 'Noch keine Bücher.',

@@ -146,6 +146,7 @@ export type BookFilter = {
 	location?: string
 	author?: string
 	publisher?: string
+	tag?: string
 }
 
 export function filterBooks(books: BookJson[], filter: BookFilter): BookJson[] {
@@ -154,12 +155,14 @@ export function filterBooks(books: BookJson[], filter: BookFilter): BookJson[] {
 	const location = filter.location?.trim()
 	const author = filter.author?.trim()
 	const publisher = filter.publisher?.trim()
+	const tag = filter.tag?.trim()
 	return books.filter(
 		(b) =>
 			(!owner || b.ownerId === owner) &&
 			(!location || b.locationId === location) &&
 			(!author || b.authorIds.includes(author)) &&
 			(!publisher || b.publisherId === publisher) &&
+			(!tag || b.tagIds.includes(tag)) &&
 			(!q || searchText(b).includes(q)),
 	)
 }

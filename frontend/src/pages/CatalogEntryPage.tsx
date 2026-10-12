@@ -1,14 +1,13 @@
 import { DataTable, type DataTableColumn } from '@serkonda7/solid-components'
 import { IconBook } from '@tabler/icons-solidjs'
 import { createMemo, Show } from 'solid-js'
-import { BookTitleCell } from '../components/BookTable'
+import { authorsColumn, BookTitleCell } from '../components/BookTable'
 import { ErrorText, LoadingRows, orDash } from '../components/common'
 import { EntryLinks, type LinkedKind } from '../components/EntryLinks'
 import { ReadCheckbox } from '../components/ReadCheckbox'
 import { t } from '../i18n'
 import { PAGE_PATHS } from '../routes'
 import type { Book, NamedEntry } from '../types'
-import { joinNames } from '../utils/books'
 
 export type CatalogEntry = {
 	kind: LinkedKind
@@ -27,7 +26,7 @@ export type CatalogEntryPageProps = {
 	onNavigate: (path: string, event: MouseEvent) => void
 }
 
-/** Author or publisher with the number and list of their books. */
+/** Author, publisher or tag with the number and list of their books. */
 export function CatalogEntryPage(props: CatalogEntryPageProps) {
 	return (
 		<div class="add-book-page">
@@ -85,18 +84,7 @@ function EntryBooks(props: Omit<CatalogEntryPageProps, 'data'> & { data: Catalog
 			sortValue: (b) => b.title,
 			getValue: (b) => <BookTitleCell book={b} onNavigate={props.onNavigate} />,
 		},
-		{
-			key: 'authors',
-			label: t('book.authors'),
-			sortable: true,
-			sortValue: (b) => joinNames(b.authors),
-			getValue: (b) =>
-				b.authors.length > 0 ? (
-					<EntryLinks kind="author" entries={b.authors} onNavigate={props.onNavigate} />
-				) : (
-					<span class="muted">{t('common.unknown')}</span>
-				),
-		},
+		authorsColumn(props.onNavigate),
 		{
 			key: 'publisher',
 			label: t('book.publisher'),
@@ -146,7 +134,7 @@ function EntryBooks(props: Omit<CatalogEntryPageProps, 'data'> & { data: Catalog
 					rows={[...props.data.books].sort((a, b) => a.title.localeCompare(b.title))}
 					columns={columns()}
 					getRowId={(b) => b.id}
-					class="table-wrap"
+					class="table-wrap compact-table"
 				/>
 			</Show>
 		</>

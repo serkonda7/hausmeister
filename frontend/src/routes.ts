@@ -4,6 +4,7 @@ export type Page =
 	| 'book'
 	| 'author'
 	| 'publisher'
+	| 'tag'
 	| 'reading'
 	| 'catalog'
 	| 'locations'
@@ -14,7 +15,7 @@ export type Page =
 export type StaticPage = Exclude<Page, EntityPage>
 
 /** Pages showing one entity, identified by the id at the end of their path. */
-export type EntityPage = 'book' | 'author' | 'publisher'
+export type EntityPage = 'book' | 'author' | 'publisher' | 'tag'
 
 export const PAGE_PATHS: Record<StaticPage, string> = {
 	library: '/library',
@@ -30,6 +31,7 @@ const ENTITY_PATH_PREFIXES: Record<EntityPage, string> = {
 	book: '/library/books/',
 	author: '/catalog/authors/',
 	publisher: '/catalog/publishers/',
+	tag: '/catalog/tags/',
 }
 
 function entityPath(page: EntityPage, id: string): string {
@@ -39,6 +41,7 @@ function entityPath(page: EntityPage, id: string): string {
 export const bookPath = (id: string) => entityPath('book', id)
 export const authorPath = (id: string) => entityPath('author', id)
 export const publisherPath = (id: string) => entityPath('publisher', id)
+export const tagPath = (id: string) => entityPath('tag', id)
 
 /** Id of the `page` entity shown at `pathname`, or null when it is another page. */
 export function entityIdFromPath(page: EntityPage, pathname: string): string | null {

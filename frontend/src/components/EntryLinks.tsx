@@ -1,14 +1,15 @@
 import { For } from 'solid-js'
-import { authorPath, publisherPath } from '../routes'
+import { authorPath, publisherPath, tagPath } from '../routes'
 import type { NamedEntry } from '../types'
 
-export type LinkedKind = 'author' | 'publisher'
+export type LinkedKind = 'author' | 'publisher' | 'tag'
 
 export function entryPath(kind: LinkedKind, id: string): string {
-	return kind === 'author' ? authorPath(id) : publisherPath(id)
+	if (kind === 'author') return authorPath(id)
+	return kind === 'publisher' ? publisherPath(id) : tagPath(id)
 }
 
-/** Comma-separated links to the author or publisher pages of `entries`. */
+/** Comma-separated links to the author, publisher or tag pages of `entries`. */
 export function EntryLinks(props: {
 	kind: LinkedKind
 	entries: NamedEntry[]

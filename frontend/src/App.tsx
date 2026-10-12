@@ -40,10 +40,10 @@ export default function App() {
 	const [path, setPath] = createSignal(window.location.pathname)
 	const page = () => pageFromPath(path())
 	const bookId = () => entityIdFromPath('book', path())
-	/** Author or publisher shown on the current page, if any. */
+	/** Author, publisher or tag shown on the current page, if any. */
 	const entryRef = () => {
 		const p = page()
-		if (p !== 'author' && p !== 'publisher') return null
+		if (p !== 'author' && p !== 'publisher' && p !== 'tag') return null
 		const id = entityIdFromPath(p, path())
 		return id ? { kind: p, id } : null
 	}
@@ -80,7 +80,7 @@ export default function App() {
 			return { id, kind, entry: entry[kind], books: list.books }
 		},
 	)
-	/** The author or publisher on its page; undefined while loading, on error, or when stale. */
+	/** The author, publisher or tag on its page; undefined while loading, on error, or when stale. */
 	const viewedEntry = (): CatalogEntry | undefined => {
 		if (fetchedEntry.error) return undefined
 		const e = fetchedEntry()
@@ -234,26 +234,23 @@ export default function App() {
 					onToggleRead={(b) => void reading.toggleRead(b)}
 				/>
 			</Match>
-			<Match when={page() === 'author' || page() === 'publisher'}>
-				<CatalogEntryPage
-					kind={page() === 'publisher' ? 'publisher' : 'author'}
-					data={viewedEntry()}
-					loading={fetchedEntry.loading}
-					loadError={
-						fetchedEntry.error
-							? errorMessage(
-									fetchedEntry.error,
-									page() === 'publisher'
-										? 'entryPage.publisherLoadError'
-										: 'entryPage.authorLoadError',
-								)
-							: null
-					}
-					actionError={reading.readError()}
-					readPendingIds={reading.pendingIds()}
-					onToggleRead={(b) => void reading.toggleRead(b)}
-					onNavigate={navigate}
-				/>
+			<Match when={entryRef()}>
+				{(ref) => (
+					<CatalogEntryPage
+						kind={ref().kind}
+						data={viewedEntry()}
+						loading={fetchedEntry.loading}
+						loadError={
+							fetchedEntry.error
+								? errorMessage(fetchedEntry.error, `entryPage.${ref().kind}LoadError`)
+								: null
+						}
+						actionError={reading.readError()}
+						readPendingIds={reading.pendingIds()}
+						onToggleRead={(b) => void reading.toggleRead(b)}
+						onNavigate={navigate}
+					/>
+				)}
 			</Match>
 			<Match when={page() === 'reading'}>
 				<ReadingListPage

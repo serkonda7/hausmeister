@@ -59,7 +59,7 @@ export function ReadingListPage(props: ReadingListPageProps) {
 				<BookTitleCell book={b} muted={b.readAt !== null} onNavigate={props.onNavigate} />
 			),
 		},
-		authorsColumn(),
+		authorsColumn(props.onNavigate),
 		{
 			key: 'readAt',
 			label: t('reading.readAt'),
@@ -125,7 +125,7 @@ export function ReadingListPage(props: ReadingListPageProps) {
 					rows={visibleBooks()}
 					columns={columns()}
 					getRowId={(b) => b.id}
-					class="table-wrap reading-table"
+					class="table-wrap reading-table compact-table"
 				/>
 			</Show>
 		</BookListFrame>

@@ -152,11 +152,13 @@ export const en = {
 	'bookPage.loadError': 'Could not load this book.',
 	'bookPage.openLibrary': 'View on Open Library',
 
-	// Author / publisher page
+	// Author / publisher / tag page
 	'entryPage.author': 'Author',
 	'entryPage.publisher': 'Publisher',
+	'entryPage.tag': 'Tag',
 	'entryPage.authorLoadError': 'Could not load this author.',
 	'entryPage.publisherLoadError': 'Could not load this publisher.',
+	'entryPage.tagLoadError': 'Could not load this tag.',
 	'entryPage.bookCountOne': '(1 book)',
 	'entryPage.bookCount': '({count} books)',
 	'entryPage.empty': 'No books yet.',

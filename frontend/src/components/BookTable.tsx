@@ -17,6 +17,7 @@ import {
 } from '../utils/books'
 import { loadStored, store } from '../utils/storage'
 import { orDash } from './common'
+import { EntryLinks } from './EntryLinks'
 import { ReadCheckbox } from './ReadCheckbox'
 
 const VISIBLE_COLUMNS_KEY = 'hausmeister.library.visibleColumns'
@@ -118,7 +119,7 @@ export function BookTable(props: BookTableProps) {
 			getValue: (b) => <BookTitleCell book={b} onNavigate={props.onNavigate} />,
 		},
 		{ ...textColumn('isbn', t('book.isbn'), (b) => b.isbn ?? ''), defaultVisible: false },
-		authorsColumn(),
+		authorsColumn(props.onNavigate),
 		{
 			key: 'printYear',
 			label: t('book.printYear'),
@@ -126,11 +127,27 @@ export function BookTable(props: BookTableProps) {
 			sortValue: (b) => b.printYear,
 			getValue: (b) => orDash(b.printYear),
 		},
-		textColumn('publisher', t('book.publisher'), (b) => b.publisher?.name ?? ''),
+		{
+			...textColumn('publisher', t('book.publisher'), (b) => b.publisher?.name ?? ''),
+			getValue: (b) =>
+				orDash(
+					b.publisher && (
+						<EntryLinks kind="publisher" entries={[b.publisher]} onNavigate={props.onNavigate} />
+					),
+				),
+		},
 		textColumn('location', t('book.location'), locationName),
 		textColumn('owner', t('book.owner'), ownerName),
 		textColumn('languages', t('catalog.languages'), (b) => joinNames(b.languages)),
-		textColumn('tags', t('catalog.tags'), (b) => joinNames(b.tags)),
+		{
+			...textColumn('tags', t('catalog.tags'), (b) => joinNames(b.tags)),
+			getValue: (b) =>
+				orDash(
+					b.tags.length > 0 && (
+						<EntryLinks kind="tag" entries={b.tags} onNavigate={props.onNavigate} />
+					),
+				),
+		},
 		{
 			key: 'provenance',
 			label: t('book.status'),
@@ -213,13 +230,20 @@ export function BookTable(props: BookTableProps) {
 }
 
 /** Author names; books without authors show "Unknown". Shared with the reading list. */
-export function authorsColumn(): DataTableColumn<Book> {
+export function authorsColumn(
+	onNavigate: (path: string, event: MouseEvent) => void,
+): DataTableColumn<Book> {
 	return {
 		key: 'authors',
 		label: t('book.authors'),
 		sortable: true,
 		sortValue: (b) => joinNames(b.authors),
-		getValue: (b) => joinNames(b.authors) || <span class="muted">{t('common.unknown')}</span>,
+		getValue: (b) =>
+			b.authors.length > 0 ? (
+				<EntryLinks kind="author" entries={b.authors} onNavigate={onNavigate} />
+			) : (
+				<span class="muted">{t('common.unknown')}</span>
+			),
 	}
 }
 

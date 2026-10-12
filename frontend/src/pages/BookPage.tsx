@@ -144,7 +144,11 @@ function BookDetails(props: Omit<BookPageProps, 'book'> & { book: Book }) {
 				</Detail>
 				<Detail label={t('book.printYear')}>{b().printYear}</Detail>
 				<Detail label={t('catalog.languages')}>{joinNames(b().languages)}</Detail>
-				<Detail label={t('catalog.tags')}>{joinNames(b().tags)}</Detail>
+				<Detail label={t('catalog.tags')}>
+					{b().tags.length > 0 && (
+						<EntryLinks kind="tag" entries={b().tags} onNavigate={props.onNavigate} />
+					)}
+				</Detail>
 				<Detail label={t('book.location')}>{locationName(b())}</Detail>
 				<Detail label={t('book.owner')}>{ownerName(b())}</Detail>
 				<Detail label={t('book.status')}>
