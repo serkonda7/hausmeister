@@ -132,3 +132,7 @@ export type PublicUser = {
 export function canEditBook(book: { ownerId: string | null }, user: PublicUser): boolean {
 	return user.isAdmin || (book.ownerId !== null && book.ownerId === user.id)
 }
+
+/** Renaming, moving, deleting and assigning a location to books: its owner or an admin. */
+export const canEditLocation: (location: { ownerId: string | null }, user: PublicUser) => boolean =
+	canEditBook

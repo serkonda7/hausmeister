@@ -11,7 +11,6 @@ import {
 	books,
 	bookTags,
 	languages,
-	locations,
 	publishers,
 	tags,
 	users,
@@ -21,15 +20,27 @@ import { assertCanEditBook, findBook, requireBook, requireEditableBook } from '.
 import { fail } from '../util/http'
 import { ensureIdsExist } from '../util/query'
 import { filterBooks, serializeBook, serializeBooks } from './books-serialize'
+import { assertAssignableLocation } from './locations'
 
 type BookInput = v.InferOutput<typeof UpdateBookSchema>
 
-function validateReferences(db: Db, data: BookInput): void {
+/**
+ * `currentLocationId` is the book's stored location: keeping it is always allowed,
+ * switching to another one requires owning that location (or being an admin).
+ */
+function validateReferences(
+	db: Db,
+	me: PublicUser,
+	data: BookInput,
+	currentLocationId: string | null = null,
+): void {
 	if (data.authorIds) ensureIdsExist(db, authors.id, data.authorIds, 'author')
 	if (data.tagIds) ensureIdsExist(db, tags.id, data.tagIds, 'tag')
 	if (data.languageIds) ensureIdsExist(db, languages.id, data.languageIds, 'language')
 	if (data.publisherId) ensureIdsExist(db, publishers.id, [data.publisherId], 'publisher')
-	if (data.locationId) ensureIdsExist(db, locations.id, [data.locationId], 'location')
+	if (data.locationId && data.locationId !== currentLocationId) {
+		assertAssignableLocation(db, data.locationId, me)
+	}
 }
 
 /** Only admins may assign an owner other than `current` (the creator for new books). */
@@ -84,7 +95,7 @@ export const bookApp = new Hono<AppEnv>()
 		const db = getDb()
 		const me = currentUser(c)
 		const { authorIds, tagIds, languageIds, ownerId, ...fields } = c.req.valid('json')
-		validateReferences(db, { authorIds, tagIds, languageIds, ...fields })
+		validateReferences(db, me, { authorIds, tagIds, languageIds, ...fields })
 		const owner = resolveOwner(db, me, ownerId, me.id)
 		const id = crypto.randomUUID()
 		const now = Date.now()
@@ -107,7 +118,7 @@ export const bookApp = new Hono<AppEnv>()
 		const me = currentUser(c)
 		const existing = requireEditableBook(db, c.req.param('id'), me)
 		const { authorIds, tagIds, languageIds, ownerId, ...fields } = c.req.valid('json')
-		validateReferences(db, { authorIds, tagIds, languageIds, ...fields })
+		validateReferences(db, me, { authorIds, tagIds, languageIds, ...fields }, existing.locationId)
 		const owner = resolveOwner(db, me, ownerId, existing.ownerId)
 		db.transaction((tx) => {
 			// Drizzle skips undefined values, so omitted fields keep their current value.

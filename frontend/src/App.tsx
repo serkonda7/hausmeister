@@ -35,6 +35,7 @@ import { ReadingListPage } from './pages/ReadingListPage'
 import { EditUserDialog, UsersPage } from './pages/UsersPage'
 import { entityIdFromPath, PAGE_PATHS, pageFromPath } from './routes'
 import type { Book, NamedEntry, PublicUser } from './types'
+import { isOwnLocation } from './utils/books'
 
 export default function App() {
 	const [path, setPath] = createSignal(window.location.pathname)
@@ -122,8 +123,12 @@ export default function App() {
 
 	/** Inline create from a book form: the new entry gets selected. */
 	async function createAndSelect(kind: CatalogKind, name: string): Promise<void> {
-		// New locations nest under the currently selected one.
-		const parentId = kind === 'locations' ? book.form().locationId : undefined
+		// New locations nest under the currently selected one, if it is the user's own.
+		const selected = lists.locations.items().find((l) => l.id === book.form().locationId)
+		const parentId =
+			kind === 'locations' && selected && isOwnLocation(selected, userId())
+				? selected.id
+				: undefined
 		const entry = await catalog.create(kind, name, parentId)
 		if (entry) book.select(kind, entry.id)
 	}
@@ -186,7 +191,14 @@ export default function App() {
 		onCleanup(() => clearTimeout(timer))
 	})
 
-	const bookFieldProps = { book, lists, onCreate: createAndSelect }
+	const bookFieldProps = {
+		book,
+		lists,
+		onCreate: createAndSelect,
+		get user() {
+			return auth.user()
+		},
+	}
 	const bookListState = {
 		get debouncedQuery() {
 			return debouncedQuery()
@@ -278,7 +290,7 @@ export default function App() {
 				/>
 			</Match>
 			<Match when={page() === 'locations'}>
-				<LocationsPage list={lists.locations} actions={catalog} canManage={user().isAdmin} />
+				<LocationsPage list={lists.locations} actions={catalog} user={user()} />
 			</Match>
 			<Match when={page() === 'users'}>
 				<Show when={user().isAdmin} fallback={<p class="error">{t('users.adminOnly')}</p>}>

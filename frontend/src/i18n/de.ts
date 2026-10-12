@@ -268,6 +268,7 @@ export const de: Record<TranslationKey, string> = {
 	'locations.collapse': '{name} zuklappen',
 	'locations.expandAll': 'Alle aufklappen',
 	'locations.collapseAll': 'Alle zuklappen',
+	'locations.ownedBy': 'Gehört {name}',
 	'locations.addChild': 'Standort in {name} anlegen',
 	'locations.createFailed': 'Standort konnte nicht angelegt werden.',
 	'locations.rename': 'Standort umbenennen',

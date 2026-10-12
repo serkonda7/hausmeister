@@ -29,6 +29,13 @@
 			"when": 1791821792798,
 			"tag": "0003_hash_session_tokens",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "6",
+			"when": 1791832900196,
+			"tag": "0004_location_owners",
+			"breakpoints": true
 		}
 	]
 }

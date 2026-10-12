@@ -11,6 +11,8 @@ export type NamedEntry = {
 
 export type Location = NamedEntry & {
 	parentId: string | null
+	ownerId: string | null
+	owner?: Pick<PublicUser, 'id' | 'username' | 'displayName'> | null
 	childrenCount?: number
 	path?: Array<{ id: string; name: string }>
 	fullPath?: string

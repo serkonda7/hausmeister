@@ -35,6 +35,8 @@ export type EntryTableProps<T extends NamedEntry> = {
 	/** Rename and delete buttons are only shown when both handlers are given. */
 	onRename?: (id: string, current: string) => void
 	onRemove?: (id: string, name: string) => void
+	/** Limits rename/delete to some rows; defaults to all. */
+	canManage?: (item: T) => boolean
 	/** Name cell content and tooltip; defaults to the plain name. */
 	renderName?: (item: T) => JSX.Element
 	nameTitle?: (item: T) => string
@@ -65,7 +67,7 @@ export function EntryTable<T extends NamedEntry>(props: EntryTableProps<T>) {
 				<td>
 					<span class="manage-actions">
 						{props.rowActions?.(item)}
-						<Show when={actions()}>
+						<Show when={(props.canManage?.(item) ?? true) && actions()}>
 							{(a) => (
 								<EntryActions
 									name={item.name}

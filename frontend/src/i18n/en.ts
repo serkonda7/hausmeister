@@ -262,6 +262,7 @@ export const en = {
 	'locations.collapse': 'Collapse {name}',
 	'locations.expandAll': 'Expand all',
 	'locations.collapseAll': 'Collapse all',
+	'locations.ownedBy': 'Owned by {name}',
 	'locations.addChild': 'Add location inside {name}',
 	'locations.createFailed': 'Could not create location.',
 	'locations.rename': 'Rename location',

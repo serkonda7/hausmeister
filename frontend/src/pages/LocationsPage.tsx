@@ -1,18 +1,25 @@
 import { IconChevronRight, IconPlus } from '@tabler/icons-solidjs'
+import { canEditLocation } from 'shared/src/book'
 import { createMemo, createSignal, For, Show } from 'solid-js'
 import { ClearableInput } from '../components/ClearableInput'
 import { ErrorText, TextField } from '../components/common'
 import { EntryTable } from '../components/EntryTable'
 import type { CatalogActions, List } from '../hooks/useCatalog'
 import { t } from '../i18n'
-import type { Location } from '../types'
-import { locationLabel, locationSubtreeIds, sortLocations } from '../utils/books'
+import type { Location, PublicUser } from '../types'
+import {
+	isOwnLocation,
+	locationLabel,
+	locationSubtreeIds,
+	sortLocations,
+	userDisplayName,
+} from '../utils/books'
 
 export type LocationsPageProps = {
 	list: List<Location>
 	actions: CatalogActions
-	/** Renaming, moving and deleting locations is admin-only. */
-	canManage: boolean
+	/** Renaming, moving and deleting a location is up to its owner or an admin. */
+	user: PublicUser
 }
 
 function LocationOptions(props: { locations: Location[] }) {
@@ -54,10 +61,14 @@ export function LocationsPage(props: LocationsPageProps) {
 		setCollapsed(anyCollapsed() ? new Set<string>() : new Set(childCounts().keys()))
 	}
 
+	const canManage = (l: Location) => canEditLocation(l, props.user)
+	const isOwn = (l: Location) => isOwnLocation(l, props.user.id)
+	const ownLocations = createMemo(() => locations().filter(isOwn))
+
 	const [newName, setNewName] = createSignal('')
 	const [newParentId, setNewParentId] = createSignal('')
 	// The chosen parent may have been deleted in the meantime.
-	const parentId = () => (locations().some((l) => l.id === newParentId()) ? newParentId() : '')
+	const parentId = () => (ownLocations().some((l) => l.id === newParentId()) ? newParentId() : '')
 
 	async function add(): Promise<void> {
 		if (await props.actions.create('locations', newName(), parentId())) setNewName('')
@@ -103,6 +114,13 @@ export function LocationsPage(props: LocationsPageProps) {
 				<Show when={query() && l.fullPath && l.fullPath !== l.name}>
 					<span class="location-full-path">{l.fullPath}</span>
 				</Show>
+				<Show when={!isOwn(l) && l.owner}>
+					{(owner) => (
+						<span class="location-full-path">
+							{t('locations.ownedBy', { name: userDisplayName(owner()) })}
+						</span>
+					)}
+				</Show>
 			</span>
 			<Show when={!query() && collapsed().has(l.id)}>
 				<span class="location-child-count">+{childCounts().get(l.id)}</span>
@@ -111,19 +129,21 @@ export function LocationsPage(props: LocationsPageProps) {
 	)
 
 	const addChildButton = (l: Location) => (
-		<button
-			type="button"
-			class="ghost small-btn catalog-rename-btn"
-			onClick={() => addChild(l)}
-			aria-label={t('locations.addChild', { name: l.name })}
-			title={t('locations.addChild', { name: l.name })}
-		>
-			<IconPlus size={14} />
-		</button>
+		<Show when={isOwn(l)}>
+			<button
+				type="button"
+				class="ghost small-btn catalog-rename-btn"
+				onClick={() => addChild(l)}
+				aria-label={t('locations.addChild', { name: l.name })}
+				title={t('locations.addChild', { name: l.name })}
+			>
+				<IconPlus size={14} />
+			</button>
+		</Show>
 	)
 
 	const parentSelect = (l: Location) => {
-		if (!props.canManage) {
+		if (!canManage(l)) {
 			const parent = l.parentId ? byId().get(l.parentId) : undefined
 			return parent ? (
 				<span class="location-parent">{locationLabel(parent)}</span>
@@ -142,7 +162,9 @@ export function LocationsPage(props: LocationsPageProps) {
 				title={t('locations.moveTitle')}
 			>
 				<option value="">{t('locations.topLevel')}</option>
-				<LocationOptions locations={locations().filter((o) => !subtree.has(o.id))} />
+				<LocationOptions
+					locations={locations().filter((o) => o.ownerId === l.ownerId && !subtree.has(o.id))}
+				/>
 			</select>
 		)
 	}
@@ -177,7 +199,7 @@ export function LocationsPage(props: LocationsPageProps) {
 							aria-label={t('locations.parentAria')}
 						>
 							<option value="">{t('locations.topLevelOption')}</option>
-							<LocationOptions locations={locations()} />
+							<LocationOptions locations={ownLocations()} />
 						</select>
 					</label>
 				</div>
@@ -217,16 +239,9 @@ export function LocationsPage(props: LocationsPageProps) {
 						label={t('locations.listLabel')}
 						class="catalog-table location-table"
 						items={visible()}
-						onRename={
-							props.canManage
-								? (id, current) => void props.actions.rename('locations', id, current)
-								: undefined
-						}
-						onRemove={
-							props.canManage
-								? (id, name) => void props.actions.remove('locations', id, name)
-								: undefined
-						}
+						onRename={(id, current) => void props.actions.rename('locations', id, current)}
+						onRemove={(id, name) => void props.actions.remove('locations', id, name)}
+						canManage={canManage}
 						nameTitle={locationLabel}
 						nameStyle={indent}
 						renderName={nameCell}

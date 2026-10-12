@@ -28,9 +28,13 @@ export const locations = sqliteTable(
 		parentId: text('parent_id').references((): AnySQLiteColumn => locations.id, {
 			onDelete: 'set null',
 		}),
+		// Null for locations whose owner was deleted; only admins can manage those.
+		ownerId: text('owner_id').references((): AnySQLiteColumn => users.id, {
+			onDelete: 'set null',
+		}),
 		createdAt: integer('created_at').notNull(),
 	},
-	(t) => [index('locations_parent_idx').on(t.parentId)],
+	(t) => [index('locations_parent_idx').on(t.parentId), index('locations_owner_idx').on(t.ownerId)],
 )
 
 export const tags = sqliteTable('tags', {

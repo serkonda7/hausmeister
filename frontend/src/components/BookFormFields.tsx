@@ -1,10 +1,10 @@
-import { PROVENANCE_KINDS } from 'shared/src/book'
+import { canEditLocation, PROVENANCE_KINDS } from 'shared/src/book'
 import { Index, Show } from 'solid-js'
 import type { BookForm, MultiSelectField } from '../hooks/useBookForm'
 import type { CatalogKind, CatalogLists } from '../hooks/useCatalog'
 import { type TranslationKey, t } from '../i18n'
-import type { BookFormState, PageNote } from '../types'
-import { locationLabel, provenanceLabel, sortLocations } from '../utils/books'
+import type { BookFormState, PageNote, PublicUser } from '../types'
+import { isOwnLocation, locationLabel, provenanceLabel, sortLocations } from '../utils/books'
 import { ClearableInput } from './ClearableInput'
 import { TextField } from './common'
 import { MultiSelect, SingleSelect } from './Dropdown'
@@ -13,6 +13,8 @@ export type BookFieldsProps = {
 	book: BookForm
 	lists: CatalogLists
 	onCreate: (kind: CatalogKind, name: string) => void
+	/** Books can only be put into the user's own locations; admins may use any. */
+	user: PublicUser | null
 }
 
 type MultiField = {
@@ -70,10 +72,18 @@ function MultiSelectGroup(props: BookFieldsProps & { config: MultiField }) {
 export function BookMetadataFields(props: BookFieldsProps & { idPrefix: string }) {
 	const form = () => props.book.form()
 	const fieldId = (name: string) => `${props.idPrefix}-${name}`
-	const locations = () => sortLocations(props.lists.locations.items())
+	// The book's current location stays listed even when it belongs to someone else.
+	const locations = () =>
+		sortLocations(
+			props.lists.locations.items().filter((l) => {
+				const user = props.user
+				return l.id === form().locationId || (user !== null && canEditLocation(l, user))
+			}),
+		)
 	const locationParentHint = () => {
 		const parent = locations().find((l) => l.id === form().locationId)
-		return parent && t('form.underLocation', { name: locationLabel(parent) })
+		if (!parent || !isOwnLocation(parent, props.user?.id ?? null)) return undefined
+		return t('form.underLocation', { name: locationLabel(parent) })
 	}
 	const textField = (key: 'title' | 'subtitle' | 'isbn', label: TranslationKey) => (
 		<TextField

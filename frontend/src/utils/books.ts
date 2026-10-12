@@ -81,6 +81,11 @@ function locationPathNames(l: Location): string[] {
 	return l.path?.map((p) => p.name) ?? [l.name]
 }
 
+/** Whether `userId` owns `l`; only own locations can be assigned to books or nested into. */
+export function isOwnLocation(l: Location, userId: string | null): boolean {
+	return l.ownerId !== null && l.ownerId === userId
+}
+
 /** Tree order: compare path segments so children follow their parent. */
 export function sortLocations(list: Location[]): Location[] {
 	return [...list].sort((a, b) => {
