@@ -41,12 +41,15 @@ export type EntryTableProps<T extends NamedEntry> = {
 	nameStyle?: (item: T) => string | undefined
 	/** Optional extra column between name and book count. */
 	extraColumn?: { label: string; render: (item: T) => JSX.Element }
+	/** Extra buttons shown before rename/delete. */
+	rowActions?: (item: T) => JSX.Element
 }
 
 /** Name / books / actions table for catalog entries and locations. */
 export function EntryTable<T extends NamedEntry>(props: EntryTableProps<T>) {
 	const actions = () =>
 		props.onRename && props.onRemove ? { rename: props.onRename, remove: props.onRemove } : null
+	const hasActions = () => Boolean(actions() || props.rowActions)
 	const row = (item: T) => (
 		<tr>
 			<td
@@ -58,16 +61,21 @@ export function EntryTable<T extends NamedEntry>(props: EntryTableProps<T>) {
 			</td>
 			<Show when={props.extraColumn}>{(extra) => <td>{extra().render(item)}</td>}</Show>
 			<td class="catalog-table-books">{item.bookCount ?? 0}</td>
-			<Show when={actions()}>
-				{(a) => (
-					<td>
-						<EntryActions
-							name={item.name}
-							onRename={() => a().rename(item.id, item.name)}
-							onRemove={() => a().remove(item.id, item.name)}
-						/>
-					</td>
-				)}
+			<Show when={hasActions()}>
+				<td>
+					<span class="manage-actions">
+						{props.rowActions?.(item)}
+						<Show when={actions()}>
+							{(a) => (
+								<EntryActions
+									name={item.name}
+									onRename={() => a().rename(item.id, item.name)}
+									onRemove={() => a().remove(item.id, item.name)}
+								/>
+							)}
+						</Show>
+					</span>
+				</td>
 			</Show>
 		</tr>
 	)
@@ -80,7 +88,7 @@ export function EntryTable<T extends NamedEntry>(props: EntryTableProps<T>) {
 						<th scope="col">{t('common.name')}</th>
 						<Show when={props.extraColumn}>{(extra) => <th scope="col">{extra().label}</th>}</Show>
 						<th scope="col">{t('common.books')}</th>
-						<Show when={actions()}>
+						<Show when={hasActions()}>
 							<th scope="col">
 								<span class="sr-only">{t('common.actions')}</span>
 							</th>

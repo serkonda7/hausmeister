@@ -1355,26 +1355,54 @@ select {
 	}
 }
 
-.location-table {
-	min-width: 38rem;
+.location-list-section .catalog-table-wrap {
+	max-height: 70vh;
+}
+
+.location-list-tools {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 }
 
 .location-table th:nth-child(2),
 .location-table td:nth-child(2) {
-	width: 12rem;
+	width: 13rem;
 }
 
 .location-table th:nth-child(3),
 .location-table td:nth-child(3) {
-	width: 4rem;
+	width: 4.5rem;
+	text-align: right;
 }
 
-.location-table .catalog-table-name strong,
-.location-full-path {
+.location-table th:nth-child(4),
+.location-table td:nth-child(4) {
+	width: 6.5rem;
+}
+
+.location-name {
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+	min-width: 0;
+}
+
+.location-name-text {
+	min-width: 0;
+}
+
+.location-table .location-name-text strong,
+.location-full-path,
+.location-parent {
 	display: block;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.location-table .location-name-text strong {
+	font-weight: 600;
 }
 
 .location-full-path {
@@ -1382,14 +1410,107 @@ select {
 	font-size: 0.75rem;
 }
 
-.location-table select {
-	width: 100%;
+.location-toggle,
+.location-toggle-spacer {
+	flex: none;
+	width: 1.35rem;
+	height: 1.35rem;
+}
+
+.location-toggle {
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--muted);
+}
+
+.location-toggle:hover {
 	background: var(--surface-2);
 	color: var(--text);
+}
+
+.location-toggle svg {
+	transition: transform 0.15s ease;
+}
+
+.location-toggle.open svg {
+	transform: rotate(90deg);
+}
+
+.location-child-count {
+	flex: none;
+	padding: 0 0.35rem;
 	border: 1px solid var(--border);
+	border-radius: 999px;
+	color: var(--muted);
+	font-size: 0.7rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.location-parent-select {
+	width: 100%;
+	padding: 0.25rem 0.45rem;
+	border: 1px solid transparent;
 	border-radius: 8px;
-	padding: 0.3rem 0.5rem;
+	background: transparent;
+	color: var(--text);
 	font-size: 0.82rem;
+	cursor: pointer;
+}
+
+.location-parent-select.top-level {
+	color: var(--muted);
+}
+
+.location-table tr:hover .location-parent-select,
+.location-parent-select:focus-visible {
+	border-color: var(--border);
+	background: var(--surface-2);
+}
+
+.location-parent-select option {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+@media (max-width: 640px) {
+	.location-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+	}
+
+	.location-table tr {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		align-items: center;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.location-table td {
+		border-bottom: 0;
+	}
+
+	.location-table tbody td:nth-child(n) {
+		width: auto;
+	}
+
+	.location-table td:nth-child(2) {
+		grid-row: 2;
+		grid-column: 1 / -1;
+		padding-top: 0;
+		padding-left: 2.2rem;
+	}
+
+	.location-table .location-parent-select {
+		border-color: var(--border);
+		background: var(--surface-2);
+	}
 }
 
 .book-form-grid > label,

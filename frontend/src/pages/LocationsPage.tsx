@@ -1,4 +1,4 @@
-import { IconPlus } from '@tabler/icons-solidjs'
+import { IconChevronRight, IconPlus } from '@tabler/icons-solidjs'
 import { createMemo, createSignal, For, Show } from 'solid-js'
 import { ClearableInput } from '../components/ClearableInput'
 import { ErrorText, TextField } from '../components/common'
@@ -27,6 +27,33 @@ export function LocationsPage(props: LocationsPageProps) {
 		locations().filter((l) => locationLabel(l).toLocaleLowerCase().includes(query())),
 	)
 
+	const byId = createMemo(() => new Map(locations().map((l) => [l.id, l])))
+	const childCounts = createMemo(() => {
+		const counts = new Map<string, number>()
+		for (const l of locations()) {
+			if (l.parentId) counts.set(l.parentId, (counts.get(l.parentId) ?? 0) + 1)
+		}
+		return counts
+	})
+	const [collapsed, setCollapsed] = createSignal<ReadonlySet<string>>(new Set())
+	const isHidden = (l: Location) => {
+		for (let p = l.parentId; p; p = byId().get(p)?.parentId ?? null) {
+			if (collapsed().has(p)) return true
+		}
+		return false
+	}
+	// Filtered results ignore collapsing so every match is visible.
+	const visible = createMemo(() => (query() ? matching() : locations().filter((l) => !isHidden(l))))
+	const anyCollapsed = () => collapsed().size > 0
+	function toggle(id: string): void {
+		const next = new Set(collapsed())
+		if (!next.delete(id)) next.add(id)
+		setCollapsed(next)
+	}
+	function toggleAll(): void {
+		setCollapsed(anyCollapsed() ? new Set<string>() : new Set(childCounts().keys()))
+	}
+
 	const [newName, setNewName] = createSignal('')
 	const [newParentId, setNewParentId] = createSignal('')
 	// The chosen parent may have been deleted in the meantime.
@@ -36,27 +63,79 @@ export function LocationsPage(props: LocationsPageProps) {
 		if (await props.actions.create('locations', newName(), parentId())) setNewName('')
 	}
 
+	function addChild(l: Location): void {
+		setNewParentId(l.id)
+		const input = document.getElementById('new-location-name')
+		input?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		input?.focus({ preventScroll: true })
+	}
+
 	// Indent by depth, except in filtered results.
 	const indent = (l: Location) =>
 		query() ? undefined : `padding-left: ${0.45 + Math.min(l.depth ?? 0, 6) * 1.25}rem`
 
-	const nameWithPath = (l: Location) => (
-		<>
-			<strong>{l.name}</strong>
-			<Show when={l.fullPath && l.fullPath !== l.name}>
-				<span class="location-full-path">{l.fullPath}</span>
+	const toggleButton = (l: Location) => {
+		const open = () => !collapsed().has(l.id)
+		return (
+			<button
+				type="button"
+				class="location-toggle"
+				classList={{ open: open() }}
+				onClick={() => toggle(l.id)}
+				aria-expanded={open()}
+				aria-label={t(open() ? 'locations.collapse' : 'locations.expand', { name: l.name })}
+			>
+				<IconChevronRight size={14} />
+			</button>
+		)
+	}
+
+	// Tree view shows structure via indentation; filtered results need the path for context.
+	const nameCell = (l: Location) => (
+		<span class="location-name">
+			<Show when={!query()}>
+				<Show when={childCounts().has(l.id)} fallback={<span class="location-toggle-spacer" />}>
+					{toggleButton(l)}
+				</Show>
 			</Show>
-		</>
+			<span class="location-name-text">
+				<strong>{l.name}</strong>
+				<Show when={query() && l.fullPath && l.fullPath !== l.name}>
+					<span class="location-full-path">{l.fullPath}</span>
+				</Show>
+			</span>
+			<Show when={!query() && collapsed().has(l.id)}>
+				<span class="location-child-count">+{childCounts().get(l.id)}</span>
+			</Show>
+		</span>
+	)
+
+	const addChildButton = (l: Location) => (
+		<button
+			type="button"
+			class="ghost small-btn catalog-rename-btn"
+			onClick={() => addChild(l)}
+			aria-label={t('locations.addChild', { name: l.name })}
+			title={t('locations.addChild', { name: l.name })}
+		>
+			<IconPlus size={14} />
+		</button>
 	)
 
 	const parentSelect = (l: Location) => {
 		if (!props.canManage) {
-			const parent = locations().find((o) => o.id === l.parentId)
-			return parent ? locationLabel(parent) : t('locations.topLevel')
+			const parent = l.parentId ? byId().get(l.parentId) : undefined
+			return parent ? (
+				<span class="location-parent">{locationLabel(parent)}</span>
+			) : (
+				<span class="muted">{t('locations.topLevel')}</span>
+			)
 		}
 		const subtree = locationSubtreeIds(locations(), l.id)
 		return (
 			<select
+				class="location-parent-select"
+				classList={{ 'top-level': !l.parentId }}
 				value={l.parentId ?? ''}
 				onChange={(e) => void props.actions.moveLocation(l.id, e.currentTarget.value)}
 				aria-label={t('locations.moveAria', { name: l.name })}
@@ -108,10 +187,17 @@ export function LocationsPage(props: LocationsPageProps) {
 					</button>
 				</div>
 			</section>
-			<section class="panel catalog-section">
+			<section class="panel catalog-section location-list-section">
 				<div class="catalog-section-header">
 					<h3>{t('locations.all')}</h3>
-					<span class="catalog-count">{locations().length}</span>
+					<div class="location-list-tools">
+						<Show when={!query() && childCounts().size > 0}>
+							<button type="button" class="ghost small-btn" onClick={toggleAll}>
+								{anyCollapsed() ? t('locations.expandAll') : t('locations.collapseAll')}
+							</button>
+						</Show>
+						<span class="catalog-count">{locations().length}</span>
+					</div>
 				</div>
 				<div class="inline-create">
 					<ClearableInput
@@ -130,7 +216,7 @@ export function LocationsPage(props: LocationsPageProps) {
 					<EntryTable
 						label={t('locations.listLabel')}
 						class="catalog-table location-table"
-						items={matching()}
+						items={visible()}
 						onRename={
 							props.canManage
 								? (id, current) => void props.actions.rename('locations', id, current)
@@ -143,8 +229,9 @@ export function LocationsPage(props: LocationsPageProps) {
 						}
 						nameTitle={locationLabel}
 						nameStyle={indent}
-						renderName={nameWithPath}
+						renderName={nameCell}
 						extraColumn={{ label: t('locations.parent'), render: parentSelect }}
+						rowActions={addChildButton}
 					/>
 				</Show>
 			</section>

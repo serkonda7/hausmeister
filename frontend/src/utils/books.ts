@@ -77,8 +77,21 @@ export function locationLabel(l: Location): string {
 	return l.fullPath ?? l.name
 }
 
+function locationPathNames(l: Location): string[] {
+	return l.path?.map((p) => p.name) ?? [l.name]
+}
+
+/** Tree order: compare path segments so children follow their parent. */
 export function sortLocations(list: Location[]): Location[] {
-	return [...list].sort((a, b) => locationLabel(a).localeCompare(locationLabel(b)))
+	return [...list].sort((a, b) => {
+		const pa = locationPathNames(a)
+		const pb = locationPathNames(b)
+		for (let i = 0; i < Math.min(pa.length, pb.length); i++) {
+			const c = pa[i].localeCompare(pb[i])
+			if (c) return c
+		}
+		return pa.length - pb.length
+	})
 }
 
 /** Ids of `id` and everything nested below it. */
