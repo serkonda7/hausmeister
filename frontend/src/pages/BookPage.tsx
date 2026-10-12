@@ -113,11 +113,6 @@ function BookDetails(props: Omit<BookPageProps, 'book'> & { book: Book }) {
 	return (
 		<article class="panel book-page">
 			<header class="book-page-head">
-				<Show when={b().coverUrl}>
-					{(url) => (
-						<img class="book-cover" src={url()} alt={t('bookPage.cover', { title: b().title })} />
-					)}
-				</Show>
 				<div class="book-page-heading">
 					<h2>{b().title}</h2>
 					<Show when={b().subtitle}>

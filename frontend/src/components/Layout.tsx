@@ -1,6 +1,7 @@
 import {
 	IconBookmarks,
 	IconDatabase,
+	IconKey,
 	IconLibrary,
 	IconLogout,
 	IconMapPin,
@@ -36,6 +37,7 @@ export type LayoutProps = {
 	query: string
 	onQueryChange: (value: string) => void
 	onLogout: () => void
+	onChangePassword: () => void
 	onNavigate: (path: string, event: MouseEvent) => void
 	children: JSX.Element
 }
@@ -88,6 +90,14 @@ export function Layout(props: LayoutProps) {
 						<For each={LOCALES}>{(l) => <option value={l.id}>{l.label}</option>}</For>
 					</select>
 					<Show when={props.user}>
+						<button
+							type="button"
+							class="ghost small-btn"
+							onClick={props.onChangePassword}
+							title={t('auth.changePassword')}
+						>
+							<IconKey size={14} /> {t('auth.changePassword')}
+						</button>
 						<button
 							type="button"
 							class="ghost small-btn"

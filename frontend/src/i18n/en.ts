@@ -53,6 +53,12 @@ export const en = {
 	'auth.loginBusy': 'Logging in…',
 	'auth.loginSubmit': 'Log in',
 	'auth.loginFailed': 'Login failed.',
+	'auth.changePassword': 'Change password',
+	'auth.changePasswordHint': 'You stay logged in here; all other devices are logged out.',
+	'auth.changePasswordClose': 'Close change password dialog',
+	'auth.changePasswordFailed': 'Could not change password.',
+	'auth.currentPassword': 'Current password',
+	'auth.newPassword': 'New password',
 
 	// Book fields
 	'book.title': 'Title',
@@ -147,7 +153,6 @@ export const en = {
 
 	// Book page
 	'bookPage.loadError': 'Could not load this book.',
-	'bookPage.cover': 'Cover of {title}',
 	'bookPage.openLibrary': 'View on Open Library',
 
 	// Author / publisher page

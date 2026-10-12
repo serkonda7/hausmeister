@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, lt, ne, or } from 'drizzle-orm'
 import { createMiddleware } from 'hono/factory'
 import type { CreateUser, PublicUser } from 'shared/src/book'
 import { type Db, getDb } from '../db'
@@ -23,15 +23,44 @@ export function bearerToken(c: { req: { header: (name: string) => string | undef
 	return match ? match[1].trim() : null
 }
 
+const HOUR = 60 * 60 * 1000
+const DAY = 24 * HOUR
+/** Sessions end this long after login, however active they are. */
+const SESSION_MAX_AGE = 30 * DAY
+/** Sessions end after this long without a request. */
+const SESSION_IDLE_TIMEOUT = 7 * DAY
+/** `lastUsedAt` is only written when older than this, to avoid a write per request. */
+const SESSION_TOUCH_INTERVAL = HOUR
+
+/** Sessions store only this hash, so a leaked database holds no usable tokens. */
+function hashToken(token: string): string {
+	return new Bun.CryptoHasher('sha256').update(token).digest('hex')
+}
+
+function isExpired(session: typeof sessions.$inferSelect, now: number): boolean {
+	return session.expiresAt <= now || session.lastUsedAt + SESSION_IDLE_TIMEOUT <= now
+}
+
 function userForToken(token: string | null): PublicUser | null {
 	if (!token) return null
-	const row = getDb()
-		.select({ user: users })
+	const db = getDb()
+	const tokenHash = hashToken(token)
+	const row = db
+		.select({ session: sessions, user: users })
 		.from(sessions)
 		.innerJoin(users, eq(sessions.userId, users.id))
-		.where(eq(sessions.token, token))
+		.where(eq(sessions.tokenHash, tokenHash))
 		.get()
-	return row ? toPublicUser(row.user) : null
+	if (!row) return null
+	const now = Date.now()
+	if (isExpired(row.session, now)) {
+		db.delete(sessions).where(eq(sessions.tokenHash, tokenHash)).run()
+		return null
+	}
+	if (now - row.session.lastUsedAt > SESSION_TOUCH_INTERVAL) {
+		db.update(sessions).set({ lastUsedAt: now }).where(eq(sessions.tokenHash, tokenHash)).run()
+	}
+	return toPublicUser(row.user)
 }
 
 /** Sets the session user when a valid token is sent; never rejects the request. */
@@ -55,10 +84,52 @@ export function currentUser(c: { var: AppEnv['Variables'] }): PublicUser {
 	return c.var.user ?? fail(401, 'Unauthorized')
 }
 
+/** Start a session and return its bearer token; also clears out expired sessions. */
 export function createSession(db: Db, userId: string): string {
-	const token = crypto.randomUUID()
-	db.insert(sessions).values({ token, userId, createdAt: Date.now() }).run()
+	const now = Date.now()
+	db.delete(sessions)
+		.where(or(lt(sessions.expiresAt, now), lt(sessions.lastUsedAt, now - SESSION_IDLE_TIMEOUT)))
+		.run()
+	const token = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url')
+	db.insert(sessions)
+		.values({
+			tokenHash: hashToken(token),
+			userId,
+			createdAt: now,
+			lastUsedAt: now,
+			expiresAt: now + SESSION_MAX_AGE,
+		})
+		.run()
 	return token
+}
+
+export function deleteSession(db: Db, token: string): void {
+	db.delete(sessions)
+		.where(eq(sessions.tokenHash, hashToken(token)))
+		.run()
+}
+
+/** End all of a user's sessions, except the one using `keepToken` (if given). */
+export function deleteOtherSessions(db: Db, userId: string, keepToken: string | null): void {
+	const keep = keepToken ? ne(sessions.tokenHash, hashToken(keepToken)) : undefined
+	db.delete(sessions)
+		.where(and(eq(sessions.userId, userId), keep))
+		.run()
+}
+
+let dummyHash: Promise<string> | undefined
+
+/**
+ * Check `password` against a user's hash. Unknown users are checked against a dummy hash so
+ * the response time doesn't reveal which usernames exist.
+ */
+export async function verifyPassword(
+	password: string,
+	user: typeof users.$inferSelect | undefined,
+): Promise<boolean> {
+	dummyHash ??= Bun.password.hash(crypto.randomUUID())
+	const ok = await Bun.password.verify(password, user?.passwordHash ?? (await dummyHash))
+	return ok && user !== undefined
 }
 
 export function findUserByName(db: Db, username: string) {

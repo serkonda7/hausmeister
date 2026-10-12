@@ -11,6 +11,8 @@ import { locationLabel, locationSubtreeIds, sortLocations } from '../utils/books
 export type LocationsPageProps = {
 	list: List<Location>
 	actions: CatalogActions
+	/** Renaming, moving and deleting locations is admin-only. */
+	canManage: boolean
 }
 
 function LocationOptions(props: { locations: Location[] }) {
@@ -48,6 +50,10 @@ export function LocationsPage(props: LocationsPageProps) {
 	)
 
 	const parentSelect = (l: Location) => {
+		if (!props.canManage) {
+			const parent = locations().find((o) => o.id === l.parentId)
+			return parent ? locationLabel(parent) : t('locations.topLevel')
+		}
 		const subtree = locationSubtreeIds(locations(), l.id)
 		return (
 			<select
@@ -125,8 +131,16 @@ export function LocationsPage(props: LocationsPageProps) {
 						label={t('locations.listLabel')}
 						class="catalog-table location-table"
 						items={matching()}
-						onRename={(id, current) => void props.actions.rename('locations', id, current)}
-						onRemove={(id, name) => void props.actions.remove('locations', id, name)}
+						onRename={
+							props.canManage
+								? (id, current) => void props.actions.rename('locations', id, current)
+								: undefined
+						}
+						onRemove={
+							props.canManage
+								? (id, name) => void props.actions.remove('locations', id, name)
+								: undefined
+						}
 						nameTitle={locationLabel}
 						nameStyle={indent}
 						renderName={nameWithPath}

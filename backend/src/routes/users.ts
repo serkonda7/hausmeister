@@ -1,14 +1,15 @@
 import { vValidator } from '@hono/valibot-validator'
-import { and, eq, ne } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { CreateUserSchema, UpdateUserSchema } from 'shared/src/book'
 import { getDb } from '../db'
-import { sessions, users } from '../schema'
+import { users } from '../schema'
 import {
 	type AppEnv,
 	assertUsernameFree,
 	bearerToken,
 	currentUser,
+	deleteOtherSessions,
 	insertUser,
 	isLastAdmin,
 	requireAdmin,
@@ -60,10 +61,7 @@ export const userApp = new Hono<AppEnv>()
 			.run()
 		if (data.password !== undefined) {
 			// Force re-login everywhere except the session that made the change (admin editing self).
-			const keep = ne(sessions.token, bearerToken(c) ?? '')
-			db.delete(sessions)
-				.where(and(eq(sessions.userId, id), keep))
-				.run()
+			deleteOtherSessions(db, id, bearerToken(c))
 		}
 		return c.json({ user: toPublicUser(requireUser(id)) })
 	})

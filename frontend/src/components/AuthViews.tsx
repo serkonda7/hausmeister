@@ -1,4 +1,6 @@
+import { PASSWORD_MIN_LENGTH } from 'shared/src/book'
 import { createSignal, Show } from 'solid-js'
+import { api, errorMessage } from '../api'
 import type { Credentials } from '../hooks/useAuth'
 import { t } from '../i18n'
 import { ErrorText, LoadingRows, SubmitButton, TextField } from './common'
@@ -60,6 +62,7 @@ export function AuthDialog(props: AuthDialogProps) {
 						value={password()}
 						onInput={setPassword}
 						required
+						minlength={isSetup() ? PASSWORD_MIN_LENGTH : undefined}
 						autocomplete={isSetup() ? 'new-password' : 'current-password'}
 					/>
 				</div>
@@ -70,6 +73,73 @@ export function AuthDialog(props: AuthDialogProps) {
 						busyLabel={isSetup() ? t('common.creating') : t('auth.loginBusy')}
 					>
 						{isSetup() ? t('auth.setupSubmit') : t('auth.loginSubmit')}
+					</SubmitButton>
+				</div>
+			</form>
+		</Dialog>
+	)
+}
+
+/** Change the logged-in user's own password; other sessions get logged out. */
+export function ChangePasswordDialog(props: { onClose: () => void }) {
+	const [currentPassword, setCurrentPassword] = createSignal('')
+	const [newPassword, setNewPassword] = createSignal('')
+	const [busy, setBusy] = createSignal(false)
+	const [error, setError] = createSignal<string | null>(null)
+
+	async function submit(e: Event): Promise<void> {
+		e.preventDefault()
+		setError(null)
+		setBusy(true)
+		try {
+			const body = { currentPassword: currentPassword(), newPassword: newPassword() }
+			await api('/auth/password', { method: 'POST', body })
+			props.onClose()
+		} catch (err) {
+			setError(errorMessage(err, 'auth.changePasswordFailed'))
+		} finally {
+			setBusy(false)
+		}
+	}
+
+	return (
+		<Dialog
+			id="change-password"
+			title={t('auth.changePassword')}
+			hint={t('auth.changePasswordHint')}
+			closeLabel={t('auth.changePasswordClose')}
+			onClose={() => !busy() && props.onClose()}
+			isDirty={() => currentPassword() !== '' || newPassword() !== ''}
+		>
+			<form onSubmit={(e) => void submit(e)}>
+				<div class="form-grid">
+					<TextField
+						id="change-password-current"
+						label={t('auth.currentPassword')}
+						type="password"
+						value={currentPassword()}
+						onInput={setCurrentPassword}
+						required
+						autocomplete="current-password"
+					/>
+					<TextField
+						id="change-password-new"
+						label={t('auth.newPassword')}
+						type="password"
+						value={newPassword()}
+						onInput={setNewPassword}
+						required
+						minlength={PASSWORD_MIN_LENGTH}
+						autocomplete="new-password"
+					/>
+				</div>
+				<ErrorText message={error()} />
+				<div class="form-actions">
+					<button type="button" class="ghost" onClick={props.onClose} disabled={busy()}>
+						{t('common.cancel')}
+					</button>
+					<SubmitButton busy={busy()} busyLabel={t('common.saving')}>
+						{t('auth.changePassword')}
 					</SubmitButton>
 				</div>
 			</form>

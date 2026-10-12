@@ -51,7 +51,6 @@ export const CreateBookSchema = v.object({
 	ownerId: v.optional(v.nullable(EntityIdSchema)),
 	printYear: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(3000))),
 	locationId: v.optional(v.nullable(EntityIdSchema)),
-	coverUrl: v.optional(text(2000)),
 	pages: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	description: v.optional(text(5000)),
 	dedications: v.optional(PageNotesSchema),
@@ -89,11 +88,18 @@ export function ownershipOf(eventsInOrder: Array<{ kind: string }>): Ownership {
 
 const UsernameSchema = requiredText(50)
 const DisplayNameSchema = requiredText(100)
-const PasswordSchema = v.pipe(v.string(), v.minLength(1), v.maxLength(200))
+export const PASSWORD_MIN_LENGTH = 8
+/** New passwords; login accepts any non-empty password so older, shorter ones still work. */
+const PasswordSchema = v.pipe(v.string(), v.minLength(PASSWORD_MIN_LENGTH), v.maxLength(200))
 
 export const LoginSchema = v.object({
 	username: UsernameSchema,
-	password: PasswordSchema,
+	password: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+})
+
+export const ChangePasswordSchema = v.object({
+	currentPassword: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+	newPassword: PasswordSchema,
 })
 
 export const CreateUserSchema = v.object({

@@ -10,7 +10,7 @@ import {
 	Switch,
 } from 'solid-js'
 import { api, errorMessage } from './api'
-import { AuthDialog, AuthLoading } from './components/AuthViews'
+import { AuthDialog, AuthLoading, ChangePasswordDialog } from './components/AuthViews'
 import { EditBookDialog } from './components/EditBookDialog'
 import { Layout } from './components/Layout'
 import { useAuth } from './hooks/useAuth'
@@ -48,6 +48,7 @@ export default function App() {
 		return id ? { kind: p, id } : null
 	}
 	const [query, setQuery] = createSignal('')
+	const [changingPassword, setChangingPassword] = createSignal(false)
 	const [debouncedQuery, setDebouncedQuery] = createSignal('')
 
 	const auth = useAuth()
@@ -255,10 +256,15 @@ export default function App() {
 				/>
 			</Match>
 			<Match when={page() === 'catalog'}>
-				<CatalogPage lists={lists} actions={catalog} onNavigate={navigate} />
+				<CatalogPage
+					lists={lists}
+					actions={catalog}
+					canManage={user().isAdmin}
+					onNavigate={navigate}
+				/>
 			</Match>
 			<Match when={page() === 'locations'}>
-				<LocationsPage list={lists.locations} actions={catalog} />
+				<LocationsPage list={lists.locations} actions={catalog} canManage={user().isAdmin} />
 			</Match>
 			<Match when={page() === 'users'}>
 				<Show when={user().isAdmin} fallback={<p class="error">{t('users.adminOnly')}</p>}>
@@ -283,6 +289,9 @@ export default function App() {
 			<Show when={userManagement.editingUser()} keyed>
 				{(editing) => <EditUserDialog user={editing} manage={userManagement} />}
 			</Show>
+			<Show when={changingPassword()}>
+				<ChangePasswordDialog onClose={() => setChangingPassword(false)} />
+			</Show>
 		</>
 	)
 
@@ -294,6 +303,7 @@ export default function App() {
 			query={query()}
 			onQueryChange={setQuery}
 			onLogout={handleLogout}
+			onChangePassword={() => setChangingPassword(true)}
 			onNavigate={navigate}
 		>
 			<Switch>

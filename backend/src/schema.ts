@@ -56,7 +56,6 @@ export const books = sqliteTable(
 		ownerId: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
 		locationId: text('location_id').references(() => locations.id, { onDelete: 'set null' }),
 		printYear: integer('print_year'),
-		coverUrl: text('cover_url'),
 		pages: integer('pages'),
 		description: text('description'),
 		dedications: text('dedications', { mode: 'json' }).$type<PageNote[]>().notNull().default([]),
@@ -170,11 +169,14 @@ export const users = sqliteTable('users', {
 export const sessions = sqliteTable(
 	'sessions',
 	{
-		token: text('token').primaryKey(),
+		// SHA-256 of the bearer token; the token itself is never stored.
+		tokenHash: text('token_hash').primaryKey(),
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		createdAt: integer('created_at').notNull(),
+		lastUsedAt: integer('last_used_at').notNull(),
+		expiresAt: integer('expires_at').notNull(),
 	},
 	(t) => [index('sessions_user_idx').on(t.userId)],
 )

@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { CreateLocationSchema, UpdateLocationSchema } from 'shared/src/book'
 import { type Db, getDb } from '../db'
 import { books, locations } from '../schema'
-import type { AppEnv } from '../util/auth'
+import { type AppEnv, requireAdmin } from '../util/auth'
 import { fail } from '../util/http'
 
 type LocationRow = typeof locations.$inferSelect
@@ -82,6 +82,7 @@ function locationJson(db: Db, id: string) {
 	return listLocations(db).find((l) => l.id === id)
 }
 
+// Anyone may add locations; renaming, moving and deleting them is admin-only.
 export const locationApp = new Hono<AppEnv>()
 	.get('/', (c) => {
 		const q = c.req.query('q')?.toLowerCase() ?? ''
@@ -99,7 +100,7 @@ export const locationApp = new Hono<AppEnv>()
 		db.insert(locations).values({ id, name, parentId, createdAt: Date.now() }).run()
 		return c.json({ location: locationJson(db, id) }, 201)
 	})
-	.patch('/:id', vValidator('json', UpdateLocationSchema), (c) => {
+	.patch('/:id', requireAdmin, vValidator('json', UpdateLocationSchema), (c) => {
 		const db = getDb()
 		const id = c.req.param('id')
 		const data = c.req.valid('json')
@@ -117,7 +118,7 @@ export const locationApp = new Hono<AppEnv>()
 		db.update(locations).set({ name, parentId }).where(eq(locations.id, id)).run()
 		return c.json({ location: locationJson(db, id) })
 	})
-	.delete('/:id', (c) => {
+	.delete('/:id', requireAdmin, (c) => {
 		const db = getDb()
 		const id = c.req.param('id')
 		const existing = db.select().from(locations).where(eq(locations.id, id)).get()

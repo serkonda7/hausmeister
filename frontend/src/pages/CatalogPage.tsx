@@ -18,6 +18,8 @@ const LINKED: Partial<Record<NamedKind, LinkedKind>> = {
 export type CatalogPageProps = {
 	lists: CatalogLists
 	actions: CatalogActions
+	/** Renaming and deleting entries is admin-only. */
+	canManage: boolean
 	onNavigate: (path: string, event: MouseEvent) => void
 }
 
@@ -93,8 +95,16 @@ function CatalogSection(props: CatalogPageProps & { kind: NamedKind }) {
 				<EntryTable
 					label={t('catalog.listLabel', { label: title() })}
 					items={matching()}
-					onRename={(id, current) => void props.actions.rename(props.kind, id, current)}
-					onRemove={(id, name) => void props.actions.remove(props.kind, id, name)}
+					onRename={
+						props.canManage
+							? (id, current) => void props.actions.rename(props.kind, id, current)
+							: undefined
+					}
+					onRemove={
+						props.canManage
+							? (id, name) => void props.actions.remove(props.kind, id, name)
+							: undefined
+					}
 					renderName={(item) => {
 						const kind = LINKED[props.kind]
 						return kind ? (

@@ -1118,12 +1118,6 @@ select {
 	align-items: flex-start;
 }
 
-.book-cover {
-	width: 8rem;
-	border-radius: 6px;
-	box-shadow: var(--shadow);
-}
-
 .book-page-heading {
 	display: flex;
 	flex-direction: column;

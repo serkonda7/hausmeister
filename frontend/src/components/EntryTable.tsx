@@ -32,8 +32,9 @@ export type EntryTableProps<T extends NamedEntry> = {
 	label: string
 	class?: string
 	items: T[]
-	onRename: (id: string, current: string) => void
-	onRemove: (id: string, name: string) => void
+	/** Rename and delete buttons are only shown when both handlers are given. */
+	onRename?: (id: string, current: string) => void
+	onRemove?: (id: string, name: string) => void
 	/** Name cell content and tooltip; defaults to the plain name. */
 	renderName?: (item: T) => JSX.Element
 	nameTitle?: (item: T) => string
@@ -44,6 +45,8 @@ export type EntryTableProps<T extends NamedEntry> = {
 
 /** Name / books / actions table for catalog entries and locations. */
 export function EntryTable<T extends NamedEntry>(props: EntryTableProps<T>) {
+	const actions = () =>
+		props.onRename && props.onRemove ? { rename: props.onRename, remove: props.onRemove } : null
 	const row = (item: T) => (
 		<tr>
 			<td
@@ -55,13 +58,17 @@ export function EntryTable<T extends NamedEntry>(props: EntryTableProps<T>) {
 			</td>
 			<Show when={props.extraColumn}>{(extra) => <td>{extra().render(item)}</td>}</Show>
 			<td class="catalog-table-books">{item.bookCount ?? 0}</td>
-			<td>
-				<EntryActions
-					name={item.name}
-					onRename={() => props.onRename(item.id, item.name)}
-					onRemove={() => props.onRemove(item.id, item.name)}
-				/>
-			</td>
+			<Show when={actions()}>
+				{(a) => (
+					<td>
+						<EntryActions
+							name={item.name}
+							onRename={() => a().rename(item.id, item.name)}
+							onRemove={() => a().remove(item.id, item.name)}
+						/>
+					</td>
+				)}
+			</Show>
 		</tr>
 	)
 
@@ -73,9 +80,11 @@ export function EntryTable<T extends NamedEntry>(props: EntryTableProps<T>) {
 						<th scope="col">{t('common.name')}</th>
 						<Show when={props.extraColumn}>{(extra) => <th scope="col">{extra().label}</th>}</Show>
 						<th scope="col">{t('common.books')}</th>
-						<th scope="col">
-							<span class="sr-only">{t('common.actions')}</span>
-						</th>
+						<Show when={actions()}>
+							<th scope="col">
+								<span class="sr-only">{t('common.actions')}</span>
+							</th>
+						</Show>
 					</tr>
 				</thead>
 				<tbody>

@@ -55,6 +55,12 @@ export const de: Record<TranslationKey, string> = {
 	'auth.loginBusy': 'Anmeldung läuft…',
 	'auth.loginSubmit': 'Anmelden',
 	'auth.loginFailed': 'Anmeldung fehlgeschlagen.',
+	'auth.changePassword': 'Passwort ändern',
+	'auth.changePasswordHint': 'Hier bleibst du angemeldet; alle anderen Geräte werden abgemeldet.',
+	'auth.changePasswordClose': 'Passwort-Dialog schließen',
+	'auth.changePasswordFailed': 'Passwort konnte nicht geändert werden.',
+	'auth.currentPassword': 'Aktuelles Passwort',
+	'auth.newPassword': 'Neues Passwort',
 
 	// Book fields
 	'book.title': 'Titel',
@@ -149,7 +155,6 @@ export const de: Record<TranslationKey, string> = {
 
 	// Book page
 	'bookPage.loadError': 'Dieses Buch konnte nicht geladen werden.',
-	'bookPage.cover': 'Cover von {title}',
 	'bookPage.openLibrary': 'Bei Open Library ansehen',
 
 	// Autoren- / Verlagsseite

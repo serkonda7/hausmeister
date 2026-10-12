@@ -14,7 +14,7 @@ import {
 	publishers,
 	tags,
 } from '../schema'
-import type { AppEnv } from '../util/auth'
+import { type AppEnv, requireAdmin } from '../util/auth'
 import { fail } from '../util/http'
 import { byName, ieq } from '../util/query'
 
@@ -31,7 +31,7 @@ type NamedCatalog = {
 	label: string
 }
 
-/** CRUD routes for a catalog of uniquely named entries (authors, tags, …). */
+/** CRUD routes for a catalog of uniquely named entries (authors, tags, …); rename and delete are admin-only. */
 function namedCatalogApp({ table, bookRef, schemas, many, one, label }: NamedCatalog) {
 	const findById = (db: Db, id: string) => db.select().from(table).where(eq(table.id, id)).get()
 
@@ -76,7 +76,7 @@ function namedCatalogApp({ table, bookRef, schemas, many, one, label }: NamedCat
 			db.insert(table).values(row).run()
 			return c.json({ [one]: row }, 201)
 		})
-		.patch('/:id', vValidator('json', schemas.update), (c) => {
+		.patch('/:id', requireAdmin, vValidator('json', schemas.update), (c) => {
 			const db = getDb()
 			const id = c.req.param('id')
 			const { name } = c.req.valid('json')
@@ -87,7 +87,7 @@ function namedCatalogApp({ table, bookRef, schemas, many, one, label }: NamedCat
 			}
 			return c.json({ [one]: findById(db, id) })
 		})
-		.delete('/:id', (c) => {
+		.delete('/:id', requireAdmin, (c) => {
 			// Book links cascade (publishers: books keep a null publisher).
 			getDb()
 				.delete(table)

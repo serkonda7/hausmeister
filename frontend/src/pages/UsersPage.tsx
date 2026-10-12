@@ -1,4 +1,5 @@
 import { IconEdit, IconTrash } from '@tabler/icons-solidjs'
+import { PASSWORD_MIN_LENGTH } from 'shared/src/book'
 import { createSignal, For, Show } from 'solid-js'
 import { ErrorText, SubmitButton, TextField } from '../components/common'
 import { Dialog } from '../components/Dialog'
@@ -90,6 +91,7 @@ function CreateUserForm(props: { manage: UserManagement }) {
 						value={password()}
 						onInput={setPassword}
 						required
+						minlength={PASSWORD_MIN_LENGTH}
 						autocomplete="new-password"
 					/>
 					<label class="check-item span-2">
@@ -215,6 +217,7 @@ export function EditUserDialog(props: EditUserDialogProps) {
 						type="password"
 						value={password()}
 						onInput={setPassword}
+						minlength={PASSWORD_MIN_LENGTH}
 						autocomplete="new-password"
 					/>
 					<label class="check-item span-2">

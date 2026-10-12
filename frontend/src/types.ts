@@ -49,7 +49,6 @@ export type Book = {
 	ownership: Ownership
 	dedications: PageNote[]
 	damages: PageNote[]
-	coverUrl: string | null
 	description: string | null
 	createdAt: number
 	updatedAt: number
