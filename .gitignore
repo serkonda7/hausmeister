@@ -9,4 +9,4 @@ frontend/dist/
 backend/dist/
 backend/data/
 test-results/
-infra/.env
+.env

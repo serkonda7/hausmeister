@@ -1,27 +1,27 @@
 services:
   hausmeister:
     build:
-      context: ..
+      context: .
       dockerfile: infra/Dockerfile
     # The backend binds 127.0.0.1:3001; host networking keeps it loopback-only on the host.
     network_mode: host
+    # Same location as in development: backend/data/hausmeister.db
     volumes:
-      - data:/app/backend/data
+      - ./backend/data:/app/backend/data
     restart: unless-stopped
 
   caddy:
-    image: caddy:latest
+    image: caddy:2
     # Host network to reach the backend on loopback; serves :80/:443 with automatic HTTPS.
     network_mode: host
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN, e.g. books.example.com}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
 
 volumes:
-  data:
   caddy_data:
   caddy_config:
