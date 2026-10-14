@@ -1,4 +1,9 @@
-import { DataTable, type DataTableColumn } from '@serkonda7/solid-components'
+import {
+	type DataTableColumn,
+	FilterTable,
+	type FilterTableFilter,
+	type FilterTableValues,
+} from '@serkonda7/solid-components'
 import { IconEdit, IconLoader2, IconTrash } from '@tabler/icons-solidjs'
 import { canEditBook } from 'shared/src/book'
 import { createEffect, createMemo, createSignal, For, type JSX, Show } from 'solid-js'
@@ -39,6 +44,8 @@ const DEFAULT_VISIBLE_COLUMNS = [
 	'modified',
 ]
 
+const FILTER_VALUES_KEY = 'hausmeister.library.filterValues'
+
 const KNOWN_COLUMNS = [...DEFAULT_VISIBLE_COLUMNS, 'isbn']
 
 function loadVisibleColumns(): string[] {
@@ -49,6 +56,24 @@ function loadVisibleColumns(): string[] {
 		// Corrupt value: fall back to the defaults.
 	}
 	return [...DEFAULT_VISIBLE_COLUMNS]
+}
+
+function loadFilterValues(): FilterTableValues {
+	try {
+		const parsed: unknown = JSON.parse(loadStored(FILTER_VALUES_KEY) ?? 'null')
+		if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+			const values: FilterTableValues = {}
+			for (const [key, value] of Object.entries(parsed)) {
+				if (typeof value === 'string') values[key] = value
+				else if (Array.isArray(value) && value.every((v) => typeof v === 'string'))
+					values[key] = value
+			}
+			return values
+		}
+	} catch {
+		// Corrupt value: start without filters.
+	}
+	return {}
 }
 
 /** Sortable text column; `text` is both the cell content and the sort key. */
@@ -209,10 +234,90 @@ export function BookTable(props: BookTableProps) {
 		</div>
 	)
 
+	// Rebuilt on locale change so labels and derived status values follow the language.
+	const filters = createMemo((): FilterTableFilter<Book>[] => [
+		{ key: 'title', label: t('book.title'), type: 'text' },
+		{ key: 'isbn', label: t('book.isbn'), type: 'text' },
+		{
+			key: 'authors',
+			label: t('book.authors'),
+			type: 'select',
+			getValue: (b) => b.authors.map((a) => a.name),
+		},
+		{
+			key: 'publisher',
+			label: t('book.publisher'),
+			type: 'select',
+			getValue: (b) => b.publisher?.name,
+		},
+		{ key: 'printYear', label: t('book.printYear'), type: 'text' },
+		{
+			key: 'languages',
+			label: t('catalog.languages'),
+			type: 'select',
+			getValue: (b) => b.languages.map((l) => l.name),
+		},
+		{
+			key: 'tags',
+			label: t('catalog.tags'),
+			type: 'select',
+			getValue: (b) => b.tags.map((tag) => tag.name),
+		},
+		{ key: 'location', label: t('book.location'), type: 'select', getValue: locationName },
+		{ key: 'owner', label: t('book.owner'), type: 'select', getValue: ownerName },
+		{
+			key: 'ownership',
+			label: t('book.status'),
+			type: 'select',
+			getValue: (b) => ownershipLabel(b.ownership),
+		},
+		{ key: 'read', label: t('book.read'), type: 'boolean', getValue: (b) => b.readAt !== null },
+		{
+			key: 'dedications',
+			label: t('book.dedications'),
+			type: 'text',
+			getValue: (b) => formatPageNotes(b.dedications),
+		},
+		{
+			key: 'damages',
+			label: t('book.damages'),
+			type: 'text',
+			getValue: (b) => formatPageNotes(b.damages),
+		},
+	])
+
 	return (
-		<DataTable
+		<FilterTable
 			rows={props.books}
 			columns={columns()}
+			filters={filters()}
+			defaultFilterValues={loadFilterValues()}
+			onFilterValuesChange={(values) =>
+				store(FILTER_VALUES_KEY, Object.keys(values).length > 0 ? JSON.stringify(values) : null)
+			}
+			getSearchText={(b) =>
+				[
+					b.title,
+					b.subtitle,
+					b.isbn,
+					joinNames(b.authors),
+					b.publisher?.name,
+					b.printYear,
+					locationName(b),
+					ownerName(b),
+					joinNames(b.languages),
+					joinNames(b.tags),
+				].join(' ')
+			}
+			quickSearchLabel={t('library.filterQuickSearch')}
+			resultsLabel={t('library.filterResults')}
+			filtersLabel={t('library.filterFilters')}
+			applyLabel={t('library.filterApply')}
+			resetLabel={t('library.filterReset')}
+			clearAllLabel={t('library.filterClearAll')}
+			anyLabel={t('library.filterAny')}
+			yesLabel={t('library.filterYes')}
+			noLabel={t('library.filterNo')}
 			getRowId={(b) => b.id}
 			class="table-wrap"
 			onSort={() => undefined}
