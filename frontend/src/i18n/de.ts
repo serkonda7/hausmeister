@@ -205,8 +205,6 @@ export const de: Record<TranslationKey, string> = {
 	'editBook.noEvents': 'Noch keine Ereignisse.',
 	'editBook.deleteEvent': 'Ereignis „{kind}“ löschen',
 	'editBook.newEventKind': 'Art des neuen Ereignisses',
-	'editBook.eventHint':
-		'Das neue Ereignis wird mit „Änderungen speichern“ gespeichert. Zum Löschen eines bestehenden Ereignisses das Papierkorb-Symbol verwenden (wirkt sofort).',
 	'editBook.added': 'Hinzugefügt',
 	'editBook.modified': 'Geändert',
 	'editBook.saveFailed': 'Buch konnte nicht aktualisiert werden.',

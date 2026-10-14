@@ -203,8 +203,6 @@ export const en = {
 	'editBook.noEvents': 'No lifecycle events yet.',
 	'editBook.deleteEvent': 'Delete {kind} event',
 	'editBook.newEventKind': 'New lifecycle event kind',
-	'editBook.eventHint':
-		'The new event is saved together with “Save changes”. To delete an old event, use the trash icon (applies immediately).',
 	'editBook.added': 'Added',
 	'editBook.modified': 'Modified',
 	'editBook.saveFailed': 'Could not update the book.',

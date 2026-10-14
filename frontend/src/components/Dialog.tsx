@@ -9,24 +9,29 @@ export type DialogProps = {
 	/** Closable dialogs get a ✕ button and close on Escape. */
 	onClose?: () => void
 	closeLabel?: string
-	/** Backdrop clicks ask before discarding unsaved changes. */
+	/** Escape and backdrop clicks ask before discarding unsaved changes. */
 	isDirty?: () => boolean
 	children: JSX.Element
 }
 
 export function Dialog(props: DialogProps) {
+	function requestClose(): void {
+		if (!props.onClose) return
+		if (props.isDirty?.() && !window.confirm(t('common.discardChanges'))) return
+		props.onClose()
+	}
+
 	onMount(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') props.onClose?.()
+			// Something inside (e.g. an open dropdown) already handled Escape.
+			if (e.key === 'Escape' && !e.defaultPrevented) requestClose()
 		}
 		document.addEventListener('keydown', onKeyDown)
 		onCleanup(() => document.removeEventListener('keydown', onKeyDown))
 	})
 
 	function onBackdropClick(e: MouseEvent): void {
-		if (e.target !== e.currentTarget || !props.onClose) return
-		if (props.isDirty?.() && !window.confirm(t('common.discardChanges'))) return
-		props.onClose()
+		if (e.target === e.currentTarget) requestClose()
 	}
 
 	return (

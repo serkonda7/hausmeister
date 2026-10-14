@@ -96,7 +96,6 @@ export function EditBookDialog(props: EditBookDialogProps) {
 							eventAriaLabel={t('editBook.newEventKind')}
 							includeSell
 						/>
-						<p class="hint">{t('editBook.eventHint')}</p>
 					</div>
 				</div>
 				<ErrorText message={props.book.error()} />
