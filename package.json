@@ -11,7 +11,7 @@
 	"scripts": {
 		"dev": "turbo run dev",
 		"build": "turbo run build",
-		"check": "turbo run typecheck",
+		"typecheck": "turbo run typecheck",
 		"test:e2e": "playwright test",
 		"lint": "biome check --write",
 		"lint:ci": "biome ci",
@@ -28,9 +28,9 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.15",
-		"@playwright/test": "1.63.0",
+		"@playwright/test": "~1.64.1",
 		"@types/bun": "1.4.3",
 		"@types/node": "~26.6.5",
-		"turbo": "~2.11.8"
+		"turbo": "~2.11.9"
 	}
 }

@@ -6,7 +6,7 @@ Family book management.
 ```sh
 bun install
 bun run dev   # turbo: backend :3001 + frontend :5174
-bun run check
+bun run typecheck
 bun run build
 ```
 

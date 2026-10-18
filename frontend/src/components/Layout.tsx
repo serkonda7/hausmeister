@@ -1,3 +1,4 @@
+import { SearchBar } from '@serkonda7/solid-components'
 import {
 	IconBookmarks,
 	IconDatabase,
@@ -5,9 +6,7 @@ import {
 	IconLibrary,
 	IconLogout,
 	IconMapPin,
-	IconSearch,
 	IconUsers,
-	IconX,
 } from '@tabler/icons-solidjs'
 import { For, type JSX, Show } from 'solid-js'
 import { LOCALES, type Locale, locale, setLocale, type TranslationKey, t } from '../i18n'
@@ -118,25 +117,13 @@ export function Layout(props: LayoutProps) {
 			</aside>
 			<Show when={props.showSearch}>
 				<header class="topbar">
-					<div class="search">
-						<IconSearch size={17} class="search-icon" />
-						<input
-							placeholder={t('search.placeholder')}
-							value={props.query}
-							onInput={(e) => props.onQueryChange(e.currentTarget.value)}
-							aria-label={t('search.label')}
-						/>
-						<Show when={props.query}>
-							<button
-								type="button"
-								class="clear"
-								onClick={() => props.onQueryChange('')}
-								aria-label={t('search.clear')}
-							>
-								<IconX size={15} />
-							</button>
-						</Show>
-					</div>
+					<SearchBar
+						value={props.query}
+						onInput={props.onQueryChange}
+						ariaLabel={t('search.label')}
+						placeholder={t('search.placeholder')}
+						clearLabel={t('search.clear')}
+					/>
 				</header>
 			</Show>
 

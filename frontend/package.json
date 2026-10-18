@@ -9,7 +9,7 @@
 		"test": "bun test"
 	},
 	"dependencies": {
-		"@serkonda7/solid-components": "~0.1.0",
+		"@serkonda7/solid-components": "~0.2.0",
 		"@tabler/icons-solidjs": "~3.49.0",
 		"backend": "workspace:*",
 		"better-result": "catalog:",
@@ -20,7 +20,6 @@
 	"devDependencies": {
 		"solid-devtools": "~0.34.3",
 		"vite": "~8.3.4",
-		"vite-plugin-entry-shaking": "~0.5.2",
 		"vite-plugin-solid": "~2.11.14"
 	}
 }

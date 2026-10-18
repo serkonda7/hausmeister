@@ -32,7 +32,7 @@ export const de: Record<TranslationKey, string> = {
 	'nav.users': 'Benutzer',
 	'nav.reading': 'Leseliste',
 	'nav.breadcrumb': 'Brotkrumennavigation',
-	'search.placeholder': 'Titel, Autor, Tag, Verlag, Standort, Besitzer, Status suchen…',
+	'search.placeholder': 'Suchen…',
 	'search.label': 'Bücher durchsuchen',
 	'search.clear': 'Suche leeren',
 	'language.label': 'Sprache',

@@ -30,7 +30,7 @@ export const en = {
 	'nav.users': 'Users',
 	'nav.reading': 'Reading list',
 	'nav.breadcrumb': 'Breadcrumb',
-	'search.placeholder': 'Search title, author, tag, publisher, location, owner, status…',
+	'search.placeholder': 'Search…',
 	'search.label': 'Search books',
 	'search.clear': 'Clear search',
 	'language.label': 'Language',
