@@ -146,6 +146,21 @@ export const bookReads = sqliteTable(
 	(t) => [primaryKey({ columns: [t.userId, t.bookId] }), index('book_reads_book_idx').on(t.bookId)],
 )
 
+/** Per-user named filter sets of a filterable table (`scope`), in display order. */
+export const savedFilters = sqliteTable(
+	'saved_filters',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		scope: text('scope').notNull(),
+		name: text('name').notNull(),
+		position: integer('position').notNull(),
+		values: text('values', { mode: 'json' }).$type<Record<string, string | string[]>>().notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.userId, t.scope, t.name] })],
+)
+
 export const loans = sqliteTable(
 	'loans',
 	{

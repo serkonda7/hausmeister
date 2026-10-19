@@ -156,6 +156,12 @@ export const de: Record<TranslationKey, string> = {
 	'library.filterAny': 'Beliebig',
 	'library.filterYes': 'Ja',
 	'library.filterNo': 'Nein',
+	'library.savedFilters': 'Gespeicherte Filter',
+	'library.savedFilterSave': 'Speichern',
+	'library.savedFilterName': 'Filtername',
+	'library.savedFilterClear': 'Gespeicherten Filter entfernen',
+	'library.savedFiltersLoadFailed': 'Gespeicherte Filter konnten nicht geladen werden',
+	'library.savedFiltersSaveFailed': 'Filter konnten nicht gespeichert werden',
 	'library.confirmDelete': 'Dieses Buch löschen?',
 	'library.deleteFailed': 'Buch konnte nicht gelöscht werden.',
 

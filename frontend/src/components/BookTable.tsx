@@ -7,6 +7,7 @@ import {
 import { IconEdit, IconLoader2, IconTrash } from '@tabler/icons-solidjs'
 import { canEditBook } from 'shared/src/book'
 import { createEffect, createMemo, createSignal, For, type JSX, Show } from 'solid-js'
+import { useSavedFilters } from '../hooks/useSavedFilters'
 import { t } from '../i18n'
 import { bookPath } from '../routes'
 import type { Book, PageNote, PublicUser } from '../types'
@@ -21,7 +22,7 @@ import {
 	provenanceTooltip,
 } from '../utils/books'
 import { loadStored, store } from '../utils/storage'
-import { orDash } from './common'
+import { ErrorText, orDash } from './common'
 import { EntryLinks } from './EntryLinks'
 import { ReadCheckbox } from './ReadCheckbox'
 
@@ -119,6 +120,7 @@ export type BookTableProps = {
 export function BookTable(props: BookTableProps) {
 	const [visibleColumns, setVisibleColumns] = createSignal(loadVisibleColumns())
 	createEffect(() => store(VISIBLE_COLUMNS_KEY, JSON.stringify(visibleColumns())))
+	const saved = useSavedFilters('library')
 
 	// Rebuilt on locale change so header labels follow the selected language.
 	const columns = createMemo((): DataTableColumn<Book>[] => [
@@ -287,50 +289,60 @@ export function BookTable(props: BookTableProps) {
 	])
 
 	return (
-		<FilterTable
-			rows={props.books}
-			columns={columns()}
-			filters={filters()}
-			defaultFilterValues={loadFilterValues()}
-			onFilterValuesChange={(values) =>
-				store(FILTER_VALUES_KEY, Object.keys(values).length > 0 ? JSON.stringify(values) : null)
-			}
-			getSearchText={(b) =>
-				[
-					b.title,
-					b.subtitle,
-					b.isbn,
-					joinNames(b.authors),
-					b.publisher?.name,
-					b.printYear,
-					locationName(b),
-					ownerName(b),
-					joinNames(b.languages),
-					joinNames(b.tags),
-				].join(' ')
-			}
-			quickSearchLabel={t('library.filterQuickSearch')}
-			resultsLabel={t('library.filterResults')}
-			filtersLabel={t('library.filterFilters')}
-			applyLabel={t('library.filterApply')}
-			resetLabel={t('library.filterReset')}
-			clearAllLabel={t('library.filterClearAll')}
-			anyLabel={t('library.filterAny')}
-			yesLabel={t('library.filterYes')}
-			noLabel={t('library.filterNo')}
-			getRowId={(b) => b.id}
-			class="table-wrap"
-			onSort={() => undefined}
-			visibleColumns={visibleColumns}
-			defaultVisibleColumns={DEFAULT_VISIBLE_COLUMNS}
-			onVisibleColumnsChange={setVisibleColumns}
-			showColumnCustomizer
-			columnCustomizerLabel={t('library.columns')}
-			columnCustomizerTitle={t('library.columnsTitle')}
-			columnCustomizerShowAllLabel={t('library.columnsShowAll')}
-			columnCustomizerResetLabel={t('library.columnsReset')}
-			rowActions={rowActions}
-		/>
+		<>
+			<ErrorText message={saved.saveError()} />
+			<FilterTable
+				rows={props.books}
+				columns={columns()}
+				filters={filters()}
+				defaultFilterValues={loadFilterValues()}
+				onFilterValuesChange={(values) =>
+					store(FILTER_VALUES_KEY, Object.keys(values).length > 0 ? JSON.stringify(values) : null)
+				}
+				savedFilters={saved.savedFilters}
+				onSavedFiltersChange={(list) => void saved.save(list)}
+				getSearchText={(b) =>
+					[
+						b.title,
+						b.subtitle,
+						b.isbn,
+						joinNames(b.authors),
+						b.publisher?.name,
+						b.printYear,
+						locationName(b),
+						ownerName(b),
+						joinNames(b.languages),
+						joinNames(b.tags),
+					].join(' ')
+				}
+				quickSearchLabel={t('library.filterQuickSearch')}
+				resultsLabel={t('library.filterResults')}
+				filtersLabel={t('library.filterFilters')}
+				applyLabel={t('library.filterApply')}
+				resetLabel={t('library.filterReset')}
+				clearAllLabel={t('library.filterClearAll')}
+				anyLabel={t('library.filterAny')}
+				yesLabel={t('library.filterYes')}
+				noLabel={t('library.filterNo')}
+				savedFiltersLabel={t('library.savedFilters')}
+				saveLabel={t('library.savedFilterSave')}
+				saveNameLabel={t('library.savedFilterName')}
+				cancelLabel={t('common.cancel')}
+				clearSavedFilterLabel={t('library.savedFilterClear')}
+				getRowId={(b) => b.id}
+				class="table-wrap"
+				onSort={() => undefined}
+				visibleColumns={visibleColumns}
+				defaultVisibleColumns={DEFAULT_VISIBLE_COLUMNS}
+				onVisibleColumnsChange={setVisibleColumns}
+				showColumnCustomizer
+				columnCustomizerLabel={t('library.columns')}
+				columnCustomizerTitle={t('library.columnsTitle')}
+				columnCustomizerShowAllLabel={t('library.columnsShowAll')}
+				columnCustomizerResetLabel={t('library.columnsReset')}
+				rowActions={rowActions}
+			/>
+		</>
 	)
 }
 

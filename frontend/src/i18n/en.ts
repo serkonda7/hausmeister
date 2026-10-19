@@ -154,6 +154,12 @@ export const en = {
 	'library.filterAny': 'Any',
 	'library.filterYes': 'Yes',
 	'library.filterNo': 'No',
+	'library.savedFilters': 'Saved filters',
+	'library.savedFilterSave': 'Save',
+	'library.savedFilterName': 'Filter name',
+	'library.savedFilterClear': 'Clear saved filter',
+	'library.savedFiltersLoadFailed': 'Could not load saved filters',
+	'library.savedFiltersSaveFailed': 'Could not save filters',
 	'library.confirmDelete': 'Delete this book?',
 	'library.deleteFailed': 'Could not delete the book.',
 

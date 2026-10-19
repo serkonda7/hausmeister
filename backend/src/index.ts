@@ -10,6 +10,7 @@ import { loanApp } from './routes/loans'
 import { locationApp } from './routes/locations'
 import { provenanceApp } from './routes/provenance'
 import { readingApp } from './routes/reading'
+import { savedFilterApp } from './routes/saved-filters'
 import { userApp } from './routes/users'
 import { type AppEnv, requireAuth } from './util/auth'
 import { jsonError } from './util/http'
@@ -33,6 +34,7 @@ export function createApp() {
 			.route('/api/languages', languageApp)
 			.route('/api/publishers', publisherApp)
 			.route('/api/tags', tagApp)
+			.route('/api/saved-filters', savedFilterApp)
 			.route('/api', readingApp)
 			.route('/api', loanApp)
 			.route('/api', provenanceApp)

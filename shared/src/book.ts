@@ -63,6 +63,41 @@ export const LendSchema = v.object({
 	dueAt: v.optional(text(30)),
 })
 
+/** Tables whose saved filters are stored per user. */
+export const SAVED_FILTER_SCOPES = ['library'] as const
+export const SavedFilterScopeSchema = v.picklist(SAVED_FILTER_SCOPES)
+export type SavedFilterScope = (typeof SAVED_FILTER_SCOPES)[number]
+
+export const SAVED_FILTER_LIMITS = { name: 100, entries: 50, values: 50, value: 500 }
+
+const SavedFilterValueSchema = v.union([
+	v.pipe(v.string(), v.maxLength(SAVED_FILTER_LIMITS.value)),
+	v.pipe(
+		v.array(v.pipe(v.string(), v.maxLength(SAVED_FILTER_LIMITS.value))),
+		v.maxLength(SAVED_FILTER_LIMITS.values),
+	),
+])
+
+export const SavedFilterSchema = v.object({
+	name: requiredText(SAVED_FILTER_LIMITS.name),
+	values: v.pipe(
+		v.record(v.pipe(v.string(), v.maxLength(100)), SavedFilterValueSchema),
+		v.check((values) => Object.keys(values).length <= SAVED_FILTER_LIMITS.values),
+	),
+})
+
+/** Full replacement of one table's saved filters; names must be unique. */
+export const SavedFiltersSchema = v.object({
+	savedFilters: v.pipe(
+		v.array(SavedFilterSchema),
+		v.maxLength(SAVED_FILTER_LIMITS.entries),
+		v.check(
+			(filters) => new Set(filters.map((f) => f.name)).size === filters.length,
+			'Saved filter names must be unique',
+		),
+	),
+})
+
 export const PROVENANCE_KINDS = ['buy', 'sell', 'other'] as const
 export const ProvenanceKindSchema = v.picklist(PROVENANCE_KINDS)
 export type ProvenanceKind = v.InferOutput<typeof ProvenanceKindSchema>
