@@ -26,6 +26,7 @@ import { useReadingList } from './hooks/useReadingList'
 import { useUserManagement } from './hooks/useUserManagement'
 import { t } from './i18n'
 import { AddBookPage } from './pages/AddBookPage'
+import { AuditLogPage } from './pages/AuditLogPage'
 import { BookPage } from './pages/BookPage'
 import { type CatalogEntry, CatalogEntryPage } from './pages/CatalogEntryPage'
 import { CatalogPage } from './pages/CatalogPage'
@@ -295,6 +296,11 @@ export default function App() {
 			<Match when={page() === 'users'}>
 				<Show when={user().isAdmin} fallback={<p class="error">{t('users.adminOnly')}</p>}>
 					<UsersPage list={users} currentUserId={user().id} manage={userManagement} />
+				</Show>
+			</Match>
+			<Match when={page() === 'audit-log'}>
+				<Show when={user().isAdmin} fallback={<p class="error">{t('auditLog.adminOnly')}</p>}>
+					<AuditLogPage />
 				</Show>
 			</Match>
 		</Switch>

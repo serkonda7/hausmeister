@@ -30,6 +30,7 @@ export const de: Record<TranslationKey, string> = {
 	'nav.catalog': 'Stammdaten',
 	'nav.locations': 'Standorte',
 	'nav.users': 'Benutzer',
+	'nav.auditLog': 'Anmeldeprotokoll',
 	'nav.reading': 'Leseliste',
 	'nav.breadcrumb': 'Brotkrumennavigation',
 	'search.placeholder': 'Suchen…',
@@ -38,6 +39,23 @@ export const de: Record<TranslationKey, string> = {
 	'language.label': 'Sprache',
 
 	// Auth
+	'auditLog.adminOnly': 'Nur Administratoren können das Anmeldeprotokoll einsehen.',
+	'auditLog.description':
+		'Erfolgreiche und fehlgeschlagene Anmeldungen, neueste zuerst. Die Quell-IP wird vom Reverse-Proxy gemeldet.',
+	'auditLog.time': 'Zeitpunkt',
+	'auditLog.outcome': 'Ergebnis',
+	'auditLog.success': 'Erfolgreich',
+	'auditLog.failure': 'Fehlgeschlagen',
+	'auditLog.sourceIp': 'Quell-IP',
+	'auditLog.httpStatus': 'HTTP-Status',
+	'auditLog.unavailable': 'Nicht verfügbar (lokale Verbindung)',
+	'auditLog.refresh': 'Aktualisieren',
+	'auditLog.newer': 'Neuere',
+	'auditLog.older': 'Ältere',
+	'auditLog.loading': 'Anmeldeprotokoll wird geladen…',
+	'auditLog.empty': 'Noch keine Anmeldeversuche protokolliert.',
+	'auditLog.loadError': 'Das Anmeldeprotokoll konnte nicht geladen werden.',
+
 	'auth.username': 'Benutzername',
 	'auth.password': 'Passwort',
 	'auth.displayNameOptional': 'Anzeigename (optional)',

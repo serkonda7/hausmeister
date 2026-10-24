@@ -6,6 +6,7 @@ import {
 	IconLibrary,
 	IconLogout,
 	IconMapPin,
+	IconShieldCheck,
 	IconUsers,
 } from '@tabler/icons-solidjs'
 import { For, type JSX, Show } from 'solid-js'
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
 	{ page: 'catalog', label: 'nav.catalog', icon: IconDatabase },
 	{ page: 'locations', label: 'nav.locations', icon: IconMapPin },
 	{ page: 'users', label: 'nav.users', icon: IconUsers, adminOnly: true },
+	{ page: 'audit-log', label: 'nav.auditLog', icon: IconShieldCheck, adminOnly: true },
 ]
 
 export type LayoutProps = {

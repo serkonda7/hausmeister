@@ -3,6 +3,7 @@ import { serveStatic } from 'hono/bun'
 import { HTTPException } from 'hono/http-exception'
 import { BACKEND_HOST, BACKEND_PORT, FRONTEND_DIST } from './constants'
 import { initDb } from './db'
+import { auditLogApp } from './routes/audit-log'
 import { authApp } from './routes/auth'
 import { bookApp } from './routes/books'
 import { authorApp, languageApp, publisherApp, tagApp } from './routes/catalog'
@@ -28,6 +29,7 @@ export function createApp() {
 			// Everything below requires a session.
 			.use('/api/*', requireAuth)
 			.route('/api/users', userApp)
+			.route('/api/audit-log', auditLogApp)
 			.route('/api/books', bookApp)
 			.route('/api/authors', authorApp)
 			.route('/api/locations', locationApp)

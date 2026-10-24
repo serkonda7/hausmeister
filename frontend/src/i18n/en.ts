@@ -28,6 +28,7 @@ export const en = {
 	'nav.catalog': 'Data catalog',
 	'nav.locations': 'Locations',
 	'nav.users': 'Users',
+	'nav.auditLog': 'Audit log',
 	'nav.reading': 'Reading list',
 	'nav.breadcrumb': 'Breadcrumb',
 	'search.placeholder': 'Search…',
@@ -36,6 +37,23 @@ export const en = {
 	'language.label': 'Language',
 
 	// Auth
+	'auditLog.adminOnly': 'Only administrators can view the audit log.',
+	'auditLog.description':
+		'Successful and failed logins, newest first. Source IP is reported by the reverse proxy.',
+	'auditLog.time': 'Time',
+	'auditLog.outcome': 'Outcome',
+	'auditLog.success': 'Successful',
+	'auditLog.failure': 'Failed',
+	'auditLog.sourceIp': 'Source IP',
+	'auditLog.httpStatus': 'HTTP status',
+	'auditLog.unavailable': 'Unavailable (local connection)',
+	'auditLog.refresh': 'Refresh',
+	'auditLog.newer': 'Newer',
+	'auditLog.older': 'Older',
+	'auditLog.loading': 'Loading audit log…',
+	'auditLog.empty': 'No login attempts recorded yet.',
+	'auditLog.loadError': 'Could not load the audit log.',
+
 	'auth.username': 'Username',
 	'auth.password': 'Password',
 	'auth.displayNameOptional': 'Display name (optional)',

@@ -1,5 +1,16 @@
 import * as v from 'valibot'
 
+export type LoginAuditEntry = {
+	id: number
+	occurredAt: number
+	username: string | null
+	sourceIp: string | null
+	outcome: 'success' | 'failure'
+	status: number
+}
+
+export type LoginAuditPage = { entries: LoginAuditEntry[]; nextCursor: string | null }
+
 function text(max: number) {
 	return v.pipe(v.string(), v.trim(), v.maxLength(max))
 }

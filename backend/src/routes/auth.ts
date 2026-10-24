@@ -20,6 +20,7 @@ import {
 	verifyPassword,
 } from '../util/auth'
 import { fail } from '../util/http'
+import { auditLogin } from '../util/login-audit'
 import { clientIp, createRateLimiter } from '../util/rate-limit'
 
 /** Password checks per client address and per account: 3 per 15 minutes. */
@@ -35,7 +36,7 @@ export const authApp = new Hono<AppEnv>()
 		const user = await insertUser(db, { ...c.req.valid('json'), isAdmin: true })
 		return c.json({ user, token: createSession(db, user.id) }, 201)
 	})
-	.post('/login', vValidator('json', LoginSchema), async (c) => {
+	.post('/login', auditLogin, vValidator('json', LoginSchema), async (c) => {
 		const db = getDb()
 		const { username, password } = c.req.valid('json')
 		const keys = [`ip:${clientIp(c)}`, `user:${username.toLowerCase()}`]

@@ -43,6 +43,13 @@
 			"when": 1792399157065,
 			"tag": "0005_saved_filters",
 			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "6",
+			"when": 1792842764915,
+			"tag": "0006_login_audit_logs",
+			"breakpoints": true
 		}
 	]
 }

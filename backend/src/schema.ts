@@ -185,6 +185,20 @@ export const users = sqliteTable('users', {
 	createdAt: integer('created_at').notNull(),
 })
 
+/** Login snapshots deliberately survive account renames and deletion. Never store credentials. */
+export const loginAuditLogs = sqliteTable(
+	'login_audit_logs',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		occurredAt: integer('occurred_at').notNull(),
+		username: text('username'),
+		sourceIp: text('source_ip'),
+		outcome: text('outcome', { enum: ['success', 'failure'] }).notNull(),
+		status: integer('status').notNull(),
+	},
+	(t) => [index('login_audit_logs_occurred_idx').on(t.occurredAt, t.id)],
+)
+
 export const sessions = sqliteTable(
 	'sessions',
 	{

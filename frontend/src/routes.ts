@@ -9,6 +9,7 @@ export type Page =
 	| 'catalog'
 	| 'locations'
 	| 'users'
+	| 'audit-log'
 	| 'login'
 
 /** Pages reachable under a fixed path; the rest carry an id in their path. */
@@ -24,6 +25,7 @@ export const PAGE_PATHS: Record<StaticPage, string> = {
 	catalog: '/catalog',
 	locations: '/locations',
 	users: '/users',
+	'audit-log': '/audit-log',
 	login: '/login',
 }
 
