@@ -10,3 +10,4 @@ backend/dist/
 backend/data/
 test-results/
 .env
+infra/backup/.env

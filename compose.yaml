@@ -22,6 +22,15 @@ services:
       - caddy_config:/config
     restart: unless-stopped
 
+  # One-shot job, not started by `up`: docker compose run --rm backup
+  backup:
+    profiles: ["backup"]
+    build: infra/backup
+    env_file: infra/backup/.env
+    volumes:
+      - ./backend/data:/data
+    # The SQLite WAL index (-shm) is shared memory, so the volume must be writable.
+
 volumes:
   caddy_data:
   caddy_config:
