@@ -1,0 +1,13 @@
+# Continuous SQLite replication to Backblaze B2 (S3-compatible API).
+# Credentials and bucket come from .env.backup.
+dbs:
+  - path: /data/db/app.sqlite
+    replica:
+      type: s3
+      bucket: ${S3_BUCKET}
+      path: litestream/app.sqlite
+      endpoint: ${S3_ENDPOINT}
+      region: ${S3_REGION}
+      access-key-id: ${S3_ACCESS_KEY_ID}
+      secret-access-key: ${S3_SECRET_ACCESS_KEY}
+      force-path-style: true

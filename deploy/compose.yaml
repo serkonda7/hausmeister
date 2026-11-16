@@ -1,0 +1,67 @@
+# Hausmeister – production stack (Phase 0). Run from /opt/hausmeister/deploy.
+# Nothing here publishes a host port: Caddy lives in the Tailscale netns.
+name: hausmeister
+
+services:
+  tailscale:
+    image: tailscale/tailscale:v1.104.4
+    hostname: hausmeister
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY:-} # one-off key, tagged tag:hausmeister; only needed on first start
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false" # kernel TUN (needs /dev/net/tun)
+      TS_EXTRA_ARGS: --advertise-tags=tag:hausmeister
+    volumes: ["./ts-state:/var/lib/tailscale"]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    cap_add: [NET_ADMIN, NET_RAW]
+    restart: unless-stopped
+
+  caddy:
+    build: ./caddy
+    image: hausmeister-caddy:2.11.9
+    network_mode: service:tailscale # listens on the tailnet only
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      DESEC_TOKEN: ${DESEC_TOKEN:?set DESEC_TOKEN in .env}
+      ACME_CA: ${ACME_CA:-https://acme-staging-v02.api.letsencrypt.org/directory}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [tailscale, app]
+    restart: unless-stopped
+
+  app:
+    build: ..
+    image: hausmeister-app:${APP_VERSION:-dev}
+    environment:
+      ORIGIN: https://${DOMAIN}
+      DATABASE_PATH: /data/db/app.sqlite
+      UPLOAD_DIR: /data/uploads
+    volumes: ["./data:/data"]
+    restart: unless-stopped
+
+  litestream:
+    image: litestream/litestream:0.5.18
+    command: replicate -config /etc/litestream.yml
+    volumes:
+      - ./data/db:/data/db
+      - ./litestream.yml:/etc/litestream.yml:ro
+    env_file: .env.backup
+    depends_on: [app]
+    restart: unless-stopped
+
+  # One-shot: `docker compose run --rm restic <args>` (used by backup-uploads.sh)
+  restic:
+    image: restic/restic:0.19.1
+    profiles: [tools]
+    env_file: .env.backup
+    volumes:
+      - ./data/uploads:/data/uploads:ro
+      - restic_cache:/root/.cache/restic
+    hostname: hausmeister
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}
+  restic_cache: {}

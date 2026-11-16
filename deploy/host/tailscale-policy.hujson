@@ -1,0 +1,44 @@
+// Tailnet policy for Hausmeister. Paste into https://login.tailscale.com/admin/acls
+// and replace the email addresses with your family's Tailscale logins.
+{
+  "groups": {
+    "group:family": [
+      "parent1@example.org",
+      "parent2@example.org",
+      // ... up to 5 family members (+1 tailnet guest on the free plan)
+    ],
+  },
+
+  "tagOwners": {
+    "tag:hausmeister": ["autogroup:admin"],
+  },
+
+  "grants": [
+    // Family (and the one in-tailnet guest, add them to group:family) → HTTPS (+HTTP/3) on the server only.
+    { "src": ["group:family"], "dst": ["tag:hausmeister"], "ip": ["tcp:443", "udp:443"] },
+    // Guests who get the node *shared* into their own tailnet.
+    { "src": ["autogroup:shared"], "dst": ["tag:hausmeister"], "ip": ["tcp:443", "udp:443"] },
+    // Each person's own devices may talk to each other (Taildrop etc.). Delete if not wanted.
+    { "src": ["autogroup:member"], "dst": ["autogroup:self"], "ip": ["*"] },
+    // Admin → the VPS host (an admin-owned node), needed by Tailscale SSH for key distribution.
+    // The tagged sidecar is deliberately NOT included: it has no sshd and stays 443-only.
+    { "src": ["autogroup:admin"], "dst": ["autogroup:self"], "ip": ["tcp:22"] },
+  ],
+
+  "ssh": [
+    {
+      "action": "check", // re-authenticate every 12h
+      "src": ["autogroup:admin"],
+      "dst": ["autogroup:self"], // only the admin's own node (the host), never the tagged sidecar
+      "users": ["admin"], // the local account created in PHASE0 step 5; no root
+      "checkPeriod": "12h",
+    },
+  ],
+
+  "tests": [
+    { "src": "parent1@example.org", "accept": ["tag:hausmeister:443"], "deny": ["tag:hausmeister:22"] },
+  ],
+  "sshTests": [
+    { "src": "parent1@example.org", "dst": ["parent1@example.org"], "check": ["admin"], "deny": ["root"] },
+  ],
+}
