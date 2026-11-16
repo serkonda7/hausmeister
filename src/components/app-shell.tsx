@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/solid-router";
+import { Link, useLocation, useNavigate } from "@tanstack/solid-router";
 import { For, type JSX } from "solid-js";
 import { Button } from "~/components/ui/button";
 import {
@@ -32,6 +32,7 @@ export async function logout() {
 /** Phone-first layout: top bar, content, bottom tab bar (side links from `md`). */
 export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const items = () => NAV.filter((n) => !n.roles || n.roles.includes(props.user.role));
   const isActive = (to: string) =>
     to === "/" ? location().pathname === "/" : location().pathname.startsWith(to);
@@ -67,6 +68,9 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
               <DropdownMenuContent>
                 <DropdownMenuLabel>@{props.user.username}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => navigate({ to: "/account" })}>
+                  {m.account_nav()}
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={logout}>{m.nav_logout()}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

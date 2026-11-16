@@ -16,6 +16,7 @@ COPY --from=build /app/.output ./.output
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /deps/node_modules ./node_modules
 COPY --from=build /app/scripts/healthcheck.ts ./scripts/healthcheck.ts
+COPY --from=build /app/scripts/create-admin-invite.ts ./scripts/create-admin-invite.ts
 COPY --from=build /app/package.json ./package.json
 # Smoke test (DESIGN §7): sharp's platform binaries work in the runtime image.
 RUN bun -e 'const s = require("sharp"); await s({ create: { width: 2, height: 2, channels: 3, background: "#fff" } }).webp().toBuffer(); console.log("sharp", s.versions.sharp, "ok")'

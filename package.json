@@ -8,6 +8,8 @@
     "build": "vite build",
     "start": "bun run .output/server/index.mjs",
     "healthcheck": "bun run scripts/healthcheck.ts",
+    "create-admin-invite": "bun run scripts/create-admin-invite.ts",
+    "e2e": "bun run gen && bunx playwright test",
     "gen": "bun run i18n && bun run scripts/gen.ts",
     "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy baseLocale --silent",
     "lint": "biome check .",

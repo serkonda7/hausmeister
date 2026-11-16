@@ -7,6 +7,10 @@ import { getEnv } from "../env";
 import * as schema from "./schema";
 
 export type AppDb = BunSQLiteDatabase<typeof schema> & { $client: Database };
+/** The `tx` handed to `db.transaction((tx) => …)`. */
+export type AppTx = Parameters<Parameters<AppDb["transaction"]>[0]>[0];
+/** Functions that work both standalone and inside a caller's transaction take this. */
+export type DbOrTx = AppDb | AppTx;
 
 /**
  * Where the generated SQL migrations live. In the repo and in the Docker image

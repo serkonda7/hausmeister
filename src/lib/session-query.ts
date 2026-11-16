@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/solid-query";
-import { getMyProfile, getSessionUser } from "~/server/auth/functions";
+import { getMyProfile, getSessionUser, listMyPasskeys } from "~/server/auth/functions";
 
 /** The signed-in user (or null). Invalidate after sign-in/out. */
 export const sessionQuery = () =>
@@ -14,4 +14,11 @@ export const myProfileQuery = () =>
   queryOptions({
     queryKey: ["me", "profile"],
     queryFn: () => getMyProfile(),
+  });
+
+/** The signed-in user's passkeys (account page). */
+export const myPasskeysQuery = () =>
+  queryOptions({
+    queryKey: ["me", "passkeys"],
+    queryFn: () => listMyPasskeys(),
   });

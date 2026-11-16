@@ -1,11 +1,13 @@
 // Server functions for the session, used by the root route and the shell.
 import { createServerFn } from "@tanstack/solid-start";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
+import { z } from "zod";
 import type { Role } from "../authz/ctx";
 import { getDb } from "../db/client";
-import { groupMembers, groups, users } from "../db/schema";
+import { groupMembers, groups, passkeys, users } from "../db/schema";
 import { authMiddleware } from "./middleware";
 import { getAuthCtx } from "./session";
+import { validateDisplayName } from "./users";
 
 export type SessionUser = {
   id: string;
@@ -48,3 +50,30 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .map((g) => g.name);
     return { role: ctx.role, groups: groupNames };
   });
+
+/** Account page: change the caller's own display name. */
+export const updateMyDisplayName = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(z.object({ displayName: z.string().max(200) }))
+  .handler(({ context: { ctx }, data }) => {
+    const displayName = validateDisplayName(data.displayName);
+    getDb().update(users).set({ displayName }).where(eq(users.id, ctx.userId)).run();
+    return { displayName };
+  });
+
+/** Account page: the caller's passkeys (no key material). */
+export const listMyPasskeys = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(({ context: { ctx } }) =>
+    getDb()
+      .select({
+        id: passkeys.id,
+        name: passkeys.name,
+        createdAt: passkeys.createdAt,
+        deviceType: passkeys.deviceType,
+      })
+      .from(passkeys)
+      .where(eq(passkeys.userId, ctx.userId))
+      .orderBy(desc(passkeys.createdAt))
+      .all(),
+  );

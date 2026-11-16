@@ -4,6 +4,7 @@ import type { AuthCtx, Role } from "../authz/ctx";
 import { type AppDb, getDb } from "../db/client";
 import { getEnv } from "../env";
 import { type Auth, createAuth } from "./auth";
+import { type AuthHandler, createAuthHandler } from "./handler";
 import { loadAuthCtx } from "./users";
 
 let instance: Auth | undefined;
@@ -14,10 +15,23 @@ export function getAuth(): Auth {
   return instance;
 }
 
+let handlerInstance: AuthHandler | undefined;
+
+/** The /api/auth/* HTTP handler: Better Auth plus the per-username sign-in lockout. */
+export function getAuthHandler(): AuthHandler {
+  const env = getEnv();
+  handlerInstance ??= createAuthHandler({
+    auth: getAuth(),
+    secret: env.BETTER_AUTH_SECRET,
+    origin: env.ORIGIN,
+  });
+  return handlerInstance;
+}
+
 /** Thrown by require* helpers; server routes turn it into a Response (see withAuth). */
 export class HttpError extends Error {
   constructor(
-    public readonly status: 401 | 403 | 404 | 409 | 422,
+    public readonly status: 401 | 403 | 404 | 409 | 422 | 429,
     message: string,
   ) {
     super(message);

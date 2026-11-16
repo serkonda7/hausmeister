@@ -5,6 +5,7 @@
 //  - passkeys with RP ID = hostname of ORIGIN; registration needs a session.
 //  - production (https ORIGIN): host-only `__Host-` cookies, Secure, Path=/, SameSite=Lax.
 //  - disabled users: session creation is refused (covers password and passkey).
+//  - per-username lockout wraps the HTTP handler (./handler.ts, ./lockout.ts).
 import { passkey } from "@better-auth/passkey";
 import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -47,7 +48,15 @@ export function createAuth({ db, env, startCookies = true, rateLimit = true }: C
       minPasswordLength: PASSWORD_MIN_LENGTH,
       maxPasswordLength: PASSWORD_MAX_LENGTH,
     },
-    disabledPaths: ["/sign-up/email", "/sign-in/email"],
+    // /is-username-available would reveal which usernames exist; there is no
+    // email, so password-reset-by-mail is off too (an admin resets passwords).
+    disabledPaths: [
+      "/sign-up/email",
+      "/sign-in/email",
+      "/is-username-available",
+      "/request-password-reset",
+      "/reset-password",
+    ],
     user: {
       fields: { name: "displayName", email: "authEmail" },
       additionalFields: {
@@ -70,6 +79,7 @@ export function createAuth({ db, env, startCookies = true, rateLimit = true }: C
       customRules: {
         "/sign-in/username": { window: 60, max: 5 },
         "/passkey/verify-authentication": { window: 60, max: 10 },
+        "/change-password": { window: 60, max: 5 },
       },
     },
     advanced: {

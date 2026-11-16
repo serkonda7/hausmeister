@@ -1,14 +1,27 @@
-import { QueryClient } from "@tanstack/solid-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/solid-query";
 import { createRouter } from "@tanstack/solid-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/solid-router-ssr-query";
+import { goToLogin, isSignedOutError } from "./lib/error-text";
 import { routeTree } from "./routeTree.gen";
 
 export type RouterContext = { queryClient: QueryClient };
 
 export function getRouter() {
   // One QueryClient per router: per request on the server, one in the browser.
+  // A 401 from any server function in the browser means the session is gone
+  // (signed out elsewhere, disabled, password reset): go to /login.
+  const onError = (err: unknown) => {
+    if (typeof window !== "undefined" && isSignedOutError(err)) goToLogin();
+  };
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+    queryCache: new QueryCache({ onError }),
+    mutationCache: new MutationCache({ onError }),
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        retry: (count, err) => !isSignedOutError(err) && count < 1,
+      },
+    },
   });
   const router = createRouter({
     routeTree,
