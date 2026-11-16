@@ -17,6 +17,8 @@ const TEXT: Record<string, () => string> = {
   GROUP_NAME_TAKEN: m.admin_groups_error_name_taken,
   GROUP_NAME_INVALID: m.admin_groups_error_name_invalid,
   GROUP_OWNS_ITEMS: m.admin_groups_error_owns_items,
+  SETTINGS_NAME_INVALID: m.admin_settings_error_name,
+  SETTINGS_CURRENCY_INVALID: m.admin_settings_error_currency,
 };
 
 export function errorCode(err: unknown): string | undefined {

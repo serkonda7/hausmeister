@@ -310,5 +310,11 @@
   "admin_groups_owned_items": "Besitzt Gegenstände: {count}",
   "admin_groups_error_name_taken": "Eine Gruppe mit diesem Namen gibt es schon.",
   "admin_groups_error_name_invalid": "Bitte einen Namen mit höchstens 60 Zeichen angeben.",
-  "admin_groups_error_owns_items": "Diese Gruppe besitzt noch Gegenstände. Übertrage sie zuerst an andere Besitzer."
+  "admin_groups_error_owns_items": "Diese Gruppe besitzt noch Gegenstände. Übertrage sie zuerst an andere Besitzer.",
+  "admin_settings_intro": "Lege den Namen und die Währung für diesen Haushalt fest. Die Sprache ist auf Deutsch festgelegt.",
+  "admin_settings_household_name": "Name des Haushalts",
+  "admin_settings_currency": "Währung",
+  "admin_settings_saved": "Einstellungen gespeichert",
+  "admin_settings_error_name": "Bitte einen Namen mit 1 bis 80 Zeichen eingeben.",
+  "admin_settings_error_currency": "Unbekannte Währung."
 }
