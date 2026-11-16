@@ -46,6 +46,7 @@ import { HttpError } from "../auth/context";
 import type { AuthCtx } from "../authz/ctx";
 import type { AppDb } from "../db/client";
 import { events, items, itemTypes, users } from "../db/schema";
+import { reindexItemsOfTypes } from "../search/indexer";
 
 export type ItemTypeErrorCode =
   | "NOT_FOUND"
@@ -475,6 +476,8 @@ export function updateItemType(db: AppDb, ctx: AuthCtx, input: UpdateItemTypeInp
         })
         .run();
     }
+    // Search index: migrated values and renamed labels of the type and its subtypes.
+    reindexItemsOfTypes(tx, typeIdsWithDescendants(d, type.id));
     const meta = diffFields(
       { name: type.name, icon: type.icon, tracking: type.tracking, parentId: type.parentId },
       { name: next.name, icon: next.icon, tracking: next.tracking, parentId: next.parentId },

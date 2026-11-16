@@ -6,6 +6,7 @@ import { inputClass } from "~/components/ui/input";
 import { cn } from "~/lib/cn";
 import { pickerUsersQuery } from "~/lib/item-types/queries";
 import { m } from "~/paraglide/messages";
+import { pickItemsFn } from "~/server/search/functions";
 
 export type PickerUser = { id: string; displayName: string };
 
@@ -96,11 +97,14 @@ export function UserPicker(
 }
 
 export type ItemSearchResult = { id: string; name: string };
-/** Searches items the caller may see. The items feature provides the real one. */
+/** Searches items the caller may see. */
 export type ItemSearchFn = (query: string) => Promise<ItemSearchResult[]>;
 
-/** Placeholder until the item search exists: finds nothing. */
-export const searchItemsStub: ItemSearchFn = async () => [];
+/** The real item search (visible, not gone, max 20) via pickItemsFn. */
+export const searchVisibleItems: ItemSearchFn = (q) => pickItemsFn({ data: { q } });
+
+/** Kept under its old name: field-input.tsx uses it as the default search. */
+export const searchItemsStub: ItemSearchFn = searchVisibleItems;
 
 /**
  * Item reference picker: a search box with a result list (combobox pattern)

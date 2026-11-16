@@ -262,6 +262,8 @@ export const items = sqliteTable(
       .notNull()
       .references(() => itemTypes.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
+    /** normalizeSearchText(name): sort key and short-query prefix match; kept by the items module. */
+    nameSort: text("name_sort"),
     description: text("description"),
     ownerKind: text("owner_kind", { enum: OWNER_KINDS }).notNull().default("household"),
     /** users.id or groups.id depending on owner_kind; NULL for household. */
@@ -298,6 +300,9 @@ export const items = sqliteTable(
     index("items_location_idx").on(t.locationId),
     index("items_container_idx").on(t.containerItemId),
     index("items_barcode_idx").on(t.barcode),
+    index("items_name_sort_idx").on(t.nameSort, t.id),
+    index("items_updated_idx").on(t.updatedAt, t.id),
+    index("items_status_idx").on(t.status),
     check("items_owner_kind", inList("owner_kind", OWNER_KINDS)),
     check("items_visibility", inList("visibility", VISIBILITIES)),
     check("items_status", inList("status", ITEM_STATUSES)),
