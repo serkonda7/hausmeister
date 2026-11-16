@@ -8,6 +8,8 @@ import { bootstrapInviteAtStartup } from "../server/auth/invites";
 import { openDatabase } from "../server/db/client";
 import { getEnv } from "../server/env";
 import { seedStarterTemplates } from "../server/item-types/seed";
+import { registerAllJobHandlers } from "../server/jobs/handlers";
+import { startJobWorker } from "../server/jobs/worker";
 
 export default definePlugin(() => {
   try {
@@ -18,12 +20,15 @@ export default definePlugin(() => {
     // First admin (README "Erster Start"): while there are no users at all,
     // print a fresh one-time admin invite link. Nothing is printed afterwards.
     const link = bootstrapInviteAtStartup(db, env.ORIGIN);
-    db.$client.close();
     if (link) {
       console.log(
         `[bootstrap] No users yet. Create the first admin (link valid 24 h, usable once):\n[bootstrap] ${link}`,
       );
     }
+    // Job worker (DESIGN §7): thumbnails, blob cleanup; later reminders etc.
+    // It keeps this connection (WAL: a second one next to the app's getDb()).
+    registerAllJobHandlers();
+    startJobWorker(db);
   } catch (err) {
     console.error("[startup] fatal:", err instanceof Error ? err.message : err);
     process.exit(1);
