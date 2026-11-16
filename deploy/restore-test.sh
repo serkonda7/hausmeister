@@ -38,7 +38,10 @@ REST_FILES=$(find "$T/uploads" -type f | wc -l)
 echo "uploads: live $LIVE_FILES files, restored $REST_FILES files"
 
 echo "== throwaway app"
-docker run -d --name "$NAME" --network none -e DATABASE_PATH=/data/db/app.sqlite -v "$T/db:/data/db" "$IMG" >/dev/null
+# Throwaway secret: since the MVP the app refuses to start in production without one.
+docker run -d --name "$NAME" --network none -e DATABASE_PATH=/data/db/app.sqlite \
+  -e BETTER_AUTH_SECRET="restore-test-$(head -c 24 /dev/urandom | base64)" \
+  -v "$T/db:/data/db" "$IMG" >/dev/null
 for i in $(seq 1 20); do
   H=$(docker exec "$NAME" bun -e 'fetch("http://127.0.0.1:3000/health").then(r=>r.text()).then(console.log).catch(()=>process.exit(1))' 2>/dev/null) && break
   sleep 1

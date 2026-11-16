@@ -1,6 +1,6 @@
 # Hausmeister
 
-Family asset manager. Design: [DESIGN.md](DESIGN.md). Current phase: **0 (infra)**, see [docs/PHASE0.md](docs/PHASE0.md).
+Family asset manager. Design: [DESIGN.md](DESIGN.md). Phase 0 (infra) is done, see [docs/PHASE0.md](docs/PHASE0.md); the MVP is in progress. Conventions and commands: [AGENTS.md](AGENTS.md).
 
 ```sh
 bun install

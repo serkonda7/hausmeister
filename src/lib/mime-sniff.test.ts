@@ -38,13 +38,15 @@ describe("sniffMime", () => {
   });
 
   it("detects WebP via RIFF at 0 and WEBP at 8", () => {
-    expect(sniffMime(concat(ascii("RIFF"), new Uint8Array([0x24, 0, 0, 0]), ascii("WEBPVP8 ")))).toBe(
-      "image/webp",
-    );
+    expect(
+      sniffMime(concat(ascii("RIFF"), new Uint8Array([0x24, 0, 0, 0]), ascii("WEBPVP8 "))),
+    ).toBe("image/webp");
   });
 
   it("rejects other RIFF formats", () => {
-    expect(sniffMime(concat(ascii("RIFF"), new Uint8Array([1, 2, 3, 4]), ascii("WAVEfmt ")))).toBeNull();
+    expect(
+      sniffMime(concat(ascii("RIFF"), new Uint8Array([1, 2, 3, 4]), ascii("WAVEfmt "))),
+    ).toBeNull();
   });
 
   it("detects PDF from %PDF-", () => {

@@ -11,3 +11,6 @@ src/routeTree.gen.ts
 data/
 deploy/data/
 deploy/ts-state/
+src/paraglide/
+test-results/
+playwright-report/
