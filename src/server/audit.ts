@@ -19,6 +19,8 @@ export type AuditAction =
   | "group.member_added"
   | "group.member_removed"
   | "settings.updated"
+  // src/server/export (diff: { scope, completed, bytes, counts, reason? }).
+  | "export.created"
   // Item events from src/server/attachments (diff: { attachmentId, kind, originalName }).
   | "attachment.added"
   | "attachment.removed";

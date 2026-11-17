@@ -83,6 +83,12 @@ Server: `src/server/attachments/` (`service.ts` logic, `functions.ts` server fns
 - Events `attachment.added/removed`, diff `{attachmentId, kind, originalName}`. Deleting items: call `enqueueBlobGc(tx, shas)` (`attachments/gc.ts`) or leave it to the nightly sweep; never delete files yourself.
 - Jobs: `enqueueJob(db, kind, payload, {runAt?})` (`server/jobs/queue.ts`). Add a handler with `addJobHandler(registry, kind, fn, {maxAttempts, backoffBaseMs, timeoutMs, recurring: {next}})` inside `registerAllJobHandlers()` in `server/jobs/handlers.ts` (relative imports). Handlers must be idempotent (a crash re-runs them). Test with `createJobWorker({db, registry}).drain()`.
 
+## Export
+`GET /api/v1/export` streams a ZIP (JSON + CSV + files); the archive layout is the contract in `docs/export-format.md` (bump `EXPORT_FORMAT_VERSION` in `src/lib/export/types.ts` when it changes). Code in `src/server/export/`: `build.ts` (`writeExport`, `PATHS`, what each scope contains), `zip.ts` (streaming ZIP64 writer), `stream.ts` (backpressured body, `ExportAborted` on disconnect/idle), `snapshot.ts` (read-only connection in one read transaction), `registry.ts` (one export per user, two overall, page tickets), `handler.ts` (route logic + `export.created` audit).
+- Contents follow `exportScope(ctx)` / `exportItemsWhere(ctx)`; member exports drop references to items outside the set and list them in `omittedReferences`. Guests get the router's own not-found page (`src/routes/api/v1/export.ts`).
+- New table or column: decide whether it is exported (admin and member), add it to `build.ts`, the doc and the secret-sentinel test in `export.test.ts`. Secrets (auth tables, invite hashes) never go in.
+- Page: `/admin/export` reserves a slot with `reserveExportFn`, then opens `?ticket=…`; `getExportInfoFn` gives the estimate and progress. Tests: `exportToMemory()` in `src/server/export/test-helpers.ts`.
+
 ## E2E tests (Playwright)
 `bun run e2e` builds into `node_modules/.cache/hausmeister-e2e/` (never `.output`), starts it on port 3211 against a fresh temp DB (`e2e/server.ts`), runs `e2e/bootstrap.setup.ts` (first admin via the startup link), then every `e2e/*.e2e.ts` (not `.spec.ts`: `bun test` would pick those up) on a Pixel 7 viewport. `E2E_SKIP_BUILD=1 bunx playwright test` reuses the last build. Import `test`/`expect` from `e2e/fixtures.ts`:
 - `adminPage`: signed in as the first admin (don't sign it out or change it). `page`: signed out.

@@ -16,7 +16,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   { to: "/admin/types", label: m.admin_nav_types, roles: ["admin", "member"] },
   { to: "/admin/tags", label: m.admin_nav_tags, roles: ADMIN },
   { to: "/admin/settings", label: m.admin_nav_settings, roles: ADMIN },
-  { to: "/admin/export", label: m.admin_nav_export, roles: ADMIN },
+  { to: "/admin/export", label: m.admin_nav_export, roles: ["admin", "member"] },
 ];
 
 /** Roles that may open /admin at all (guests may not). */
