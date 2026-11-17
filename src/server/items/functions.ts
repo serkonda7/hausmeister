@@ -19,6 +19,7 @@ import {
 } from "~/lib/items/inputs";
 import { authMiddleware, roleMiddleware } from "../auth/middleware";
 import { itemsDb } from "../search/ready";
+import { listPrincipals } from "./principals";
 import {
   changeItemOwner,
   changeItemType,
@@ -122,3 +123,8 @@ export const reassignUserItemsFn = createServerFn({ method: "POST" })
   .middleware([roleMiddleware("admin")])
   .validator(reassignItemsInput)
   .handler(({ context: { ctx }, data }) => reassignUserItems(itemsDb(), ctx, data));
+
+/** Admin/member: owner and grantee candidates (users, groups) for the item pickers. */
+export const listPrincipalsFn = createServerFn({ method: "GET" })
+  .middleware([roleMiddleware("admin", "member")])
+  .handler(({ context: { ctx } }) => listPrincipals(itemsDb(), ctx));

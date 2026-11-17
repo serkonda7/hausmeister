@@ -1,9 +1,9 @@
 // TanStack Query options for items, locations, tags, search and history
 // (loaders: ensureQueryData; components: useQuery). Invalidate ["items"] after
 // item writes, ["locations"] / ["tags"] after theirs.
-import { queryOptions } from "@tanstack/solid-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/solid-query";
 import { getItemHistoryFn } from "~/server/history/functions";
-import { getItemFn, listItemGrantsFn } from "~/server/items/functions";
+import { getItemFn, listItemGrantsFn, listPrincipalsFn } from "~/server/items/functions";
 import { getLocationFn, listLocationsFn } from "~/server/locations/functions";
 import { searchFacetsFn, searchItemsFn } from "~/server/search/functions";
 import { listTagsFn } from "~/server/tags/functions";
@@ -13,6 +13,16 @@ export const itemSearchQuery = (input: SearchItemsInput) =>
   queryOptions({
     queryKey: ["items", "search", input],
     queryFn: () => searchItemsFn({ data: input }),
+  });
+
+/** Paged list (keyset cursor) for "load more" / infinite scroll. Same input as itemSearchQuery minus cursor. */
+export const itemListQuery = (input: Omit<SearchItemsInput, "cursor">) =>
+  infiniteQueryOptions({
+    queryKey: ["items", "list", input],
+    queryFn: ({ pageParam }) =>
+      searchItemsFn({ data: { ...input, ...(pageParam ? { cursor: pageParam } : {}) } }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
   });
 
 export const itemFacetsQuery = (filters: SearchFilters) =>
@@ -50,3 +60,11 @@ export const locationQuery = (id: string) =>
 
 export const tagsQuery = () =>
   queryOptions({ queryKey: ["tags", "list"], queryFn: () => listTagsFn() });
+
+/** Owner and grantee candidates (admin/member only). */
+export const principalsQuery = () =>
+  queryOptions({
+    queryKey: ["items", "principals"],
+    queryFn: () => listPrincipalsFn(),
+    staleTime: 5 * 60_000,
+  });

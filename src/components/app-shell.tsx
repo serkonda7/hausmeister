@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/solid-router";
-import { For, type JSX } from "solid-js";
+import { For, type JSX, onMount } from "solid-js";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -14,9 +14,14 @@ import { cn } from "~/lib/cn";
 import { m } from "~/paraglide/messages";
 import type { SessionUser } from "~/server/auth/functions";
 
-type NavItem = { to: string; label: () => string; icon: string; roles?: SessionUser["role"][] };
+type NavItem = {
+  to: "/" | "/items" | "/locations" | "/admin";
+  label: () => string;
+  icon: string;
+  roles?: SessionUser["role"][];
+};
 
-// Targets other than "/" are built by later tasks; until then they 404.
+// Guests see Start, items and locations (only what is shared with them).
 const NAV: NavItem[] = [
   { to: "/", label: m.nav_home, icon: "⌂" },
   { to: "/items", label: m.nav_items, icon: "▦" },
@@ -34,6 +39,8 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
   const location = useLocation();
   const navigate = useNavigate();
   const items = () => NAV.filter((n) => !n.roles || n.roles.includes(props.user.role));
+  // Marks the page as interactive (e2e tests wait for it before typing).
+  onMount(() => document.documentElement.setAttribute("data-hydrated", ""));
   const isActive = (to: string) =>
     to === "/" ? location().pathname === "/" : location().pathname.startsWith(to);
 
@@ -48,7 +55,7 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
             <For each={items()}>
               {(item) => (
                 <Link
-                  to={item.to as "/"}
+                  to={item.to}
                   class={cn(
                     "rounded-md px-3 py-2 text-sm font-medium hover:bg-accent",
                     isActive(item.to) && "bg-accent",
@@ -89,7 +96,7 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
             {(item) => (
               <li>
                 <Link
-                  to={item.to as "/"}
+                  to={item.to}
                   class={cn(
                     "flex h-16 flex-col items-center justify-center gap-0.5 text-xs",
                     isActive(item.to) ? "font-semibold text-primary" : "text-muted-foreground",

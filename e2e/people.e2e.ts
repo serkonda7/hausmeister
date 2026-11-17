@@ -18,7 +18,7 @@ test("admin invites a member, who accepts and sees no admin sections", async ({
   await acceptInvite(page, link, { username, password: "lenas-password-1", displayName: "Lena" });
   await expect(page.getByText("Rolle: Mitglied")).toBeVisible();
 
-  // Members may open the admin area, but only "Typen" is offered …
+  // Members may open the admin area, but only "Typen" and their own export are offered …
   await page.goto("/admin/users");
   await expect(page.getByText("Seite nicht gefunden.")).toBeVisible();
   for (const path of ["/admin/invites", "/admin/groups", "/admin/settings"]) {
@@ -28,7 +28,7 @@ test("admin invites a member, who accepts and sees no admin sections", async ({
   await page.goto("/");
   await page.getByRole("link", { name: "Verwaltung" }).click();
   const sections = page.getByRole("navigation", { name: "Bereiche der Verwaltung" });
-  await expect(sections.getByRole("link")).toHaveText(["Typen"]);
+  await expect(sections.getByRole("link")).toHaveText(["Typen", "Export"]);
 
   // … and the used link is gone from the admin's pending list.
   await adminPage.reload();

@@ -171,12 +171,22 @@ function OptionSelect(props: {
       onBlur={() => props.onBlur()}
     >
       <Show when={props.placeholder !== false}>
-        <option value="">{m.field_select_placeholder()}</option>
+        <option value="" selected={!props.value}>
+          {m.field_select_placeholder()}
+        </option>
       </Show>
       <Show when={props.value && !props.options.some((o) => o.value === props.value)}>
-        <option value={props.value}>{props.value}</option>
+        <option value={props.value} selected>
+          {props.value}
+        </option>
       </Show>
-      <For each={props.options}>{(o) => <option value={o.value}>{o.label}</option>}</For>
+      <For each={props.options}>
+        {(o) => (
+          <option value={o.value} selected={o.value === props.value}>
+            {o.label}
+          </option>
+        )}
+      </For>
     </select>
   );
 }
