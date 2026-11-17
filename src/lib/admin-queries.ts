@@ -6,6 +6,7 @@ import {
   adminListUsers,
 } from "~/server/admin/functions";
 import { getSettingsFn } from "~/server/settings/functions";
+import { listTagsFn } from "~/server/tags/functions";
 
 export const adminUsersQuery = () =>
   queryOptions({ queryKey: ["admin", "users"], queryFn: () => adminListUsers() });
@@ -21,3 +22,6 @@ export const adminGroupsQuery = () =>
 
 export const settingsQuery = () =>
   queryOptions({ queryKey: ["admin", "settings"], queryFn: () => getSettingsFn() });
+
+export const adminTagsQuery = () =>
+  queryOptions({ queryKey: ["admin", "tags"], queryFn: () => listTagsFn() });
