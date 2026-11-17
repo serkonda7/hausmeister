@@ -5,6 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { AuthCtx, Role } from "../authz/ctx";
 import type { AppDb, DbOrTx } from "../db/client";
 import { accounts, groupMembers, sessions, type User, users } from "../db/schema";
+import { reindexItemsReferencingUser } from "../search/indexer";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, USERNAME_PATTERN } from "./auth";
 
 export class UserInputError extends Error {
@@ -153,6 +154,19 @@ export function disableUser(db: AppDb, userId: string) {
     tx.update(users).set({ disabledAt: new Date() }).where(eq(users.id, userId)).run();
     tx.delete(sessions).where(eq(sessions.userId, userId)).run();
   });
+}
+
+/**
+ * Changes a user's display name and reindexes the items that reference the
+ * user in a `user` field (the search index holds the name, not the id).
+ */
+export function updateDisplayName(db: AppDb, userId: string, raw: string): string {
+  const displayName = validateDisplayName(raw);
+  db.transaction((tx) => {
+    tx.update(users).set({ displayName }).where(eq(users.id, userId)).run();
+    reindexItemsReferencingUser(tx, userId);
+  });
+  return displayName;
 }
 
 export function enableUser(db: AppDb, userId: string) {

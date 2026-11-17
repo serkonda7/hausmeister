@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { closeDatabase, KEEP_SNAPSHOTS, openDatabase, pruneSnapshots } from "./client";
 import { items, itemTypes, settings, users } from "./schema";
-import { dbStats } from "./stats";
+import { healthStatus } from "./stats";
 import { createTestDb } from "./test-db";
 
 describe("bundled SQLite", () => {
@@ -102,8 +102,8 @@ describe("migrations", () => {
     ).toThrow();
     // foreign keys are on
     expect(() => db.insert(items).values({ typeId: "nope", name: "x" }).run()).toThrow();
-    expect(dbStats(db)).toMatchObject({ items: 1, boots: 0 });
-    expect(dbStats(db).sqlite).toMatch(/^3\./);
+    // /health tells signed-out callers only `ok` and `boots`: no item count, no versions.
+    expect(healthStatus(db)).toEqual({ ok: true, boots: 0 });
   });
 });
 
@@ -127,7 +127,7 @@ describe("pre-migration snapshots (DESIGN §8.6)", () => {
         writeFileSync(join(dir, f), "");
 
       const db = openDatabase(path, { snapshotBeforeMigrate: true });
-      expect(dbStats(db).boots).toBe(1);
+      expect(healthStatus(db).boots).toBe(1);
       closeDatabase(db);
 
       const files = (readdirSync(dir) as string[]).sort();

@@ -23,7 +23,9 @@ export type AuditAction =
   | "export.created"
   // Item events from src/server/attachments (diff: { attachmentId, kind, originalName }).
   | "attachment.added"
-  | "attachment.removed";
+  | "attachment.removed"
+  // Same, with kind as a change: { attachmentId, kind: { from, to }, originalName }.
+  | "attachment.kind_changed";
 
 /** Keys that look like secrets. Matched case-insensitively at any depth. */
 const SECRET_KEY = /pass(word)?|token|hash|secret|credential/i;

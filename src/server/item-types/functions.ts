@@ -8,7 +8,7 @@ import {
   typeIdInput,
   updateItemTypeInput,
 } from "~/lib/item-types/type-input";
-import { authMiddleware } from "../auth/middleware";
+import { authMiddleware, roleMiddleware } from "../auth/middleware";
 import { getDb } from "../db/client";
 import {
   archiveItemType,
@@ -67,7 +67,7 @@ export const deleteItemTypeFn = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-/** Active users (id, display name) for the `user` field picker; any signed-in user. */
+/** Active users (id, display name) for the `user` field picker; admins and members. */
 export const listPickerUsersFn = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
-  .handler(() => listActiveUsers(getDb()));
+  .middleware([roleMiddleware("admin", "member")])
+  .handler(({ context: { ctx } }) => listActiveUsers(getDb(), ctx));

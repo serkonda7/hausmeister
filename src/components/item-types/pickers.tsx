@@ -10,9 +10,13 @@ import { pickItemsFn } from "~/server/search/functions";
 
 export type PickerUser = { id: string; displayName: string };
 
-/** Active users from the server (cached); id -> name lookup for display. */
-export function usePickerUsers() {
-  const q = useQuery(() => pickerUsersQuery());
+/**
+ * Active users from the server (cached); id -> name lookup for display. Only
+ * admins and members may load the list; pass `enabled` false where names come
+ * from elsewhere (the item page has ItemDetail.references.users).
+ */
+export function usePickerUsers(enabled: () => boolean = () => true) {
+  const q = useQuery(() => ({ ...pickerUsersQuery(), enabled: enabled() }));
   const byId = createMemo(() => new Map((q.data ?? []).map((u) => [u.id, u.displayName])));
   return { query: q, users: () => q.data ?? [], nameOf: (id: string) => byId().get(id) };
 }

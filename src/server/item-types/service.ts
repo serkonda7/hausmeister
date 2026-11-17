@@ -263,8 +263,13 @@ export function getItemType(db: AppDb, ctx: AuthCtx, id: string): ItemTypeDetail
   };
 }
 
-/** Active users for the `user` field picker: id and display name only. */
-export function listActiveUsers(db: AppDb): { id: string; displayName: string }[] {
+/**
+ * Active users for the `user` field picker: id and display name only. Admins
+ * and members only: guests never edit attributes, and the detail page names
+ * referenced users itself (ItemDetail.references.users).
+ */
+export function listActiveUsers(db: AppDb, ctx: AuthCtx): { id: string; displayName: string }[] {
+  if (ctx.role !== "admin" && ctx.role !== "member") throw new ItemTypeError(403, "FORBIDDEN");
   return db
     .select({ id: users.id, displayName: users.displayName })
     .from(users)

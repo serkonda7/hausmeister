@@ -169,12 +169,27 @@ export function setAttachmentKind(
     throw new AttachmentError(422, "ATTACHMENTS_KIND_MISMATCH");
   }
   if (attachment.kind === input.kind) return attachment;
-  return db
-    .update(attachments)
-    .set({ kind: input.kind })
-    .where(eq(attachments.id, attachment.id))
-    .returning()
-    .get()!;
+  // The event matters for redaction: once an attachment was a receipt, every
+  // event about it is hidden below `edit` (history service, redactEvent).
+  return db.transaction((tx) => {
+    const row = tx
+      .update(attachments)
+      .set({ kind: input.kind })
+      .where(eq(attachments.id, attachment.id))
+      .returning()
+      .get()!;
+    recordEvent(tx, {
+      actorId: ctx.userId,
+      action: "attachment.kind_changed",
+      itemId: attachment.itemId,
+      diff: {
+        attachmentId: attachment.id,
+        kind: { from: attachment.kind, to: input.kind },
+        originalName: attachment.originalName,
+      },
+    });
+    return row;
+  });
 }
 
 /**

@@ -11,6 +11,7 @@ export {
 export type { AuthCtx, Role } from "./ctx";
 export {
   atLeast,
+  canChangeOwner,
   canSeeMoney,
   type GrantRef,
   grantLevel,

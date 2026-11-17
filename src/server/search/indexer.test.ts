@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { updateDisplayName } from "../auth/users";
 import { items } from "../db/schema";
 import { updateItemType } from "../item-types/service";
 import {
@@ -140,6 +141,20 @@ describe("items_fts stays in step with every kind of write", () => {
 });
 
 describe("rebuild", () => {
+  test("a display name change reindexes the items that reference the user", () => {
+    const f = setupFixture();
+    f.item(f.anna, { name: "Bohrer", attributes: { keeper: f.ben.userId } });
+    f.item(f.anna, { name: "Säge", attributes: { keeper: f.anna.userId } });
+    expect(found(f, "ben")).toEqual(["Bohrer"]);
+    updateDisplayName(f.db, f.ben.userId, "Benjamin Blau");
+    expect(found(f, "blau")).toEqual(["Bohrer"]);
+    expect(found(f, "ben")).toEqual(["Bohrer"]); // prefix of "benjamin"
+    updateDisplayName(f.db, f.ben.userId, "Onkel B");
+    expect(found(f, "benjamin")).toEqual([]);
+    expect(found(f, "onkel")).toEqual(["Bohrer"]);
+    expectConsistent(f);
+  });
+
   test("detects an empty or partial index and rebuilds it", () => {
     const f = setupFixture();
     f.item(f.anna, { name: "Säge" });

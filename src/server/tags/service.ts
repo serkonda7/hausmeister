@@ -24,7 +24,7 @@ import { recordCatalogEvent, recordItemEvent } from "../history/record";
 import { assertVersion, requireItem, writeVersioned } from "../items/access";
 import { ItemsError, parseInput } from "../items/errors";
 import { reindexItems } from "../search/indexer";
-import { findOrCreateTags, itemIdsWithTags, itemTagNames, tagKey } from "./core";
+import { findOrCreateTags, itemIdsWithTags, itemTagNames, tagKey, tagVisibleWhere } from "./core";
 
 const tagNotFound = () => new ItemsError(404, "TAG_NOT_FOUND");
 
@@ -43,21 +43,12 @@ export function listTags(db: AppDb, ctx: AuthCtx): TagSummary[] {
       .all()
       .map((r) => [r.id, r.n]),
   );
-  const used = new Set(
-    ctx.role === "admin"
-      ? []
-      : db
-          .selectDistinct({ id: itemTags.tagId })
-          .from(itemTags)
-          .all()
-          .map((r) => r.id),
-  );
   return db
     .select({ id: tags.id, name: tags.name, color: tags.color })
     .from(tags)
+    .where(tagVisibleWhere(ctx, db))
     .orderBy(asc(sql`${tags.name} collate nocase`))
     .all()
-    .filter((t) => ctx.role === "admin" || counts.has(t.id) || !used.has(t.id))
     .map((t) => ({ ...t, count: counts.get(t.id) ?? 0 }));
 }
 

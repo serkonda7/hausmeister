@@ -1,6 +1,7 @@
-// HTTP entry for /api/auth/*: Better Auth's handler plus the per-username
-// sign-in lockout (./lockout.ts) around POST /sign-in/username.
-import type { Auth } from "./auth";
+// HTTP entry for /api/auth/*: Better Auth's handler behind an allowlist of the
+// endpoints the app uses, plus the per-username sign-in lockout (./lockout.ts)
+// around POST /sign-in/username.
+import { ACCOUNT_DISABLED, type Auth, ENABLED_AUTH_PATHS } from "./auth";
 import {
   addTrustedUsername,
   DEVICE_COOKIE_MAX_AGE,
@@ -12,6 +13,25 @@ import { normalizeUsername } from "./users";
 
 /** Error code of the 429 answer while a username is locked. */
 export const SIGN_IN_LOCKED = "TOO_MANY_ATTEMPTS";
+
+const AUTH_BASE_PATH = "/api/auth";
+
+/** Better Auth's answer to a wrong username or password (username plugin). */
+export function invalidCredentials(): Response {
+  return Response.json(
+    { code: "INVALID_USERNAME_OR_PASSWORD", message: "Invalid username or password" },
+    { status: 401 },
+  );
+}
+
+async function errorCode(res: Response): Promise<string | undefined> {
+  try {
+    const body = (await res.clone().json()) as { code?: unknown };
+    return typeof body?.code === "string" ? body.code : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export type AuthHandlerOptions = {
   auth: Auth;
@@ -27,7 +47,13 @@ export function createAuthHandler(opts: AuthHandlerOptions) {
 
   async function handler(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    if (request.method !== "POST" || !url.pathname.endsWith("/sign-in/username")) {
+    // Anything else Better Auth (or a future version of it) offers answers like
+    // a disabled path. Account changes go through the app's own server functions.
+    const path = url.pathname.startsWith(AUTH_BASE_PATH)
+      ? url.pathname.slice(AUTH_BASE_PATH.length)
+      : url.pathname;
+    if (!ENABLED_AUTH_PATHS.has(path)) return new Response("Not Found", { status: 404 });
+    if (request.method !== "POST" || path !== "/sign-in/username") {
       return opts.auth.handler(request);
     }
     // Only JSON bodies with a string username reach Better Auth, so the
@@ -56,7 +82,12 @@ export function createAuthHandler(opts: AuthHandlerOptions) {
       );
     }
 
-    const res = await opts.auth.handler(request);
+    let res = await opts.auth.handler(request);
+    // A correct password for a disabled account answers like a wrong one and
+    // counts toward the lockout, so a guessed password is not confirmed. The
+    // login page tells everyone who fails to ask an admin if it keeps failing.
+    if (res.status === 403 && (await errorCode(res)) === ACCOUNT_DISABLED)
+      res = invalidCredentials();
     if (res.status === 401) lockout.fail(key);
     if (!res.ok) return res;
 

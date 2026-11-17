@@ -54,6 +54,7 @@ import { enqueueBlobGc } from "../attachments/gc";
 import {
   atLeast,
   can,
+  canChangeOwner,
   filterAttachments,
   type Owner,
   serializeItem,
@@ -87,6 +88,7 @@ import { findOrCreateTags, itemTagNames, replaceItemTags } from "../tags/core";
 import { assertVersion, requireItem, uniqueShortCode, writeVersioned } from "./access";
 import { forbidden, ItemsError, parseInput } from "./errors";
 import { itemPath, syncDescendantLocations, visibleItemIds, wouldContainCycle } from "./placement";
+import { hiddenReferenceIds, restoreHiddenReferences, stripHiddenReferences } from "./references";
 
 const asDb = (tx: DbOrTx) => tx as unknown as AppDb;
 
@@ -355,10 +357,18 @@ export function getItem(db: AppDb, ctx: AuthCtx, id: string): ItemDetail {
       .all())
       itemNames[r.id] = r.n;
 
+  // Ids of referenced items the caller cannot see never leave the server.
+  const attrs = item.attributes ?? {};
+  const stripped = stripHiddenReferences(
+    effectiveFields,
+    attrs,
+    hiddenReferenceIds(db, ctx, effectiveFields, attrs),
+  );
+
   const { nameSort: _ns, ...rest } = item;
   const row: ItemRow = {
     ...rest,
-    attributes: (item.attributes ?? {}) as JsonObject,
+    attributes: stripped.attributes as JsonObject,
     containerItemId: containerVisible ? item.containerItemId : null,
   };
   return {
@@ -377,10 +387,12 @@ export function getItem(db: AppDb, ctx: AuthCtx, id: string): ItemDetail {
     contentsCount,
     attachments: filterAttachments(atts, level),
     references: { users: userNames, items: itemNames },
+    hiddenReferences: stripped.hiddenReferences,
     permissions: {
       canUse: atLeast(level, "use"),
       canEdit: atLeast(level, "edit"),
       canManage: atLeast(level, "manage"),
+      canChangeOwner: canChangeOwner(ctx, item),
     },
     grants: atLeast(level, "manage") ? grantRows(db, item.id) : null,
   };
@@ -433,10 +445,15 @@ export function updateItem(db: AppDb, ctx: AuthCtx, raw: UpdateItemInput): { ver
     }
     const before = pick(item, EDIT_KEYS);
     const after = { ...before, ...next };
-    const attrsAfter =
-      input.attributes !== undefined
-        ? validateAttributes(tx, ctx, item.typeId, input.attributes, item.attributes ?? {})
-        : (item.attributes ?? {});
+    const previous = item.attributes ?? {};
+    let attrsAfter = previous;
+    if (input.attributes !== undefined) {
+      // The client never saw references to items hidden from the caller; keep them.
+      const fields = effectiveFieldsForType(asDb(tx), item.typeId);
+      const hidden = hiddenReferenceIds(tx, ctx, fields, previous);
+      const sent = restoreHiddenReferences(fields, input.attributes, previous, hidden);
+      attrsAfter = validateAttributes(tx, ctx, item.typeId, sent, previous);
+    }
     const diff = itemDiff(before, after, item.attributes ?? {}, attrsAfter);
 
     let tagChange: { from: string[]; to: string[] } | null = null;
@@ -532,7 +549,13 @@ export function changeItemType(
     const plan = planItemTypeChange(asDb(tx), { attributes: old, toTypeId: input.typeId });
     if (!input.confirm) {
       const { attributes, ...summary } = plan;
-      return { status: "preview", plan: summary, attributes: attributes as JsonObject };
+      const fields = effectiveFieldsForType(asDb(tx), input.typeId);
+      const shown = stripHiddenReferences(
+        fields,
+        attributes,
+        hiddenReferenceIds(tx, ctx, fields, attributes),
+      ).attributes;
+      return { status: "preview", plan: summary, attributes: shown as JsonObject };
     }
     const merged = { ...plan.attributes, ...(input.attributes ?? {}) };
     const attributes = validateAttributes(tx, ctx, input.typeId, merged, old, plan.attributes);
@@ -554,9 +577,11 @@ export function changeItemType(
 // --- Owner, visibility (manage) -------------------------------------------------------
 
 /**
- * A manager may give the item to themselves, the household or one of their
- * groups; an admin to any active non-guest user or any group. Becoming
- * household-owned makes the item household-visible (it cannot be private).
+ * Only an admin or the item's direct user owner may change the owner
+ * (`canChangeOwner`): `manage` from a grant or a shared group is not enough.
+ * The owner may give it to the household or one of their groups; an admin to
+ * any active non-guest user or any group. Becoming household-owned makes the
+ * item household-visible (it cannot be private).
  */
 export function changeItemOwner(
   db: AppDb,
@@ -566,6 +591,7 @@ export function changeItemOwner(
   const input = parseInput(changeOwnerInput, raw);
   return db.transaction((tx) => {
     const { item } = requireItem(tx, ctx, input.id, "manage");
+    if (!canChangeOwner(ctx, item)) throw forbidden();
     assertVersion(item, input.version);
     const owner = checkedOwner(tx, input.owner);
     assertOwnerAllowed(ctx, owner);

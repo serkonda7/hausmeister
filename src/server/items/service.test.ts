@@ -3,9 +3,9 @@ import { eq } from "drizzle-orm";
 import { parseItemsError } from "../../lib/items/errors";
 import type { AuthCtx } from "../authz/ctx";
 import { seed } from "../authz/test-fixtures";
-import { attachments, events, items, jobs, users } from "../db/schema";
+import { attachments, events, groups, items, jobs, users } from "../db/schema";
 import { getItemHistory } from "../history/service";
-import { archiveItemType } from "../item-types/service";
+import { archiveItemType, createItemType } from "../item-types/service";
 import { createLocation } from "../locations/service";
 import { searchItems } from "../search/query";
 import { attachTag } from "../tags/service";
@@ -108,6 +108,8 @@ function scenario() {
 type Op = {
   name: string;
   min: string;
+  /** "who/key" pairs refused (ITEM_FORBIDDEN) although the level reaches `min`. */
+  deny?: string[];
   run: (s: ReturnType<typeof scenario>, ctx: AuthCtx, id: string) => unknown;
 };
 const OPS: Op[] = [
@@ -152,6 +154,8 @@ const OPS: Op[] = [
   {
     name: "changeItemOwner",
     min: "manage",
+    // Ben manages the group's tent as a member, but only admins re-own group items.
+    deny: ["ben/G"],
     run: (s, c, id) =>
       changeItemOwner(s.f.db, c, {
         id,
@@ -206,7 +210,7 @@ describe("permission matrix (role x ownership x visibility x grant x operation)"
           const want =
             lvl === "none"
               ? "ITEM_NOT_FOUND"
-              : RANK[lvl]! >= RANK[op.min]!
+              : RANK[lvl]! >= RANK[op.min]! && !op.deny?.includes(`${who}/${key}`)
                 ? "OK"
                 : "ITEM_FORBIDDEN";
           expect(`${who}/${key}: ${got}`).toBe(`${who}/${key}: ${want}`);
@@ -478,6 +482,86 @@ describe("move and status at use", () => {
   });
 });
 
+describe("references to items the caller cannot see", () => {
+  function setup() {
+    const f = setupFixture();
+    const type = createItemType(f.db, f.admin, {
+      key: "kit",
+      name: "Set",
+      icon: null,
+      tracking: "individual",
+      parentId: null,
+      fields: [
+        { key: "parts", label: "Teile", kind: "item", multiple: true },
+        { key: "partner", label: "Gegenstück", kind: "item" },
+        { key: "note", label: "Notiz", kind: "text" },
+      ],
+    });
+    const secret = f.item(f.anna, {
+      name: "Annas Geheimnis",
+      owner: { ownerKind: "user", ownerId: f.anna.userId },
+      visibility: "private",
+    });
+    const open = f.item(f.anna, { name: "Leiter" });
+    // Household item: Ben may edit it but cannot see Anna's private item.
+    const kit = f.item(f.anna, {
+      name: "Werkzeugset",
+      typeId: type.id,
+      attributes: { parts: [open.id, secret.id], partner: secret.id, note: "alt" },
+    });
+    const stored = () => f.db.select().from(items).where(eq(items.id, kit.id)).get()!.attributes;
+    return { f, type, secret, open, kit, stored };
+  }
+
+  test("the detail response leaves hidden ids out and counts them", () => {
+    const { f, secret, open, kit } = setup();
+    const d = getItem(f.db, f.ben, kit.id);
+    expect(d.item.attributes).toEqual({ parts: [open.id], note: "alt" });
+    expect(d.hiddenReferences).toEqual({ parts: 1, partner: 1 });
+    expect(JSON.stringify(d)).not.toContain(secret.id);
+    // The owner of the secret (and admins) see everything.
+    expect(getItem(f.db, f.anna, kit.id).item.attributes.partner).toBe(secret.id);
+    expect(getItem(f.db, f.admin, kit.id).hiddenReferences).toEqual({});
+  });
+
+  test("saving what the editor saw keeps the hidden references", () => {
+    const { f, secret, open, kit, stored } = setup();
+    const seen = getItem(f.db, f.ben, kit.id).item.attributes;
+    updateItem(f.db, f.ben, { id: kit.id, version: 1, attributes: { ...seen, note: "neu" } });
+    expect(stored()).toEqual({ parts: [open.id, secret.id], partner: secret.id, note: "neu" });
+    // Emptying the visible part of a list or leaving the single field empty keeps them too.
+    updateItem(f.db, f.ben, { id: kit.id, version: 2, attributes: { parts: [] } });
+    expect(stored()).toEqual({ parts: [secret.id], partner: secret.id });
+    // The history shows no change to the hidden values.
+    const ev = f.db.select().from(events).where(eq(events.itemId, kit.id)).all().at(-1)!;
+    expect(Object.keys(ev.diff as object).sort()).toEqual(["attributes.note", "attributes.parts"]);
+    // Picking another item for the single field is a deliberate replacement.
+    updateItem(f.db, f.ben, { id: kit.id, version: 3, attributes: { partner: open.id } });
+    expect(stored()).toEqual({ parts: [secret.id], partner: open.id });
+  });
+
+  test("history diffs show a hidden reference without its id", () => {
+    const { f, secret, open, kit } = setup();
+    updateItem(f.db, f.anna, { id: kit.id, version: 1, attributes: { partner: open.id } });
+    const h = getItemHistory(f.db, f.ben, { itemId: kit.id });
+    expect(JSON.stringify(h)).not.toContain(secret.id);
+    const change = h.entries.find((e) => e.action === "item.updated")!.diff[
+      "attributes.partner"
+    ] as { from: string; to: string };
+    expect(change).toEqual({ from: "hidden", to: open.id });
+    expect(h.names.items[open.id]).toBe("Leiter");
+    // Anna sees the real ids.
+    expect(JSON.stringify(getItemHistory(f.db, f.anna, { itemId: kit.id }))).toContain(secret.id);
+  });
+
+  test("the type change preview leaves hidden ids out", () => {
+    const { f, secret, kit } = setup();
+    const p = changeItemType(f.db, f.ben, { id: kit.id, version: 1, typeId: f.tool.id });
+    expect(p.status).toBe("preview");
+    expect(JSON.stringify(p)).not.toContain(secret.id);
+  });
+});
+
 describe("type change", () => {
   test("preview first, apply only with confirm; required fields of the new type are asked for", () => {
     const f = setupFixture();
@@ -511,51 +595,166 @@ describe("type change", () => {
 });
 
 describe("owner changes", () => {
-  test("members reassign to themselves, the household or their groups; admins to anyone", () => {
+  /** Ben gets `manage` on Anna's private item through a grant. */
+  function annasPrivateItemManagedByBen() {
+    const f = setupFixture();
+    const a = f.item(f.anna, {
+      name: "Annas Uhr",
+      owner: { ownerKind: "user", ownerId: f.anna.userId },
+      visibility: "private",
+    });
+    setItemGrant(f.db, f.anna, {
+      itemId: a.id,
+      principalKind: "user",
+      principalId: f.ben.userId,
+      level: "manage",
+    });
+    return { f, a };
+  }
+
+  test("a manage grantee cannot take the item (or give it away) and lock the owner out", () => {
+    const { f, a } = annasPrivateItemManagedByBen();
+    expect(getItem(f.db, f.ben, a.id).permissions.canManage).toBe(true);
+    expect(getItem(f.db, f.ben, a.id).permissions.canChangeOwner).toBe(false);
+    for (const owner of [
+      { ownerKind: "user" as const, ownerId: f.ben.userId },
+      { ownerKind: "household" as const },
+      { ownerKind: "group" as const, ownerId: f.group.id },
+    ])
+      expect(code(() => changeItemOwner(f.db, f.ben, { id: a.id, version: 1, owner }))).toBe(
+        "ITEM_FORBIDDEN",
+      );
+    const row = f.db.select().from(items).where(eq(items.id, a.id)).get()!;
+    expect([row.ownerKind, row.ownerId]).toEqual(["user", f.anna.userId]);
+    expect(getItem(f.db, f.anna, a.id).item.name).toBe("Annas Uhr");
+  });
+
+  test("a co-member of the owning group cannot re-own a group item; an admin can", () => {
     const f = setupFixture();
     const g = f.item(f.ben, {
       name: "Zelt",
       owner: { ownerKind: "group", ownerId: f.group.id },
       visibility: "private",
     });
+    expect(getItem(f.db, f.ben, g.id).permissions).toMatchObject({
+      canManage: true,
+      canChangeOwner: false,
+    });
+    for (const owner of [
+      { ownerKind: "user" as const, ownerId: f.ben.userId },
+      { ownerKind: "household" as const },
+    ])
+      expect(code(() => changeItemOwner(f.db, f.ben, { id: g.id, version: 1, owner }))).toBe(
+        "ITEM_FORBIDDEN",
+      );
+    expect(getItem(f.db, f.admin, g.id).permissions.canChangeOwner).toBe(true);
+    expect(
+      changeItemOwner(f.db, f.admin, {
+        id: g.id,
+        version: 1,
+        owner: { ownerKind: "user", ownerId: f.anna.userId },
+      }),
+    ).toEqual({ version: 2, visibility: "private" });
+  });
+
+  test("the direct owner gives the item to the household or an own group, not to others", () => {
+    const f = setupFixture();
+    const b = f.item(f.ben, {
+      name: "Rad",
+      owner: { ownerKind: "user", ownerId: f.ben.userId },
+      visibility: "private",
+    });
+    expect(getItem(f.db, f.ben, b.id).permissions.canChangeOwner).toBe(true);
     expect(
       code(() =>
         changeItemOwner(f.db, f.ben, {
-          id: g.id,
+          id: b.id,
           version: 1,
           owner: { ownerKind: "user", ownerId: f.anna.userId },
         }),
       ),
     ).toBe("OWNER_NOT_ALLOWED");
+    // A group Ben is not in.
+    const other = f.db.insert(groups).values({ name: "Eltern" }).returning().get();
+    expect(
+      code(() =>
+        changeItemOwner(f.db, f.ben, {
+          id: b.id,
+          version: 1,
+          owner: { ownerKind: "group", ownerId: other.id },
+        }),
+      ),
+    ).toBe("OWNER_NOT_ALLOWED");
     expect(
       changeItemOwner(f.db, f.ben, {
-        id: g.id,
+        id: b.id,
         version: 1,
-        owner: { ownerKind: "user", ownerId: f.ben.userId },
+        owner: { ownerKind: "group", ownerId: f.group.id },
       }),
     ).toEqual({ version: 2, visibility: "private" });
+    // Now group-owned: even the former owner needs an admin to change it again.
+    expect(
+      code(() =>
+        changeItemOwner(f.db, f.ben, { id: b.id, version: 2, owner: { ownerKind: "household" } }),
+      ),
+    ).toBe("ITEM_FORBIDDEN");
+
+    const c = f.item(f.ben, {
+      name: "Helm",
+      owner: { ownerKind: "user", ownerId: f.ben.userId },
+      visibility: "private",
+    });
     // To the household: becomes household-visible.
     expect(
-      changeItemOwner(f.db, f.ben, { id: g.id, version: 2, owner: { ownerKind: "household" } }),
-    ).toEqual({ version: 3, visibility: "household" });
+      changeItemOwner(f.db, f.ben, { id: c.id, version: 1, owner: { ownerKind: "household" } }),
+    ).toEqual({ version: 2, visibility: "household" });
+    // Household-owned: members have edit only; only an admin may re-own it.
+    expect(getItem(f.db, f.ben, c.id).permissions.canChangeOwner).toBe(false);
     expect(
-      changeItemOwner(f.db, f.admin, {
-        id: g.id,
-        version: 3,
-        owner: { ownerKind: "user", ownerId: f.anna.userId },
-      }).version,
-    ).toBe(4);
+      code(() =>
+        changeItemOwner(f.db, f.ben, {
+          id: c.id,
+          version: 2,
+          owner: { ownerKind: "user", ownerId: f.ben.userId },
+        }),
+      ),
+    ).toBe("ITEM_FORBIDDEN");
     const ev = f.db
       .select()
       .from(events)
-      .where(eq(events.itemId, g.id))
+      .where(eq(events.itemId, c.id))
       .all()
       .filter((e) => e.action === "item.owner_changed");
-    expect(ev).toHaveLength(3);
-    expect((ev[1]!.diff as Record<string, unknown>).visibility).toEqual({
+    expect(ev).toHaveLength(1);
+    expect((ev[0]!.diff as Record<string, unknown>).visibility).toEqual({
       from: "private",
       to: "household",
     });
+  });
+
+  test("an admin may change the owner in every case", () => {
+    const { f, a } = annasPrivateItemManagedByBen();
+    const g = f.item(f.ben, { name: "Zelt", owner: { ownerKind: "group", ownerId: f.group.id } });
+    const h = f.item(f.anna, { name: "Leiter" });
+    let v = 1;
+    for (const owner of [
+      { ownerKind: "user" as const, ownerId: f.ben.userId },
+      { ownerKind: "group" as const, ownerId: f.group.id },
+      { ownerKind: "household" as const },
+    ])
+      v = changeItemOwner(f.db, f.admin, { id: a.id, version: v, owner }).version;
+    expect(v).toBe(4);
+    expect(
+      changeItemOwner(f.db, f.admin, { id: g.id, version: 1, owner: { ownerKind: "household" } })
+        .version,
+    ).toBe(2);
+    expect(
+      changeItemOwner(f.db, f.admin, {
+        id: h.id,
+        version: 1,
+        owner: { ownerKind: "user", ownerId: f.anna.userId },
+      }).version,
+    ).toBe(2);
   });
 
   test("admin bulk reassignment of a leaving user's items", () => {
@@ -720,7 +919,12 @@ describe("serialization below edit", () => {
     expect("currency" in viewer.item).toBe(false);
     expect(viewer.attachments.map((x) => x.id)).toEqual(["att-photo"]);
     expect(viewer.grants).toBeNull();
-    expect(viewer.permissions).toEqual({ canUse: false, canEdit: false, canManage: false });
+    expect(viewer.permissions).toEqual({
+      canUse: false,
+      canEdit: false,
+      canManage: false,
+      canChangeOwner: false,
+    });
     const owner = getItem(f.db, f.anna, a.id);
     expect(owner.item.priceCents).toBe(89900);
     expect(owner.attachments.map((x) => x.id).sort()).toEqual(["att-photo", "att-receipt"]);

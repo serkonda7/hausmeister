@@ -56,7 +56,7 @@ import {
   tags,
   users,
 } from "../db/schema";
-import { redactEvent } from "../history/service";
+import { receiptAttachmentIds, redactEvent } from "../history/service";
 import { loadTypes, type TypeRecord } from "../item-types/service";
 import { attachmentFileName, createPathAllocator, safeSegment } from "./paths";
 import { openSnapshot } from "./snapshot";
@@ -469,6 +469,8 @@ async function build(
 
   // --- json/events.json -----------------------------------------------------------
   const historyLocations = new Set<string>();
+  // Attachments that are or were receipts: their events are hidden below edit.
+  const receipts = isAdmin ? new Set<string>() : receiptAttachmentIds(db);
   counts.events = await jsonArray(
     PATHS.events,
     (async function* () {
@@ -518,7 +520,7 @@ async function build(
           if (!isAdmin) {
             const level = e.itemId ? levels.get(e.itemId) : undefined;
             if (!level) continue;
-            const redacted = redactEvent(e, level);
+            const redacted = redactEvent(e, level, receipts);
             if (!redacted) continue;
             diff = scrubDiff(redacted);
           }

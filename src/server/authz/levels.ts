@@ -92,3 +92,16 @@ export function itemLevel(ctx: AuthCtx, item: ItemAuthFields, grants: readonly G
 
 /** Price, currency and receipts are visible from `edit` up (DESIGN §3.2, §3.4). */
 export const canSeeMoney = (lvl: Level): boolean => atLeast(lvl, "edit");
+
+/**
+ * Who may change an item's owner (DESIGN §3.6, MVP rule). Until accept-based
+ * transfers exist, `manage` is not enough: a grantee or a co-member of an
+ * owning group could otherwise take the item and lock the owner out. Only an
+ * admin or the item's direct user owner may; a group-owned item only an admin.
+ * Which owners the direct owner may pick is checked separately (household,
+ * themselves, their own groups).
+ */
+export function canChangeOwner(ctx: AuthCtx, item: Pick<Item, "ownerKind" | "ownerId">): boolean {
+  if (ctx.role === "admin") return true;
+  return ctx.role === "member" && item.ownerKind === "user" && item.ownerId === ctx.userId;
+}

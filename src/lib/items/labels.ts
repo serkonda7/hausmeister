@@ -49,6 +49,7 @@ const ACTIONS: Record<string, () => string> = {
   "item.attributes_migrated": m.history_action_item_attributes_migrated,
   "attachment.added": m.history_action_attachment_added,
   "attachment.removed": m.history_action_attachment_removed,
+  "attachment.kind_changed": m.history_action_attachment_kind_changed,
 };
 
 export const historyActionLabel = (action: string): string =>

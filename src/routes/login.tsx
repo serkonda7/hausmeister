@@ -31,12 +31,10 @@ function LoginPage() {
   // Full navigation so every query and the root context start fresh.
   const done = () => window.location.assign(safeRedirect(search().redirect));
 
-  const errorText = (status?: number, code?: string) =>
-    code === "ACCOUNT_DISABLED"
-      ? m.login_disabled()
-      : status === 429
-        ? m.login_rate_limited()
-        : m.login_failed();
+  // A disabled account answers a password sign-in like a wrong password (the
+  // server does not confirm guessed passwords); login_failed says to ask an admin.
+  const errorText = (status?: number) =>
+    status === 429 ? m.login_rate_limited() : m.login_failed();
 
   async function onSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -48,7 +46,7 @@ function LoginPage() {
       password: String(form.get("password") ?? ""),
     });
     setPending(false);
-    if (error) setError(errorText(error.status, error.code));
+    if (error) setError(errorText(error.status));
     else done();
   }
 

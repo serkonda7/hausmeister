@@ -1,17 +1,18 @@
 import { createFileRoute } from "@tanstack/solid-router";
 import { getDb } from "~/server/db";
-import { dbStats } from "~/server/db/stats";
+import { healthStatus } from "~/server/db/stats";
 
-// Public, unauthenticated. deploy/restore-test.sh reads `ok` and `boots`.
+// Public, unauthenticated: only `ok` and `boots` (see healthStatus). The
+// Docker healthcheck reads the status code, deploy/restore-test.sh both fields.
 export const Route = createFileRoute("/health")({
   server: {
     handlers: {
       GET: () => {
         try {
-          const stats = dbStats(getDb());
-          return Response.json({ ok: true, bun: Bun.version, ...stats });
+          return Response.json(healthStatus(getDb()));
         } catch (err) {
-          return Response.json({ ok: false, error: String(err) }, { status: 503 });
+          console.error("health check failed", err);
+          return Response.json({ ok: false }, { status: 503 });
         }
       },
     },

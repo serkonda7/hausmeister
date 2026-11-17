@@ -184,3 +184,33 @@ test("share an item with a group, then revoke it", async ({ newUser, adminPage }
   await hydrated(friend.page);
   await expect(friend.page.getByRole("heading", { name: NOT_FOUND })).toBeVisible();
 });
+
+test("a manage grantee does not get the owner action; the owner does", async ({ newUser }) => {
+  const owner = await newUser("member");
+  const ben = await newUser("member");
+  const t = token();
+  const name = `Uhr ${t}`;
+  const id = await addItem(owner.page, {
+    type: "Werkzeug",
+    name,
+    more: ownMore({ private: true }),
+  });
+  const actions = (p: typeof owner.page) => p.getByRole("group", { name: "Aktionen" });
+  await expect(actions(owner.page).getByRole("button", { name: "Besitzer" })).toBeVisible();
+
+  const share = owner.page.getByRole("region", { name: "Teilen" });
+  await share.getByLabel("Teilen mit").selectOption({ label: ben.displayName });
+  await share.getByLabel("Recht", { exact: true }).selectOption("manage");
+  await share.getByRole("button", { name: "Teilen", exact: true }).click();
+  await expect(
+    share.getByRole("list", { name: "Freigaben" }).getByText(ben.displayName),
+  ).toBeVisible();
+
+  await ben.page.goto(`/items/${id}`);
+  await hydrated(ben.page);
+  await expect(ben.page.getByRole("heading", { level: 1, name })).toBeVisible();
+  // Manage actions are there, taking the item over is not.
+  await expect(actions(ben.page).getByRole("button", { name: "Sichtbarkeit" })).toBeVisible();
+  await expect(actions(ben.page).getByRole("button", { name: "Löschen" })).toBeVisible();
+  await expect(actions(ben.page).getByRole("button", { name: "Besitzer" })).toHaveCount(0);
+});

@@ -45,6 +45,15 @@ const SKIP = new Set([
 ]);
 
 type Change = { from: JsonValue | undefined; to: JsonValue | undefined };
+
+const ATTACHMENT_KINDS: Record<string, () => string> = {
+  photo: m.attachments_kind_photo,
+  receipt: m.attachments_kind_receipt,
+  manual: m.attachments_kind_manual,
+  other: m.attachments_kind_other,
+};
+const attachmentKindLabel = (k: JsonValue | undefined) =>
+  typeof k === "string" ? (ATTACHMENT_KINDS[k]?.() ?? k) : NONE;
 const isChange = (v: unknown): v is Change =>
   !!v && typeof v === "object" && !Array.isArray(v) && ("from" in v || "to" in v);
 
@@ -165,6 +174,13 @@ export function formatHistoryEntry(e: HistoryEntry, ctx: HistoryContext): Format
     summary = m.item_history_grant({ name });
   } else if (e.action === "attachment.added" || e.action === "attachment.removed") {
     summary = typeof d.originalName === "string" && d.originalName ? d.originalName : null;
+  } else if (e.action === "attachment.kind_changed") {
+    const k = isChange(d.kind) ? d.kind : { from: undefined, to: undefined };
+    summary = m.item_history_attachment_kind({
+      name: typeof d.originalName === "string" ? d.originalName : "",
+      from: attachmentKindLabel(k.from),
+      to: attachmentKindLabel(k.to),
+    });
   } else if (d.reason === "location_deleted") summary = m.item_history_reason_location_deleted();
   else if (d.reason === "container_deleted") summary = m.item_history_reason_container_deleted();
 

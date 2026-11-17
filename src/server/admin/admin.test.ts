@@ -184,7 +184,8 @@ describe("user guards", () => {
     expect(await authCtxFromHeaders(headers, f)).not.toBeNull();
     setUserDisabled(f.db, f.adminCtx, { userId: f.member.id, disabled: true });
     expect(await authCtxFromHeaders(headers, f)).toBeNull();
-    expect((await signInRequest(f.handler, "member")).status).toBe(403);
+    // Same answer as a wrong password (the correct password is not confirmed).
+    expect((await signInRequest(f.handler, "member")).status).toBe(401);
     setUserDisabled(f.db, f.adminCtx, { userId: f.member.id, disabled: false });
     expect((await signInRequest(f.handler, "member")).status).toBe(200);
     const row = listUsers(f.db, f.adminCtx).find((u) => u.id === f.member.id)!;

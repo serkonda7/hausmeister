@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { events, items, tags } from "../db/schema";
 import { ItemsError } from "../items/errors";
-import { updateItem } from "../items/service";
+import { getItem, updateItem } from "../items/service";
 import { setupFixture } from "../items/test-fixtures";
 import {
   attachTag,
@@ -85,6 +85,63 @@ describe("listing", () => {
     expect(show(f.ben)).toEqual(["Leer:0", "Werkstatt:1"]);
     expect(show(f.admin)).toEqual(["Geschenk für Ben:1", "Leer:0", "Werkstatt:2"]);
     expect(show(f.gast)).toEqual(["Leer:0"]);
+  });
+});
+
+describe("matching names against hidden tags", () => {
+  function hiddenTag() {
+    const f = setupFixture();
+    f.item(f.anna, {
+      name: "Ring",
+      tags: ["Verlobung-Geheim"],
+      owner: { ownerKind: "user", ownerId: f.anna.userId },
+      visibility: "private",
+    });
+    const secret = f.db.select().from(tags).where(eq(tags.name, "Verlobung-Geheim")).get()!;
+    recolorTag(f.db, f.admin, { id: secret.id, color: "#cc0000" });
+    const mine = f.item(f.ben, {
+      name: "Bens Kiste",
+      owner: { ownerKind: "user", ownerId: f.ben.userId },
+    });
+    return { f, secret, mine };
+  }
+  const tagsOf = (f: ReturnType<typeof setupFixture>, ctx: typeof f.ben, id: string) =>
+    getItem(f.db, ctx, id).tags.map((t) => `${t.name}:${t.color ?? "-"}`);
+
+  test("attachTag with a case variant does not reveal the hidden spelling or colour", () => {
+    const { f, secret, mine } = hiddenTag();
+    const r = attachTag(f.db, f.ben, { itemId: mine.id, version: 1, name: "verlobung-geheim" });
+    expect(r.tagId).not.toBe(secret.id);
+    expect(tagsOf(f, f.ben, mine.id)).toEqual(["verlobung-geheim:-"]);
+    // Anna's tag is untouched and still hers alone.
+    expect(f.db.select().from(tags).where(eq(tags.id, secret.id)).get()?.name).toBe(
+      "Verlobung-Geheim",
+    );
+    expect(listTags(f.db, f.ben).some((t) => t.id === secret.id)).toBe(false);
+  });
+
+  test("updateItem with tag names behaves the same", () => {
+    const { f, secret, mine } = hiddenTag();
+    updateItem(f.db, f.ben, { id: mine.id, version: 1, tags: ["VERLOBUNG-GEHEIM"] });
+    expect(tagsOf(f, f.ben, mine.id)).toEqual(["VERLOBUNG-GEHEIM:-"]);
+    expect(listTags(f.db, f.ben).some((t) => t.id === secret.id)).toBe(false);
+  });
+
+  test("visible tags and admins still match case-insensitively", () => {
+    const { f, secret, mine } = hiddenTag();
+    f.item(f.anna, { name: "Spaten", tags: ["Garten"] });
+    attachTag(f.db, f.ben, { itemId: mine.id, version: 1, name: "garten" });
+    expect(tagsOf(f, f.ben, mine.id)).toEqual(["Garten:-"]);
+    const adminItem = f.item(f.admin, { name: "Etui" });
+    const r = attachTag(f.db, f.admin, {
+      itemId: adminItem.id,
+      version: 1,
+      name: "verlobung-geheim",
+    });
+    expect(r.tagId).toBe(secret.id);
+    // The exact spelling reuses the hidden tag (names are unique exactly): the caller typed it already.
+    const again = attachTag(f.db, f.ben, { itemId: mine.id, version: 2, name: "Verlobung-Geheim" });
+    expect(again.tagId).toBe(secret.id);
   });
 });
 

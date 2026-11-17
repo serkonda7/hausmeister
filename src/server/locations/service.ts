@@ -103,7 +103,17 @@ export function getLocation(db: AppDb, ctx: AuthCtx, id: string): LocationDetail
   };
 }
 
-/** No sub-locations and no items at all (visibility ignored). */
+/**
+ * No sub-locations and no items at all (visibility ignored).
+ *
+ * Known, accepted trade-off (review finding F5): because a member may only
+ * delete a location that is truly empty, `canDelete` on the location page and
+ * the LOCATION_NOT_EMPTY refusal tell a member that a location which looks
+ * empty to them holds something they cannot see (another user's private item
+ * or a hidden sub-location). They learn only "something is there", never what.
+ * The alternative, deleting and moving hidden contents up silently, would
+ * change other people's items behind their backs; admins see everything anyway.
+ */
 function isTrulyEmpty(db: DbOrTx, id: string): boolean {
   const child = db
     .select({ id: locations.id })
@@ -227,6 +237,7 @@ export function deleteLocation(
   const id = parseInput(idSchema, raw?.id);
   return db.transaction((tx) => {
     const l = requireLocation(tx, id);
+    // Tells a member that hidden contents exist (accepted trade-off, see isTrulyEmpty).
     if (ctx.role !== "admin" && !isTrulyEmpty(tx, l.id))
       throw new ItemsError(409, "LOCATION_NOT_EMPTY");
     const childIds = tx

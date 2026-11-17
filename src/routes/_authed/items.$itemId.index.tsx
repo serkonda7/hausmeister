@@ -161,8 +161,10 @@ function ItemView(props: { detail: ItemDetail }) {
           <Show when={perms().canEdit}>
             <TypeAction detail={d()} />
           </Show>
-          <Show when={perms().canManage}>
+          <Show when={perms().canChangeOwner}>
             <OwnerAction detail={d()} user={ctx().user} />
+          </Show>
+          <Show when={perms().canManage}>
             <VisibilityAction detail={d()} />
             <DeleteAction detail={d()} />
           </Show>
@@ -250,13 +252,14 @@ function ItemView(props: { detail: ItemDetail }) {
         </Show>
       </Section>
 
-      <Show when={Object.keys(it().attributes).length}>
+      <Show when={Object.keys(it().attributes).length || Object.keys(d().hiddenReferences).length}>
         <Section title={m.item_type_fields({ type: d().type.name })} id="item-attributes">
           <AttributeList
             fields={d().type.effectiveFields}
             attributes={it().attributes}
             userName={(id) => d().references.users[id]}
             itemName={(id) => d().references.items[id]}
+            hiddenReferences={d().hiddenReferences}
           />
         </Section>
       </Show>

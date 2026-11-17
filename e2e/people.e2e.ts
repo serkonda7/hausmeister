@@ -1,3 +1,4 @@
+import { E2E_ORIGIN } from "./env";
 import { acceptInvite, expect, signIn, submitLogin, test, uniqueName, userMenu } from "./fixtures";
 
 test("admin invites a member, who accepts and sees no admin sections", async ({
@@ -52,18 +53,17 @@ test("sign out and sign in again with the password", async ({ newUser }) => {
   await expect(u.page.getByRole("heading", { name: `Hallo ${u.displayName}` })).toBeVisible();
 });
 
+const LOGIN_FAILED =
+  "Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen. Klappt es weiterhin nicht, wende dich an einen Admin.";
+
 test("a wrong password shows the German error", async ({ newUser, page }) => {
   const u = await newUser("member");
   await submitLogin(page, u.username, "definitely-wrong-pw");
-  await expect(page.getByRole("alert")).toHaveText(
-    "Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen.",
-  );
+  await expect(page.getByRole("alert")).toHaveText(LOGIN_FAILED);
   await expect(page).toHaveURL(/\/login/);
   // An unknown username gets exactly the same message.
   await submitLogin(page, "nobody_here", "definitely-wrong-pw");
-  await expect(page.getByRole("alert")).toHaveText(
-    "Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen.",
-  );
+  await expect(page.getByRole("alert")).toHaveText(LOGIN_FAILED);
 });
 
 test("register a passkey and sign in with it (virtual authenticator)", async ({ newUser }) => {
@@ -123,8 +123,11 @@ test("a disabled user is thrown out and cannot sign in", async ({ adminPage, new
   await expect(u.page).toHaveURL(/\/login/);
   await u.page.goto("/");
   await expect(u.page).toHaveURL(/\/login/);
+  // The correct password of a disabled account gets the same answer as a wrong
+  // one (a guessed password is not confirmed); the text points to an admin.
   await submitLogin(u.page, u.username, u.password);
-  await expect(u.page.getByRole("alert")).toHaveText("Dieses Konto ist deaktiviert.");
+  await expect(u.page.getByRole("alert")).toHaveText(LOGIN_FAILED);
+  await expect(u.page).toHaveURL(/\/login/);
 
   // Enabling lets them back in.
   await card.getByRole("button", { name: "Aktivieren" }).click();
@@ -165,4 +168,24 @@ test("admin manages groups and sets a password", async ({ adminPage, newUser }) 
   await u.page.goto("/");
   await expect(u.page).toHaveURL(/\/login/);
   await signIn(u.page, u.username, "set-by-admin-123");
+});
+
+test("Better Auth's update-user endpoint is closed to signed-in users", async ({ newUser }) => {
+  const u = await newUser("guest");
+  const res = await u.page.request.post("/api/auth/update-user", {
+    headers: { origin: E2E_ORIGIN },
+    data: { username: "taken_over", name: "x".repeat(5000), image: "https://example.com/x.png" },
+  });
+  expect(res.status()).toBe(404);
+  // The session itself still works, and nothing changed.
+  const session = await u.page.request.get("/api/auth/get-session");
+  expect(session.status()).toBe(200);
+  // Better Auth calls the display name `name`.
+  const body = (await session.json()) as {
+    user: { username: string; name: string; image: string | null };
+  };
+  expect(body.user).toMatchObject({ username: u.username, name: u.displayName, image: null });
+  // /health (public) tells only that the app is up: no item count, no versions.
+  const health = await u.page.request.get("/health");
+  expect(Object.keys(await health.json()).sort()).toEqual(["boots", "ok"]);
 });

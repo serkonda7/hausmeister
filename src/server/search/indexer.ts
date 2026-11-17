@@ -123,6 +123,24 @@ export function reindexItemsOfTypes(db: DbOrTx, typeIds: readonly string[]) {
   reindexItems(db, ids);
 }
 
+/**
+ * Reindexes the items whose attributes mention this user (values of `user`
+ * fields are indexed by display name). Matches the id anywhere in the stored
+ * attributes JSON (instr on the text: one scan of items, fine at household
+ * scale); an id that happens to sit in another field only costs a needless
+ * reindex. Returns the number of items reindexed.
+ */
+export function reindexItemsReferencingUser(db: DbOrTx, userId: string): number {
+  const ids = db
+    .select({ id: items.id })
+    .from(items)
+    .where(sql`instr(${items.attributes}, ${userId}) > 0`)
+    .all()
+    .map((r) => r.id);
+  reindexItems(db, ids);
+  return ids.length;
+}
+
 /** Drops and rewrites the whole index. Returns the number of indexed items. */
 export function rebuildSearchIndex(db: DbOrTx): number {
   return db.transaction((tx) => {

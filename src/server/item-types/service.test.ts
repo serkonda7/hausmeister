@@ -406,9 +406,14 @@ describe("items helpers", () => {
 
   test("listActiveUsers returns id and display name of active users only", () => {
     addUser("weg", "member", true);
-    const list = listActiveUsers(db);
+    const list = listActiveUsers(db, anna);
     expect(list.map((u) => u.displayName)).toEqual(["Admin", "Anna", "Ben", "Gast"]);
     expect(Object.keys(list[0]!).sort()).toEqual(["displayName", "id"]);
+    expect(listActiveUsers(db, admin)).toEqual(list);
+  });
+
+  test("guests do not get the user list", () => {
+    expect(() => listActiveUsers(db, gast)).toThrow(ItemTypeError);
   });
 
   test("item counts are only reported to admins", () => {

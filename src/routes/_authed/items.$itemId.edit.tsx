@@ -333,6 +333,7 @@ function EditForm(props: { initial: ItemDetail }) {
               fields={fields}
               idPrefix="edit-attr"
               itemName={(i) => props.initial.references.items[i]}
+              hiddenReferences={props.initial.hiddenReferences}
             />
           </section>
         </Show>

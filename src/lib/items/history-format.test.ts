@@ -120,3 +120,38 @@ test("a burst of uploads by one person becomes one entry with the file names", (
   expect(g[0]!.f.lines.map((l) => l.to)).toEqual(["d.png", "c.png", "b.png"]);
   expect(g[1]!.f.summary).toBe("x.png");
 });
+
+test("a kind change names the file and both kinds, and is not merged into upload runs", () => {
+  const f = formatHistoryEntry(
+    entry("attachment.kind_changed", {
+      attachmentId: "a1",
+      kind: { from: "other", to: "receipt" },
+      originalName: "bon.pdf",
+    }),
+    ctx,
+  );
+  expect(f.summary).toBe("bon.pdf: Sonstiges → Beleg");
+  expect(f.lines).toEqual([]);
+  const at = (min: number) => new Date(Date.UTC(2026, 0, 1, 12, min));
+  const ev = (id: string, action: string, min: number) => {
+    const e: HistoryEntry = {
+      id,
+      at: at(min),
+      action,
+      actor: { id: "a", name: "a" },
+      diff: {
+        originalName: `${id}.png`,
+        kind: action.endsWith("changed") ? { from: "other", to: "photo" } : "photo",
+      },
+    };
+    return { e, f: formatHistoryEntry(e, ctx) };
+  };
+  const g = groupFileRuns([
+    ev("4", "attachment.added", 4),
+    ev("3", "attachment.added", 3),
+    ev("2", "attachment.kind_changed", 2),
+    ev("1", "attachment.added", 1),
+  ]);
+  expect(g.map((x) => x.e.id)).toEqual(["4", "2", "1"]);
+  expect(g[0]!.f.summary).toBe("2 Dateien");
+});

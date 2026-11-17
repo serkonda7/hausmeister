@@ -19,6 +19,25 @@ import type { Env } from "../env";
 export const PASSWORD_MIN_LENGTH = 10;
 export const PASSWORD_MAX_LENGTH = 128;
 export const USERNAME_PATTERN = /^[a-z0-9_.]{3,30}$/;
+/**
+ * The Better Auth endpoints reachable over HTTP (paths below /api/auth). The
+ * handler (./handler.ts) answers 404 for every other path, so endpoints that
+ * bypass the app's account rules (e.g. /update-user: username, display name,
+ * image) and anything a Better Auth upgrade adds stay closed.
+ */
+export const ENABLED_AUTH_PATHS: ReadonlySet<string> = new Set([
+  "/sign-in/username", // password login (login page, lockout in ./handler.ts)
+  "/sign-out", // header menu
+  "/get-session", // auth client session checks
+  "/change-password", // account page (needs the current password)
+  "/passkey/generate-register-options", // account page: add a passkey (needs a session)
+  "/passkey/verify-registration",
+  "/passkey/generate-authenticate-options", // login page: sign in with a passkey
+  "/passkey/verify-authentication",
+  "/passkey/update-passkey", // account page: rename own passkey
+  "/passkey/delete-passkey", // account page: delete own passkey
+]);
+
 /** Error code returned when a disabled user tries to sign in. */
 export const ACCOUNT_DISABLED = "ACCOUNT_DISABLED";
 
@@ -50,7 +69,11 @@ export function createAuth({ db, env, startCookies = true, rateLimit = true }: C
     },
     // /is-username-available would reveal which usernames exist; there is no
     // email, so password-reset-by-mail is off too (an admin resets passwords).
+    // /update-user would let anyone change their own login name, display name
+    // and image past the app's rules (account page uses its own server function).
+    // The handler's ENABLED_AUTH_PATHS allowlist closes everything else too.
     disabledPaths: [
+      "/update-user",
       "/sign-up/email",
       "/sign-in/email",
       "/is-username-available",

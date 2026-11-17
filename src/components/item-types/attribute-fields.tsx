@@ -9,7 +9,12 @@
 import { createForm } from "@tanstack/solid-form";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Button } from "~/components/ui/button";
-import { activeFields, type FieldDefinition, validateFieldValue } from "~/lib/item-types/fields";
+import {
+  activeFields,
+  type FieldDefinition,
+  isMultiple,
+  validateFieldValue,
+} from "~/lib/item-types/fields";
 import { m } from "~/paraglide/messages";
 import { FieldInput, isGroupInput } from "./field-input";
 import type { ItemSearchFn } from "./pickers";
@@ -37,6 +42,8 @@ export type AttributeFieldsProps = {
   disabled?: boolean;
   searchItems?: ItemSearchFn;
   itemName?: (id: string) => string | undefined;
+  /** ItemDetail.hiddenReferences: per `item` field, how many references the caller cannot see. */
+  hiddenReferences?: Record<string, number>;
 };
 
 const errorText = (e: unknown): string =>
@@ -64,6 +71,7 @@ export function AttributeFields(props: AttributeFieldsProps) {
                 disabled={props.disabled}
                 searchItems={props.searchItems}
                 itemName={props.itemName}
+                hiddenCount={props.hiddenReferences?.[field.key] ?? 0}
               />
             )}
           </props.form.Field>
@@ -80,6 +88,7 @@ function FieldRow(props: {
   disabled?: boolean;
   searchItems?: ItemSearchFn;
   itemName?: (id: string) => string | undefined;
+  hiddenCount?: number;
 }) {
   const error = () => {
     const meta = props.api().state.meta;
@@ -87,9 +96,19 @@ function FieldRow(props: {
   };
   const helpId = () => `${props.id}-help`;
   const errorId = () => `${props.id}-error`;
+  const hiddenId = () => `${props.id}-hidden`;
+  const hiddenText = () => {
+    const n = props.hiddenCount ?? 0;
+    if (!n) return "";
+    if (isMultiple(props.field)) return m.field_hidden_references_multi({ count: n });
+    return props.api().state.value
+      ? m.field_hidden_reference_replaced()
+      : m.field_hidden_reference_single();
+  };
   const describedBy = () =>
-    [props.field.help ? helpId() : "", error() ? errorId() : ""].filter(Boolean).join(" ") ||
-    undefined;
+    [props.field.help ? helpId() : "", hiddenText() ? hiddenId() : "", error() ? errorId() : ""]
+      .filter(Boolean)
+      .join(" ") || undefined;
   const required = () => props.field.required === true && props.field.kind !== "boolean";
   const labelText = () => (
     <>
@@ -119,6 +138,11 @@ function FieldRow(props: {
   );
   const footer = () => (
     <>
+      <Show when={hiddenText()}>
+        <p id={hiddenId()} class="text-sm text-muted-foreground" data-testid="hidden-reference">
+          {hiddenText()}
+        </p>
+      </Show>
       <Show when={props.field.help}>
         <p id={helpId()} class="text-sm text-muted-foreground">
           {props.field.help}

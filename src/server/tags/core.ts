@@ -1,14 +1,40 @@
 // Tag helpers shared by the items and tags services (run inside their
 // transactions). Tag names are matched case-insensitively ("Garten" and
 // "garten" are one tag); the first spelling wins.
-import { asc, eq, inArray } from "drizzle-orm";
+//
+// Matching only considers tags the caller can see (tagVisibleWhere), so typing
+// a name never reveals the spelling or colour of a tag that is used only on
+// items the caller cannot see. Trade-off: typing a case variant of such a
+// hidden tag ("verlobung-geheim" for a hidden "Verlobung-Geheim") creates a
+// second tag in the typed spelling (names are unique exactly, so this is
+// allowed); an admin can merge the two on the tags page. Typing the hidden
+// tag's exact spelling reuses it: the caller already wrote the full name, and
+// the unique name leaves no other choice but refusing, which would confirm the
+// tag's existence just the same (reuse also shows its colour, if any).
+import { and, asc, eq, exists, inArray, not, or, type SQL, sql } from "drizzle-orm";
 import type { TagRef } from "../../lib/items/types";
+import { visibleItemsWhere } from "../authz";
 import type { AuthCtx } from "../authz/ctx";
 import type { DbOrTx } from "../db/client";
-import { itemTags, tags } from "../db/schema";
+import { items, itemTags, tags } from "../db/schema";
 import { recordCatalogEvent } from "../history/record";
 
 export const tagKey = (name: string) => name.trim().toLocaleLowerCase("de");
+
+/**
+ * Tags ctx can see: admins all; others the tags on at least one item they can
+ * see, plus unused tags. `undefined` means no restriction.
+ */
+export function tagVisibleWhere(ctx: AuthCtx, db: DbOrTx): SQL | undefined {
+  if (ctx.role === "admin") return undefined;
+  const onVisible = db
+    .select({ x: sql`1` })
+    .from(itemTags)
+    .innerJoin(items, eq(items.id, itemTags.itemId))
+    .where(and(eq(itemTags.tagId, tags.id), visibleItemsWhere(ctx)));
+  const used = db.select({ x: sql`1` }).from(itemTags).where(eq(itemTags.tagId, tags.id));
+  return or(exists(onVisible), not(exists(used)));
+}
 
 /** The tags with these names, creating missing ones (logged as tag.created). */
 export function findOrCreateTags(db: DbOrTx, ctx: AuthCtx, names: readonly string[]): TagRef[] {
@@ -18,16 +44,22 @@ export function findOrCreateTags(db: DbOrTx, ctx: AuthCtx, names: readonly strin
     if (name && !wanted.has(tagKey(name))) wanted.set(tagKey(name), name);
   }
   if (wanted.size === 0) return [];
-  const existing = new Map(
-    db
-      .select({ id: tags.id, name: tags.name, color: tags.color })
-      .from(tags)
-      .all()
-      .map((t) => [tagKey(t.name), t]),
-  );
+  const cols = { id: tags.id, name: tags.name, color: tags.color };
+  // Visible tags by key; an exact spelling beats another case variant.
+  const existing = new Map<string, TagRef>();
+  for (const t of db
+    .select(cols)
+    .from(tags)
+    .where(tagVisibleWhere(ctx, db))
+    .orderBy(asc(tags.name))
+    .all()) {
+    const key = tagKey(t.name);
+    const cur = existing.get(key);
+    if (!cur || (t.name === wanted.get(key) && cur.name !== t.name)) existing.set(key, t);
+  }
   const out: TagRef[] = [];
   for (const [key, name] of wanted) {
-    let t = existing.get(key);
+    let t = existing.get(key) ?? db.select(cols).from(tags).where(eq(tags.name, name)).get();
     if (!t) {
       t = db
         .insert(tags)

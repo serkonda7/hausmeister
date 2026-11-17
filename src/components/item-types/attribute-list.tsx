@@ -1,9 +1,11 @@
 // Read-only display of an item's attributes, with legacy values under "Alte Felder".
 import { For, Show } from "solid-js";
 import { formatAttributeValue, formatUnknown, splitAttributes } from "~/lib/item-types/display";
-import type { FieldDefinition } from "~/lib/item-types/fields";
+import { type FieldDefinition, isMultiple } from "~/lib/item-types/fields";
 import { m } from "~/paraglide/messages";
 import { usePickerUsers } from "./pickers";
+
+const HIDDEN_MARK = "\u0000hidden:";
 
 export function AttributeList(props: {
   /** Effective fields of the item's type (hidden ones included, for legacy labels). */
@@ -13,13 +15,30 @@ export function AttributeList(props: {
   itemName?: (id: string) => string | undefined;
   /** Hide the "Alte Felder" section (e.g. in compact cards). */
   hideLegacy?: boolean;
+  /** ItemDetail.hiddenReferences: shown as "Unbekannter Gegenstand", like a deleted one. */
+  hiddenReferences?: Record<string, number>;
 }) {
-  const users = usePickerUsers();
+  // Only fetch the user list when the caller gives no names (guests may not load it).
+  const users = usePickerUsers(() => !props.userName);
   const resolvers = () => ({
     userName: props.userName ?? users.nameOf,
-    itemName: props.itemName,
+    itemName: (id: string) => (id.startsWith(HIDDEN_MARK) ? undefined : props.itemName?.(id)),
   });
-  const parts = () => splitAttributes(props.fields, props.attributes);
+  // Placeholders for references the server left out; they resolve to no name.
+  const shown = () => {
+    const hidden = props.hiddenReferences ?? {};
+    if (!Object.keys(hidden).length) return props.attributes;
+    const out = { ...props.attributes };
+    for (const f of props.fields) {
+      const n = hidden[f.key];
+      if (f.kind !== "item" || !n) continue;
+      const marks = Array.from({ length: n }, (_, i) => `${HIDDEN_MARK}${i}`);
+      const cur = out[f.key];
+      out[f.key] = Array.isArray(cur) ? [...cur, ...marks] : isMultiple(f) ? marks : marks[0];
+    }
+    return out;
+  };
+  const parts = () => splitAttributes(props.fields, shown());
   const text = (e: { field?: FieldDefinition; value: unknown }) =>
     e.field ? formatAttributeValue(e.field, e.value, resolvers()) : formatUnknown(e.value);
   const swatch = (e: { field?: FieldDefinition; value: unknown }) =>

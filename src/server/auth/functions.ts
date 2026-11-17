@@ -7,7 +7,7 @@ import { getDb } from "../db/client";
 import { groupMembers, groups, passkeys, users } from "../db/schema";
 import { authMiddleware } from "./middleware";
 import { getAuthCtx } from "./session";
-import { validateDisplayName } from "./users";
+import { updateDisplayName } from "./users";
 
 export type SessionUser = {
   id: string;
@@ -55,11 +55,9 @@ export const getMyProfile = createServerFn({ method: "GET" })
 export const updateMyDisplayName = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(z.object({ displayName: z.string().max(200) }))
-  .handler(({ context: { ctx }, data }) => {
-    const displayName = validateDisplayName(data.displayName);
-    getDb().update(users).set({ displayName }).where(eq(users.id, ctx.userId)).run();
-    return { displayName };
-  });
+  .handler(({ context: { ctx }, data }) => ({
+    displayName: updateDisplayName(getDb(), ctx.userId, data.displayName),
+  }));
 
 /** Account page: the caller's passkeys (no key material). */
 export const listMyPasskeys = createServerFn({ method: "GET" })

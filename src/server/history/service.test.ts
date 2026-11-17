@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { setAttachmentKind } from "../attachments/service";
 import { canSeeMoney, type Level } from "../authz";
-import { events, items } from "../db/schema";
+import { attachments, events, items } from "../db/schema";
 import type { ItemsError } from "../items/errors";
 import {
   changeItemOwner,
@@ -162,5 +163,78 @@ describe("history", () => {
       err = e;
     }
     expect((err as ItemsError).code).toBe("ITEM_NOT_FOUND");
+  });
+});
+
+describe("attachments reclassified as receipts", () => {
+  test("every event of an attachment that is or was a receipt is hidden below edit", () => {
+    const f = setupFixture();
+    // Household-visible item of Anna's: Ben has view.
+    const a = f.item(f.anna, {
+      name: "Fernseher",
+      owner: { ownerKind: "user", ownerId: f.anna.userId },
+    });
+    const [bon, foto] = ["Kassenbon_TV_899EUR.jpg", "tv.pdf"].map((originalName) =>
+      f.db
+        .insert(attachments)
+        .values({
+          itemId: a.id,
+          kind: "other",
+          sha256: "0".repeat(64),
+          mime: "application/pdf",
+          bytes: 1,
+          originalName,
+          createdBy: f.anna.userId,
+        })
+        .returning()
+        .get(),
+    );
+    for (const x of [bon!, foto!])
+      f.db
+        .insert(events)
+        .values({
+          itemId: a.id,
+          actorId: f.anna.userId,
+          action: "attachment.added",
+          diff: { attachmentId: x.id, kind: "other", originalName: x.originalName },
+        })
+        .run();
+    const before = JSON.stringify(getItemHistory(f.db, f.ben, { itemId: a.id }));
+    expect(before).toContain("Kassenbon_TV_899EUR.jpg");
+
+    setAttachmentKind(f.db, f.anna, { attachmentId: bon!.id, kind: "receipt" });
+    const ev = f.db.select().from(events).where(eq(events.itemId, a.id)).all().at(-1)!;
+    expect(ev.action).toBe("attachment.kind_changed");
+    expect(ev.diff).toEqual({
+      attachmentId: bon!.id,
+      kind: { from: "other", to: "receipt" },
+      originalName: "Kassenbon_TV_899EUR.jpg",
+    });
+
+    const viewer = getItemHistory(f.db, f.ben, { itemId: a.id });
+    expect(JSON.stringify(viewer)).not.toContain("Kassenbon");
+    expect(JSON.stringify(viewer)).not.toContain(bon!.id);
+    expect(viewer.entries.filter((e) => e.action.startsWith("attachment.")).length).toBe(1);
+    // Turning it back into "other" does not bring the old events back.
+    setAttachmentKind(f.db, f.anna, { attachmentId: bon!.id, kind: "other" });
+    expect(JSON.stringify(getItemHistory(f.db, f.ben, { itemId: a.id }))).not.toContain(
+      "Kassenbon",
+    );
+    // Editors see the whole story.
+    const owner = getItemHistory(f.db, f.anna, { itemId: a.id });
+    expect(owner.entries.filter((e) => e.action === "attachment.kind_changed")).toHaveLength(2);
+    expect(JSON.stringify(owner)).toContain("Kassenbon_TV_899EUR.jpg");
+  });
+
+  test("redactEvent hides kind changes to or from receipt by the event alone", () => {
+    const e = {
+      action: "attachment.kind_changed",
+      diff: { attachmentId: "x", kind: { from: "receipt", to: "other" }, originalName: "bon.pdf" },
+    };
+    expect(redactEvent(e, "view")).toBeNull();
+    expect(redactEvent(e, "edit")).not.toBeNull();
+    const photo = { action: "attachment.added", diff: { attachmentId: "x", kind: "photo" } };
+    expect(redactEvent(photo, "view", new Set(["x"]))).toBeNull();
+    expect(redactEvent(photo, "view")).not.toBeNull();
   });
 });

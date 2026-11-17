@@ -101,10 +101,15 @@ export type ItemPermissions = {
   canUse: boolean;
   canEdit: boolean;
   canManage: boolean;
+  /** Admin, or the item's direct user owner (DESIGN §3.6 until transfers exist). */
+  canChangeOwner: boolean;
 };
 
 export type ItemDetail = {
-  /** The item (attributes in full, legacy values included). No money below edit. */
+  /**
+   * The item (attributes in full, legacy values included, except ids of items the
+   * caller cannot see: see hiddenReferences). No money below edit.
+   */
   item: SerializedItem<ItemRow>;
   type: {
     id: string;
@@ -125,6 +130,11 @@ export type ItemDetail = {
   attachments: SerializedAttachment[];
   /** Names for ids in `user`/`item` attributes; invisible items are left out. */
   references: { users: Record<string, string>; items: Record<string, string> };
+  /**
+   * `item` fields whose value references items the caller cannot see: key ->
+   * how many ids were left out of `item.attributes`. Saving keeps them.
+   */
+  hiddenReferences: Record<string, number>;
   permissions: ItemPermissions;
   /** The item's grants; only for callers with manage, otherwise null. */
   grants: GrantRow[] | null;
