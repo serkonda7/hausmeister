@@ -11,7 +11,18 @@ import { levelLabel, statusLabel } from "./labels";
 import type { HistoryEntry, HistoryPage, JsonValue } from "./types";
 
 export type HistoryLine = { key: string; label: string; from: string; to: string };
-export type FormattedEntry = { summary: string | null; lines: HistoryLine[] };
+/**
+ * `collapsed`: creation entries carry every initial value; the UI shows only
+ * the summary (the name) and keeps the lines behind "Anfangswerte" (the event
+ * itself still stores everything).
+ */
+export type FormattedEntry = {
+  summary: string | null;
+  lines: HistoryLine[];
+  collapsed: boolean;
+  /** Label of the collapsed lines (default "Anfangswerte (n)"). */
+  detailsLabel?: string;
+};
 
 export type HistoryContext = {
   names: HistoryPage["names"];
@@ -179,5 +190,62 @@ export function formatHistoryEntry(e: HistoryEntry, ctx: HistoryContext): Format
       to: formatHistoryValue(k, c.to, ctx),
     });
   }
-  return { summary, lines };
+  if (e.action === "item.created") {
+    const name = lines.find((l) => l.key === "name");
+    return {
+      summary: name?.to || summary,
+      lines: lines.filter((l) => l.key !== "name"),
+      collapsed: true,
+    };
+  }
+  return { summary, lines, collapsed: false };
+}
+
+const FILE_ACTIONS = new Set(["attachment.added", "attachment.removed"]);
+
+/**
+ * Uploading twenty photos at once writes twenty `attachment.added` events.
+ * Consecutive file events of the same kind by the same person within
+ * `windowMs` become one entry ("20 Dateien"), with the file names collapsed.
+ * Input and output are newest first.
+ */
+export function groupFileRuns<T extends { e: HistoryEntry; f: FormattedEntry }>(
+  list: readonly T[],
+  windowMs = 10 * 60_000,
+): T[] {
+  const out: T[] = [];
+  let i = 0;
+  while (i < list.length) {
+    const first = list[i]!;
+    let j = i + 1;
+    if (FILE_ACTIONS.has(first.e.action)) {
+      const at = (x: T) => new Date(x.e.at).getTime();
+      while (
+        j < list.length &&
+        list[j]!.e.action === first.e.action &&
+        (list[j]!.e.actor?.id ?? null) === (first.e.actor?.id ?? null) &&
+        at(first) - at(list[j]!) <= windowMs
+      )
+        j++;
+    }
+    const run = list.slice(i, j);
+    if (run.length < 2) out.push(first);
+    else
+      out.push({
+        ...first,
+        f: {
+          summary: m.item_history_files({ count: run.length }),
+          lines: run.map((x) => ({
+            key: x.e.id,
+            label: m.item_history_file(),
+            from: "",
+            to: x.f.summary ?? "",
+          })),
+          collapsed: true,
+          detailsLabel: m.item_history_file_names(),
+        },
+      });
+    i = j;
+  }
+  return out;
 }

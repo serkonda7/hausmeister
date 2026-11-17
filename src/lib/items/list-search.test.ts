@@ -170,3 +170,30 @@ test("activeFilterCount ignores q, sort and view", () => {
     }),
   ).toBe(5);
 });
+
+describe("unplaced and price range in the URL", () => {
+  test("parse: flags and euros (German or dot decimals), bad values dropped", () => {
+    expect(parseItemsSearch({ unplaced: "1", pmin: "12,5", pmax: "100" })).toEqual({
+      unplaced: true,
+      pmin: 12.5,
+      pmax: 100,
+    });
+    expect(parseItemsSearch({ pmin: "-3", pmax: "abc" })).toEqual({});
+    expect(parseItemsSearch({ pmin: 9.999 })).toEqual({ pmin: 10 });
+    // unplaced wins over a location
+    expect(parseItemsSearch({ unplaced: "1", loc: "l" })).toEqual({ unplaced: true });
+  });
+
+  test("map to server input in cents; count as one filter each", () => {
+    expect(toSearchFilters({ unplaced: true, pmin: 12.5, pmax: 0.1 })).toEqual({
+      unplaced: true,
+      priceMin: 1250,
+      priceMax: 10,
+    });
+    expect(toSearchFilters({ loc: "l" })).toEqual({ locationId: "l" });
+    expect(activeFilterCount({ unplaced: true, pmin: 1, pmax: 2 })).toBe(2);
+    expect(patchSearch({ unplaced: true }, { unplaced: undefined, loc: "l" })).toEqual({
+      loc: "l",
+    });
+  });
+});

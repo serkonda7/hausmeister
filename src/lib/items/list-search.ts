@@ -31,6 +31,11 @@ export type ItemsSearch = {
   mine?: boolean;
   gone?: boolean;
   low?: boolean;
+  /** Neither a location nor a container ("noch nicht weggeräumt"). Wins over `loc`. */
+  unplaced?: boolean;
+  /** Price range in euros (inclusive); the server only matches prices the caller may see. */
+  pmin?: number;
+  pmax?: number;
   sort?: ItemSort;
   view?: ItemView;
   /** Attribute filters of the chosen type (ignored without `type`). */
@@ -39,6 +44,11 @@ export type ItemsSearch = {
 
 const id = z.string().min(1).max(64);
 const ownerTokenSchema = z.string().regex(/^(household|(user|group):[^\s:]{1,64})$/);
+/** Euros in the URL: "12", "12.5" or "12,50"; at most two decimals, 0..1e10. */
+const euros = z
+  .union([z.number(), z.string().transform((v) => Number(v.trim().replace(",", ".")))])
+  .pipe(z.number().finite().min(0).max(1e10))
+  .transform((v) => Math.round(v * 100) / 100);
 const flag = z
   .union([z.boolean(), z.literal("1"), z.literal("true"), z.literal(1)])
   .transform(() => true);
@@ -78,6 +88,9 @@ export function parseItemsSearch(raw: Record<string, unknown>): ItemsSearch {
     mine: one(flag, raw.mine),
     gone: one(flag, raw.gone),
     low: one(flag, raw.low),
+    unplaced: one(flag, raw.unplaced),
+    pmin: one(euros, raw.pmin),
+    pmax: one(euros, raw.pmax),
     sort: one(z.enum(ITEM_SORTS), raw.sort),
     view: one(z.enum(ITEM_VIEWS), raw.view),
     attr: type ? listOf(attributeFilterInput, 20, raw.attr) : undefined,
@@ -91,12 +104,15 @@ export function cleanSearch(s: ItemsSearch): ItemsSearch {
   if (s.q?.trim()) out.q = s.q.trim();
   if (s.type) out.type = s.type;
   if (s.owner?.length) out.owner = s.owner;
-  if (s.loc) out.loc = s.loc;
+  if (s.unplaced) out.unplaced = true;
+  else if (s.loc) out.loc = s.loc;
   if (s.status?.length) out.status = s.status;
   if (s.tag?.length) out.tag = s.tag;
   if (s.mine) out.mine = true;
   if (s.gone && !s.status?.length) out.gone = true;
   if (s.low) out.low = true;
+  if (s.pmin !== undefined) out.pmin = s.pmin;
+  if (s.pmax !== undefined) out.pmax = s.pmax;
   if (s.sort && s.sort !== defaultSort(s)) out.sort = s.sort;
   if (s.view && s.view !== "grid") out.view = s.view;
   const attr = s.type ? s.attr?.filter(isActiveAttributeFilter) : undefined;
@@ -150,7 +166,10 @@ export function toSearchFilters(s: ItemsSearch): SearchFilters {
   const owners = (s.owner ?? []).map(parseOwnerToken).filter((o) => o !== null);
   if (owners.length) f.owners = owners;
   if (s.mine) f.mine = true;
-  if (s.loc) f.locationId = s.loc;
+  if (s.unplaced) f.unplaced = true;
+  else if (s.loc) f.locationId = s.loc;
+  if (s.pmin !== undefined) f.priceMin = Math.round(s.pmin * 100);
+  if (s.pmax !== undefined) f.priceMax = Math.round(s.pmax * 100);
   if (s.status?.length) f.statuses = s.status;
   else if (s.gone) f.includeGone = true;
   if (s.tag?.length) f.tagIds = s.tag;
@@ -169,7 +188,8 @@ export function activeFilterCount(s: ItemsSearch): number {
   return (
     (s.type ? 1 : 0) +
     (s.owner?.length ?? 0) +
-    (s.loc ? 1 : 0) +
+    (s.loc || s.unplaced ? 1 : 0) +
+    (s.pmin !== undefined || s.pmax !== undefined ? 1 : 0) +
     (s.status?.length ?? 0) +
     (s.tag?.length ?? 0) +
     (s.mine ? 1 : 0) +

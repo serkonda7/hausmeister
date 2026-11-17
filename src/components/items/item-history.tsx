@@ -6,9 +6,9 @@ import { formatDateTime } from "~/lib/format";
 import type { FieldDefinition } from "~/lib/item-types/fields";
 import { itemTypesQuery } from "~/lib/item-types/queries";
 import { flattenTree } from "~/lib/item-types/tree";
-import { formatHistoryEntry } from "~/lib/items/history-format";
+import { formatHistoryEntry, groupFileRuns, type HistoryLine } from "~/lib/items/history-format";
 import { historyActionLabel } from "~/lib/items/labels";
-import type { HistoryPage } from "~/lib/items/types";
+import type { HistoryEntry, HistoryPage } from "~/lib/items/types";
 import { actionErrorText } from "~/lib/run-action";
 import { m } from "~/paraglide/messages";
 import { getItemHistoryFn } from "~/server/history/functions";
@@ -24,6 +24,26 @@ export const itemHistoryPagesQuery = (itemId: string) =>
     getNextPageParam: (last: HistoryPage) => last.nextCursor,
   });
 
+function HistoryLines(props: { e: HistoryEntry; lines: HistoryLine[] }) {
+  return (
+    <ul class="grid gap-0.5 text-sm">
+      <For each={props.lines}>
+        {(l) => (
+          <li class="break-words">
+            <span class="text-muted-foreground">{l.label}: </span>
+            <Show when={props.e.action !== "item.created" && l.from !== ""}>
+              <span>{l.from}</span>
+              <span aria-hidden="true"> → </span>
+              <span class="sr-only"> {m.item_history_to()} </span>
+            </Show>
+            <span class="font-medium">{l.to}</span>
+          </li>
+        )}
+      </For>
+    </ul>
+  );
+}
+
 export function ItemHistory(props: { itemId: string; fields: readonly FieldDefinition[] }) {
   const q = useInfiniteQuery(() => itemHistoryPagesQuery(props.itemId));
   const types = useQuery(() => itemTypesQuery());
@@ -36,7 +56,7 @@ export function ItemHistory(props: { itemId: string; fields: readonly FieldDefin
     for (const p of pages)
       for (const k of Object.keys(names) as (keyof HistoryPage["names"])[])
         Object.assign(names[k], p.names[k]);
-    return pages
+    const list = pages
       .flatMap((p) => p.entries)
       .map((e) => ({
         e,
@@ -46,6 +66,7 @@ export function ItemHistory(props: { itemId: string; fields: readonly FieldDefin
           typeName: (id) => typeNames().get(id),
         }),
       }));
+    return groupFileRuns(list);
   });
   return (
     <div class="grid gap-3">
@@ -73,21 +94,14 @@ export function ItemHistory(props: { itemId: string; fields: readonly FieldDefin
                 {e.actor?.name ?? m.history_unknown_actor()}
               </div>
               <Show when={f.lines.length}>
-                <ul class="grid gap-0.5 text-sm">
-                  <For each={f.lines}>
-                    {(l) => (
-                      <li class="break-words">
-                        <span class="text-muted-foreground">{l.label}: </span>
-                        <Show when={e.action !== "item.created"}>
-                          <span>{l.from}</span>
-                          <span aria-hidden="true"> → </span>
-                          <span class="sr-only"> {m.item_history_to()} </span>
-                        </Show>
-                        <span class="font-medium">{l.to}</span>
-                      </li>
-                    )}
-                  </For>
-                </ul>
+                <Show when={f.collapsed} fallback={<HistoryLines e={e} lines={f.lines} />}>
+                  <details class="text-sm">
+                    <summary class="min-h-8 cursor-pointer text-muted-foreground">
+                      {f.detailsLabel ?? m.item_history_initial_values({ count: f.lines.length })}
+                    </summary>
+                    <HistoryLines e={e} lines={f.lines} />
+                  </details>
+                </Show>
               </Show>
             </li>
           )}

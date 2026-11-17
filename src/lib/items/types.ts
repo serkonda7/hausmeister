@@ -196,6 +196,8 @@ export type SearchFacets = {
   attributes: AttributeFacet[] | null;
   /** Price filter/sort is meaningful (some matching item shows its price). */
   priceAvailable: boolean;
+  /** Visible items with neither a location nor a container (location filter left out). */
+  unplacedCount: number;
 };
 
 export type HistoryActor = { id: string; name: string } | null;

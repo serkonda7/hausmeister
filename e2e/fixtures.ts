@@ -12,7 +12,13 @@
 //   (sign-in, invite accept) never leak between tests.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { type Browser, test as base, expect, type Page } from "@playwright/test";
+import {
+  type Browser,
+  type BrowserContext,
+  test as base,
+  expect,
+  type Page,
+} from "@playwright/test";
 import { ADMIN_STATE, E2E_DB, E2E_ORIGIN } from "./env";
 
 export { expect };
@@ -85,16 +91,42 @@ export async function userMenu(page: Page, entry: "Mein Konto" | "Abmelden") {
   await page.getByRole("menuitem", { name: entry }).click();
 }
 
-async function newPage(browser: Browser, ip: string, storageState?: string) {
+/**
+ * CSP guard (DESIGN §8.4): every page of every test reports Content Security
+ * Policy violations, from the `securitypolicyviolation` event and from console
+ * errors; the test fails at teardown if there were any.
+ */
+const CSP_MARK = "[csp-violation]";
+export function watchCsp(context: BrowserContext, violations: string[]) {
+  void context.addInitScript((mark) => {
+    document.addEventListener("securitypolicyviolation", (e) => {
+      console.error(
+        `${mark} ${e.violatedDirective} blocked ${e.blockedURI || "inline"} at ${e.sourceFile}:${e.lineNumber} ${e.sample}`,
+      );
+    });
+  }, CSP_MARK);
+  const onPage = (page: Page) =>
+    page.on("console", (msg) => {
+      const text = msg.text();
+      if (text.includes(CSP_MARK) || /Content Security Policy/i.test(text))
+        violations.push(`${page.url()}: ${text}`);
+    });
+  context.pages().forEach(onPage);
+  context.on("page", onPage);
+}
+
+async function newPage(browser: Browser, ip: string, violations: string[], storageState?: string) {
   const context = await browser.newContext({
     storageState,
     extraHTTPHeaders: { "x-forwarded-for": ip },
   });
+  watchCsp(context, violations);
   return context.newPage();
 }
 
 type Fixtures = {
   clientIp: string;
+  cspViolations: string[];
   adminPage: Page;
   newUser: (role?: Role, displayName?: string) => Promise<TestUser>;
 };
@@ -103,12 +135,22 @@ export const test = base.extend<Fixtures>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured first argument
   clientIp: async ({}, use, info) => use(fakeIp(`${info.testId}:${info.retry}`)),
   extraHTTPHeaders: async ({ clientIp }, use) => use({ "x-forwarded-for": clientIp }),
-  adminPage: async ({ browser, clientIp }, use) => {
-    const page = await newPage(browser, clientIp, ADMIN_STATE);
+  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured first argument
+  cspViolations: async ({}, use) => {
+    const violations: string[] = [];
+    await use(violations);
+    expect(violations, "Content Security Policy violations").toEqual([]);
+  },
+  context: async ({ context, cspViolations }, use) => {
+    watchCsp(context, cspViolations);
+    await use(context);
+  },
+  adminPage: async ({ browser, clientIp, cspViolations }, use) => {
+    const page = await newPage(browser, clientIp, cspViolations, ADMIN_STATE);
     await use(page);
     await page.context().close();
   },
-  newUser: async ({ browser, clientIp }, use) => {
+  newUser: async ({ browser, clientIp, cspViolations }, use) => {
     const pages: Page[] = [];
     await use(async (role = "member", displayName) => {
       const username = uniqueName(role);
@@ -118,7 +160,7 @@ export const test = base.extend<Fixtures>({
         displayName: displayName ?? `Test ${username.slice(-6)}`,
         role,
       };
-      const page = await newPage(browser, clientIp);
+      const page = await newPage(browser, clientIp, cspViolations);
       pages.push(page);
       await acceptInvite(page, cliInvite(role), u);
       return { ...u, page };

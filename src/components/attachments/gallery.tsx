@@ -21,12 +21,20 @@ import { runAttachmentAction as act } from "./action";
 import { canEditAttachments } from "./format";
 import { attachmentsQuery, attachmentsQueryKey } from "./queries";
 
+/** Thumbnails shown before "Alle n Fotos anzeigen" (two rows on a phone). */
+export const GALLERY_PREVIEW = 6;
+
 export function PhotoGallery(props: { itemId: string; level: Level; class?: string }) {
   const qc = useQueryClient();
   const q = useQuery(() => attachmentsQuery(props.itemId));
   const photos = createMemo(() => (q.data?.attachments ?? []).filter((a) => a.kind === "photo"));
   const editable = () => canEditAttachments(q.data?.level ?? props.level);
   const [open, setOpen] = createSignal<number | null>(null);
+  const [all, setAll] = createSignal(false);
+  // The viewer still pages through every photo; only the grid is shortened.
+  const shown = createMemo(() =>
+    all() || photos().length <= GALLERY_PREVIEW + 1 ? photos() : photos().slice(0, GALLERY_PREVIEW),
+  );
   const current = () => {
     const i = open();
     return i === null ? undefined : photos()[i];
@@ -87,7 +95,7 @@ export function PhotoGallery(props: { itemId: string; level: Level; class?: stri
         }
       >
         <ul class="grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label={m.attachments_photos()}>
-          <For each={photos()}>
+          <For each={shown()}>
             {(p, i) => (
               <li class="relative">
                 <button
@@ -112,6 +120,21 @@ export function PhotoGallery(props: { itemId: string; level: Level; class?: stri
             )}
           </For>
         </ul>
+        <Show when={photos().length > shown().length || all()}>
+          <Show when={photos().length > GALLERY_PREVIEW + 1}>
+            <Button
+              variant="outline"
+              size="sm"
+              class="justify-self-start"
+              aria-expanded={all()}
+              onClick={() => setAll(!all())}
+            >
+              {all()
+                ? m.attachments_show_fewer()
+                : m.attachments_show_all({ total: photos().length })}
+            </Button>
+          </Show>
+        </Show>
       </Show>
 
       <Dialog open={open() !== null} onOpenChange={(o) => !o && setOpen(null)}>

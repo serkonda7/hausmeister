@@ -246,6 +246,8 @@ export const searchFiltersInput = z.object({
   locationScope: z.enum(["subtree", "direct"]).optional(),
   /** Items directly inside this container item. */
   containerId: idSchema.optional(),
+  /** Items with neither a location nor a container ("not put away yet"); wins over locationId. */
+  unplaced: z.boolean().optional(),
   /** Any of these statuses. Given explicitly, gone statuses are included. */
   statuses: z.array(z.enum(ITEM_STATUSES)).max(ITEM_STATUSES.length).optional(),
   /** Without `statuses`: also show gone items (archived, given away, sold, disposed). */

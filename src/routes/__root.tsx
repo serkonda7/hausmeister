@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanstack/solid-router";
-import type { JSX } from "solid-js";
+import { type JSX, onMount } from "solid-js";
 import { HydrationScript } from "solid-js/web";
 import { Toaster } from "~/components/ui/toast";
+import { markHydrated } from "~/lib/hydrated";
 import { sessionQuery } from "~/lib/session-query";
 import { m } from "~/paraglide/messages";
 import type { RouterContext } from "~/router";
@@ -23,8 +24,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     links: [{ rel: "stylesheet", href: appCss }],
   }),
   notFoundComponent: () => (
-    <main class="mx-auto max-w-3xl p-4">
+    <main class="mx-auto grid max-w-3xl justify-items-start gap-3 p-4">
       <p>{m.error_not_found()}</p>
+      {/* A plain link: works even when the page failed before hydration. */}
+      <a href="/" class="text-primary underline underline-offset-4">
+        {m.error_back_home()}
+      </a>
     </main>
   ),
   component: () => (
@@ -35,6 +40,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootDocument(props: { children: JSX.Element }) {
+  // Every page, including login and invite (outside the app shell).
+  onMount(markHydrated);
   return (
     <html lang="de">
       <head>

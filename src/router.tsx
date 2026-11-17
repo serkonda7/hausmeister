@@ -1,6 +1,9 @@
+// Must stay the first import: configures Zod before any schema is built.
+import "./lib/zod-config";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/solid-query";
 import { createRouter } from "@tanstack/solid-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/solid-router-ssr-query";
+import { currentCspNonce } from "./lib/csp-nonce";
 import { goToLogin, isSignedOutError } from "./lib/error-text";
 import { routeTree } from "./routeTree.gen";
 
@@ -30,6 +33,8 @@ export function getRouter() {
     defaultPreload: "intent",
     // Loaders should read through queryClient.ensureQueryData; Query owns caching.
     defaultPreloadStaleTime: 0,
+    // CSP nonce for every inline script during SSR (undefined in the browser and in dev).
+    ssr: { nonce: currentCspNonce() },
   });
   // Dehydrates queries fetched during SSR, hydrates them in the browser and
   // wraps the app in <QueryClientProvider>.

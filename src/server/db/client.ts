@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { getEnv } from "../env";
@@ -43,7 +43,15 @@ export function openDatabase(path: string, opts: { snapshotBeforeMigrate?: boole
   return db;
 }
 
-/** DESIGN §8.6: take a DB snapshot before migrations run on an existing database. */
+/** How many pre-migration snapshots `snapshotIfPending` keeps per database. */
+export const KEEP_SNAPSHOTS = 3;
+
+/**
+ * DESIGN §8.6: take a DB snapshot before migrations run on an existing
+ * database, as `<db>.pre-migrate-<ISO time>.bak` next to it. Only the newest
+ * KEEP_SNAPSHOTS are kept. Litestream replicates only the configured path
+ * (deploy/litestream.yml), so these files are local only and never restored.
+ */
 function snapshotIfPending(sqlite: Database, path: string, folder: string) {
   const journal = JSON.parse(readFileSync(join(folder, "meta", "_journal.json"), "utf8")) as {
     entries: unknown[];
@@ -60,9 +68,34 @@ function snapshotIfPending(sqlite: Database, path: string, folder: string) {
   const target = `${path}.pre-migrate-${new Date().toISOString().replace(/[:.]/g, "-")}.bak`;
   sqlite.query("VACUUM INTO ?").run(target);
   console.log(`[db] snapshot before migrations: ${target}`);
+  for (const old of pruneSnapshots(path, KEEP_SNAPSHOTS)) {
+    console.log(`[db] removed old snapshot: ${old}`);
+  }
 }
 
-let instance: AppDb | undefined;
+/**
+ * Deletes all but the newest `keep` pre-migration snapshots of `path`
+ * (the ISO timestamp in the name sorts chronologically). Returns the removed paths.
+ */
+export function pruneSnapshots(path: string, keep: number): string[] {
+  const dir = dirname(path);
+  const prefix = `${basename(path)}.pre-migrate-`;
+  const snaps = readdirSync(dir)
+    .filter((f) => f.startsWith(prefix) && f.endsWith(".bak"))
+    .sort()
+    .reverse();
+  const removed: string[] = [];
+  for (const f of snaps.slice(keep)) {
+    rmSync(join(dir, f), { force: true });
+    removed.push(join(dir, f));
+  }
+  return removed;
+}
+
+// On globalThis: the Nitro startup plugin and the lazily loaded app bundle may
+// each carry their own copy of this module, and both must share one connection
+// (so shutdown can close it).
+const G = globalThis as unknown as { __hausmeisterDb?: AppDb };
 
 /**
  * The process-wide database (DATABASE_PATH). The first call opens it, runs
@@ -70,9 +103,40 @@ let instance: AppDb | undefined;
  * `createTestDb()` from ./test-db instead.
  */
 export function getDb(): AppDb {
-  if (instance) return instance;
+  if (G.__hausmeisterDb) return G.__hausmeisterDb;
   const db = openDatabase(getEnv().DATABASE_PATH, { snapshotBeforeMigrate: true });
   db.insert(schema.boots).values({ at: new Date().toISOString() }).run();
-  instance = db;
+  G.__hausmeisterDb = db;
   return db;
+}
+
+/**
+ * Closes the process-wide database at shutdown. A PASSIVE checkpoint first
+ * moves committed WAL frames into the main file without waiting for readers
+ * or resetting the WAL, so a running Litestream (which holds its own read
+ * connection and manages the WAL itself) is never disturbed.
+ */
+export function closeDb(): boolean {
+  const db = G.__hausmeisterDb;
+  if (!db) return false;
+  G.__hausmeisterDb = undefined;
+  closeDatabase(db);
+  return true;
+}
+
+/**
+ * Checkpoints (PASSIVE) and closes one connection. `close(true)` finalizes
+ * cached statements and closes now; plain `close()` would defer the close
+ * (and SQLite's final checkpoint) while any cached `query()` statement lives.
+ */
+export function closeDatabase(db: AppDb) {
+  try {
+    db.$client.exec("PRAGMA wal_checkpoint(PASSIVE)");
+  } finally {
+    try {
+      db.$client.close(true);
+    } catch {
+      db.$client.close(); // a statement is still running: close when it ends
+    }
+  }
 }

@@ -1,6 +1,6 @@
 # Hausmeister
 
-Family asset manager. Design: [DESIGN.md](DESIGN.md). Phase 0 (infra) is done, see [docs/PHASE0.md](docs/PHASE0.md); the MVP is in progress. Conventions and commands: [AGENTS.md](AGENTS.md).
+Family asset manager. Design: [DESIGN.md](DESIGN.md). Phase 0 (infra) is done, see [docs/PHASE0.md](docs/PHASE0.md); the MVP is feature-complete. Conventions and commands: [AGENTS.md](AGENTS.md).
 
 ```sh
 bun install
@@ -29,6 +29,12 @@ Accounts are created only through invite links; there is no open sign-up and no 
 4. Open the link, choose username, display name and password. You are signed in and invite everyone else under **Verwaltung → Einladungen**.
 
 **Recovery** (no admin can sign in): `docker compose exec app bun run create-admin-invite --force` creates an admin link even though admins exist. With the new account, set the old account's password under Verwaltung → Benutzer. Other options: `--role member|guest`, `--hours N`.
+
+## Operations
+
+- **Upgrade:** `docker compose build app && docker compose up -d` (or `pull` once images come from a registry). Before migrations run on an existing database the app writes `data/db/app.sqlite.pre-migrate-<time>.bak` next to it (`[db] snapshot before migrations` in the log) and keeps the newest three. They are local only: Litestream replicates just `app.sqlite`, and the restore test never sees them. To roll back an upgrade: stop the app, copy the snapshot over `app.sqlite` (delete `app.sqlite-wal`/`-shm`), start the previous image.
+- **Shutdown:** on SIGTERM/SIGINT (`docker stop`, every `up -d` that replaces the container) the app stops taking requests, lets open ones finish for up to 5 s (`SERVER_SHUTDOWN_TIMEOUT`), gives a running background job 3 s (an unfinished one runs again at the next start), checkpoints and closes SQLite and exits 0, usually in well under a second. `[shutdown] done` in the log confirms it.
+- **Content Security Policy:** production HTML pages send a strict CSP with a fresh nonce per request (`src/server/http/csp.ts`): scripts only from the app itself or with that nonce, no inline scripts, no eval, no framing, images from the app plus `blob:` previews. `bun run dev` sends none (Vite's dev server needs inline scripts). A page that breaks with a CSP error in the browser console is a bug.
 
 ## Tests
 

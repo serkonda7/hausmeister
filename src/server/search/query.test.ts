@@ -260,6 +260,27 @@ describe("filters", () => {
     expect(names(f, f.ben, { priceMax: 2000 })).toEqual(["Straßenbesen"]);
     expect(names(f, f.gast, { priceMin: 0 })).toEqual([]);
   });
+
+  test("unplaced: neither location nor container; facet counts it, wins over locationId", () => {
+    const { f, loc } = world();
+    // "Jacke klein" is unplaced too, but given away (hidden by default).
+    const unplaced = ["Geheimes Tagebuch", "Schrauben M6", "Sommerjacke", "Winterjacke"];
+    expect(names(f, f.anna, { unplaced: true })).toEqual(unplaced);
+    // Items in a container are placed, even if the container has a location.
+    expect(names(f, f.anna, { unplaced: true })).not.toContain("Stichsäge");
+    expect(names(f, f.anna, { unplaced: true, locationId: loc.garage.id })).toEqual(unplaced);
+    expect(names(f, f.anna, { unplaced: true, includeGone: true })).toContain("Jacke klein");
+    // Visibility still applies: Ben does not see Anna's private diary either way.
+    expect(names(f, f.ben, { unplaced: true })).not.toContain("Geheimes Tagebuch");
+    expect(searchFacets(f.db, f.anna, {}).unplacedCount).toBe(unplaced.length);
+    expect(searchFacets(f.db, f.anna, { unplaced: true }).unplacedCount).toBe(unplaced.length);
+    expect(searchFacets(f.db, f.anna, { locationId: loc.garage.id }).unplacedCount).toBe(
+      unplaced.length,
+    );
+    expect(searchFacets(f.db, f.gast, {}).unplacedCount).toBe(
+      names(f, f.gast, { unplaced: true }).length,
+    );
+  });
 });
 
 describe("sorting and pagination", () => {

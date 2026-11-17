@@ -103,6 +103,13 @@ Server: `src/server/attachments/` (`service.ts` logic, `functions.ts` server fns
 - Helpers: `cliInvite(role)` (link from the CLI), `acceptInvite`, `signIn`, `submitLogin`, `userMenu(page, "Mein Konto" | "Abmelden")`, `uniqueName(prefix)`. Each test has its own `X-Forwarded-For`, so per-IP limits don't leak; use unique names, the DB is shared by all tests of a run.
 - Item helpers (`e2e/item-helpers.ts`): `addItem(page, {type, name, photo?, more?})` → id, `ownMore({private?, price?})`, `searchItems`, `results(page)`, `selectByText(select, /re/)`, `token()`, `photoFile()`. Visually hidden radios/checkboxes: click their label. Accessibility: `@axe-core/playwright` (`e2e/a11y.e2e.ts`).
 
+## Hardening (T9)
+- CSP (production only): every inline script needs the request nonce. Router scripts get it via `ssr.nonce` (`src/lib/csp-nonce.ts`); never add `<script>` or `<style>` elements by hand, never `eval`/`new Function` (Zod runs `jitless`, `src/lib/zod-config.ts` must stay the first import of `router.tsx`). `style` attributes are allowed. Every e2e test fails on a CSP violation (`cspViolations` fixture).
+- Slow links: use `useHydrated()` / `adoptTypedValue()` from `src/lib/hydrated.ts` for forms (submit disabled with "Lädt …" until hydrated; `<html data-hydrated>` is set in `__root.tsx`). Test with `slowLink()` in `e2e/hydration.e2e.ts`.
+- Shutdown: `src/server/shutdown.ts` (wired in the startup plugin). The DB connection is one per process (`getDb()`, on globalThis); close with `closeDb()`/`closeDatabase()`, never `$client.close()` alone. Long-running work must watch the job `signal`.
+- Quick add shows a type's required fields next to the name; keep it that way when adding field kinds.
+- List filters: `unplaced` (no location, no container) and `pmin`/`pmax` (euros) in `list-search.ts`; `SearchFacets.unplacedCount`.
+
 ## Gotchas
 - In page loaders, read data with `context.queryClient.ensureQueryData(opts)` and in the component with `useQuery(() => opts)`. The router dehydrates the cache for SSR.
 - Links to routes that don't exist yet fail typecheck. Cast them (`to={"/x" as "/"}`) until the route exists.

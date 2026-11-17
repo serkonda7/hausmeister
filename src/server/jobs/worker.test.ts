@@ -234,3 +234,34 @@ describe("worker", () => {
     expect(w.running).toBe(false);
   });
 });
+
+describe("worker stop (shutdown)", () => {
+  test("waits for a running job, or aborts it after timeoutMs and leaves it to rerun", async () => {
+    let release: () => void = () => {};
+    let aborted: unknown;
+    addJobHandler(registry, "slow", (_p, { signal }) => {
+      signal.addEventListener("abort", () => {
+        aborted = signal.reason;
+        release();
+      });
+      return new Promise<void>((r) => {
+        release = r;
+      });
+    });
+    const id = enqueueJob(db, "slow", {}, { runAt: new Date(T0 - 1) });
+    const w = createJobWorker({ db, registry, now: () => Date.now() + 2000, log: () => {} });
+    w.start();
+    await Bun.sleep(20); // the loop picks the job up
+    expect(row(id).lockedUntil).not.toBeNull();
+    const t0 = performance.now();
+    expect(await w.stop({ timeoutMs: 50 })).toBe(false);
+    expect(performance.now() - t0).toBeLessThan(500);
+    expect(String(aborted)).toContain("shutdown");
+    expect(w.running).toBe(false);
+
+    // A job that finishes in time: stop resolves true.
+    const w2 = createJobWorker({ db, registry: createJobRegistry(), log: () => {} });
+    w2.start();
+    expect(await w2.stop({ timeoutMs: 50 })).toBe(true);
+  });
+});

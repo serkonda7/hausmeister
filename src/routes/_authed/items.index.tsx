@@ -2,12 +2,13 @@
 // lives in the URL (src/lib/items/list-search.ts) so views can be bookmarked.
 import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup, onMount, Show } from "solid-js";
 import { ItemResults } from "~/components/items/item-card";
 import { ActiveFilterChips, ItemFilterSheet } from "~/components/items/item-filters";
 import { buttonVariants } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
 import { cn } from "~/lib/cn";
+import { adoptTypedValue, useHydrated } from "~/lib/hydrated";
 import { ITEM_SORTS, type ItemSort } from "~/lib/items/constants";
 import {
   activeFilterCount,
@@ -70,6 +71,11 @@ function ItemsPage() {
   );
   let timer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(timer));
+  // Text typed before hydration is kept (adoptTypedValue) and applied once ready.
+  const hydrated = useHydrated();
+  onMount(() => {
+    if (text().trim() !== (search().q ?? "")) applyText(true);
+  });
   const applyText = (replace: boolean) => {
     clearTimeout(timer);
     const q = text().trim();
@@ -123,6 +129,7 @@ function ItemsPage() {
           placeholder={m.items_search_placeholder()}
           enterkeyhint="search"
           autocomplete="off"
+          ref={adoptTypedValue(text, setText)}
           value={text()}
           onInput={(e) => {
             setText(e.currentTarget.value);
@@ -130,7 +137,13 @@ function ItemsPage() {
             timer = setTimeout(() => applyText(true), 350);
           }}
         />
-        <button type="submit" class={buttonVariants({ variant: "secondary" })}>
+        {/* Disabled until hydrated: Enter would otherwise reload the page natively. */}
+        <button
+          type="submit"
+          class={buttonVariants({ variant: "secondary" })}
+          disabled={!hydrated()}
+          aria-busy={!hydrated()}
+        >
           {m.items_search_submit()}
         </button>
       </form>

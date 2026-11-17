@@ -243,7 +243,9 @@ export function buildConditions(
     );
   }
   if (f.mine) conds.set("mine", ownedByCtx(ctx));
-  if (f.locationId) {
+  if (f.unplaced) {
+    conds.set("location", and(isNull(items.locationId), isNull(items.containerItemId)) as SQL);
+  } else if (f.locationId) {
     conds.set(
       "location",
       f.locationScope === "direct"
@@ -683,6 +685,20 @@ export function searchFacets(db: DbOrTx, ctx: AuthCtx, raw: SearchFilters): Sear
     total: totalOf(l.id),
   }));
 
+  // Unplaced: neither location nor container
+  const unplacedCount =
+    db
+      .select({ n: count() })
+      .from(items)
+      .where(
+        and(
+          whereOf(ctx, conds, ["location"]),
+          isNull(items.locationId),
+          isNull(items.containerItemId),
+        ),
+      )
+      .get()?.n ?? 0;
+
   // Tags
   const tagRows = db
     .select({ id: tags.id, name: tags.name, color: tags.color, n: count() })
@@ -738,6 +754,7 @@ export function searchFacets(db: DbOrTx, ctx: AuthCtx, raw: SearchFilters): Sear
     types,
     owners,
     locations: locs,
+    unplacedCount,
     tags: tagFacets,
     statuses,
     attributes: attributeFacets,

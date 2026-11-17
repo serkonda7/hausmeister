@@ -1,5 +1,7 @@
 // Quick add (DESIGN §5.1): pick a type, take or choose a photo, enter the
-// name, save. Everything else sits in "Weitere Angaben" on the same page.
+// name, save. Everything else sits in "Weitere Angaben" on the same page,
+// except fields the type requires: those show right below the name, so a
+// first save never fails on a field the user could not see.
 // The item is created first; photos are uploaded once it exists. A failed
 // upload keeps the item and the photos and offers a retry.
 import { createForm } from "@tanstack/solid-form";
@@ -24,6 +26,7 @@ import { VisibilityChoice } from "~/components/items/visibility-choice";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { MAX_FILE_BYTES } from "~/lib/attachments/rules";
 import { goToLogin } from "~/lib/error-text";
+import { useHydrated } from "~/lib/hydrated";
 import { activeFields } from "~/lib/item-types/fields";
 import { itemTypeQuery, itemTypesQuery } from "~/lib/item-types/queries";
 import { parseItemsError } from "~/lib/items/errors";
@@ -83,6 +86,8 @@ function NewItemPage() {
   const [uploadError, setUploadError] = createSignal<string | null>(null);
   const [uploadStatus, setUploadStatus] = createSignal("");
   const [touched, setTouched] = createSignal(false);
+  // Radios, photo inputs and the name are controlled: inert until hydrated.
+  const hydrated = useHydrated();
   const [moreOpen, setMoreOpen] = createSignal(!!(search().loc || search().container));
 
   // Remember the last type for the next quick add.
@@ -136,11 +141,20 @@ function NewItemPage() {
     parsed = parseBaseValues(base, { withPrice: true });
     setErrors(parsed.ok ? {} : parsed.errors);
     await form.handleSubmit();
-    const attrsInvalid = !form.state.isValid;
+    const required = new Set(requiredFields().map((f) => `attributes.${f.key}`));
+    const attrsInvalid = Object.entries(form.state.fieldMeta ?? {}).some(
+      ([k, meta]) => !required.has(k) && (meta?.errors?.length ?? 0) > 0,
+    );
     if ((!parsed.ok && Object.keys(parsed.errors).some((k) => k !== "name")) || attrsInvalid)
       setMoreOpen(true);
     if (!typeId()) document.getElementsByName("new-type")[0]?.focus();
     else if (!parsed.ok) focusFirstError("new", parsed.errors);
+    else {
+      const bad = requiredFields().find(
+        (f) => (form.state.fieldMeta?.[`attributes.${f.key}`]?.errors?.length ?? 0) > 0,
+      );
+      if (bad) document.getElementById(`new-attr-${bad.key}`)?.focus();
+    }
   }
 
   async function save(attrs: Record<string, unknown>) {
@@ -167,7 +181,8 @@ function NewItemPage() {
         onError: (err) => {
           const p = parseItemsError(err);
           if (p.code === "ATTRIBUTES_INVALID") {
-            setMoreOpen(true);
+            const req = new Set(requiredFields().map((f) => f.key));
+            if (Object.keys(p.fieldErrors).some((k) => !req.has(k))) setMoreOpen(true);
             applyAttributeErrors(form, p.fieldErrors, { idPrefix: "new-attr" });
           }
           return false;
@@ -217,6 +232,12 @@ function NewItemPage() {
     await navigate({ to: "/items/$itemId", params: { itemId: c.id } });
   }
 
+  // Required active fields go next to the name; the rest into "Weitere Angaben".
+  const requiredFields = () =>
+    activeFields(type.data?.effectiveFields ?? []).filter((f) => f.required);
+  const optionalFields = () =>
+    (type.data?.effectiveFields ?? []).filter((f) => !(f.required && !f.hidden));
+
   let camera!: HTMLInputElement;
   let picker!: HTMLInputElement;
 
@@ -255,191 +276,219 @@ function NewItemPage() {
         )}
       </Show>
 
-      <form class="grid gap-5" noValidate onSubmit={onSubmit} onInput={() => setTouched(true)}>
-        <Show
-          when={(types.data ?? []).length > 0}
-          fallback={
-            <p class="rounded-md border bg-muted p-3 text-sm">
-              {m.item_new_no_types()}{" "}
-              <Link to="/admin/types/new" class="text-primary underline">
-                {m.item_new_create_type()}
-              </Link>
-            </p>
-          }
-        >
-          <TypeChoice
-            name="new-type"
-            types={types.data ?? []}
-            value={typeId()}
-            onChange={(id) => {
-              setTypeId(id);
-              setTypeError(undefined);
-              setTouched(true);
-            }}
-            error={typeError()}
+      <form
+        class="grid gap-5"
+        noValidate
+        method="post"
+        onSubmit={onSubmit}
+        onInput={() => setTouched(true)}
+      >
+        <fieldset class="contents" disabled={!hydrated()} aria-busy={!hydrated()}>
+          <Show
+            when={(types.data ?? []).length > 0}
+            fallback={
+              <p class="rounded-md border bg-muted p-3 text-sm">
+                {m.item_new_no_types()}{" "}
+                <Link to="/admin/types/new" class="text-primary underline">
+                  {m.item_new_create_type()}
+                </Link>
+              </p>
+            }
+          >
+            <TypeChoice
+              name="new-type"
+              types={types.data ?? []}
+              value={typeId()}
+              onChange={(id) => {
+                setTypeId(id);
+                setTypeError(undefined);
+                setTouched(true);
+              }}
+              error={typeError()}
+              disabled={!!created()}
+            />
+          </Show>
+
+          <section class="grid gap-2" aria-labelledby="new-photos-h">
+            <h2 id="new-photos-h" class="text-sm font-medium">
+              {m.attachments_photos()}
+            </h2>
+            <Show when={photos().length}>
+              <ul
+                class="grid grid-cols-4 gap-2 sm:grid-cols-6"
+                aria-label={m.item_new_selected_photos()}
+              >
+                <For each={photos()}>
+                  {(p, i) => (
+                    <li class="relative">
+                      <img
+                        src={p.url}
+                        alt={m.attachments_photo_alt({ n: i() + 1, total: photos().length })}
+                        class="aspect-square w-full rounded-md border object-cover"
+                      />
+                      <button
+                        type="button"
+                        class="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-background/90 text-sm shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={m.item_new_remove_photo({ n: i() + 1 })}
+                        disabled={busy()}
+                        onClick={() => removePhoto(i())}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  )}
+                </For>
+              </ul>
+            </Show>
+            <div class="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy()}
+                onClick={() => camera.click()}
+              >
+                {m.attachments_take_photo()}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy()}
+                onClick={() => picker.click()}
+              >
+                {m.item_new_pick_photo()}
+              </Button>
+            </div>
+            <input
+              ref={camera}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              class="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={(e) => {
+                addPhotos(e.currentTarget.files);
+                e.currentTarget.value = "";
+              }}
+            />
+            <input
+              ref={picker}
+              type="file"
+              accept="image/*,.heic,.heif"
+              multiple
+              class="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+              data-testid="photo-input"
+              onChange={(e) => {
+                addPhotos(e.currentTarget.files);
+                e.currentTarget.value = "";
+              }}
+            />
+          </section>
+
+          <NameField
+            id="new-name"
+            value={base.name}
+            onInput={(v) => setBase("name", v)}
+            error={errors().name}
             disabled={!!created()}
           />
-        </Show>
 
-        <section class="grid gap-2" aria-labelledby="new-photos-h">
-          <h2 id="new-photos-h" class="text-sm font-medium">
-            {m.attachments_photos()}
-          </h2>
-          <Show when={photos().length}>
-            <ul
-              class="grid grid-cols-4 gap-2 sm:grid-cols-6"
-              aria-label={m.item_new_selected_photos()}
-            >
-              <For each={photos()}>
-                {(p, i) => (
-                  <li class="relative">
-                    <img
-                      src={p.url}
-                      alt={m.attachments_photo_alt({ n: i() + 1, total: photos().length })}
-                      class="aspect-square w-full rounded-md border object-cover"
-                    />
-                    <button
-                      type="button"
-                      class="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-background/90 text-sm shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label={m.item_new_remove_photo({ n: i() + 1 })}
-                      disabled={busy()}
-                      onClick={() => removePhoto(i())}
-                    >
-                      ✕
-                    </button>
-                  </li>
-                )}
-              </For>
-            </ul>
+          <Show when={requiredFields().length}>
+            <AttributeFields
+              form={form}
+              fields={requiredFields()}
+              idPrefix="new-attr"
+              disabled={!!created()}
+            />
           </Show>
-          <div class="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={busy()}
-              onClick={() => camera.click()}
-            >
-              {m.attachments_take_photo()}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy()}
-              onClick={() => picker.click()}
-            >
-              {m.item_new_pick_photo()}
-            </Button>
-          </div>
-          <input
-            ref={camera}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            class="sr-only"
-            tabIndex={-1}
-            aria-hidden="true"
-            onChange={(e) => {
-              addPhotos(e.currentTarget.files);
-              e.currentTarget.value = "";
-            }}
-          />
-          <input
-            ref={picker}
-            type="file"
-            accept="image/*,.heic,.heif"
-            multiple
-            class="sr-only"
-            tabIndex={-1}
-            aria-hidden="true"
-            data-testid="photo-input"
-            onChange={(e) => {
-              addPhotos(e.currentTarget.files);
-              e.currentTarget.value = "";
-            }}
-          />
-        </section>
 
-        <NameField
-          id="new-name"
-          value={base.name}
-          onInput={(v) => setBase("name", v)}
-          error={errors().name}
-          disabled={!!created()}
-        />
-
-        <details
-          class="group rounded-md border"
-          open={moreOpen()}
-          onToggle={(e) => setMoreOpen(e.currentTarget.open)}
-        >
-          <summary class="flex min-h-12 cursor-pointer items-center px-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            {m.item_new_more()}
-          </summary>
-          <div class="grid gap-5 border-t p-3">
-            <div class="grid gap-4 sm:grid-cols-2">
-              <div class="grid content-start gap-2">
-                <label for="new-owner" class="text-sm font-medium">
-                  {m.item_field_owner()}
-                </label>
-                <OwnerSelect
-                  id="new-owner"
-                  user={ctx().user}
-                  value={owner()}
-                  onChange={setOwner}
+          <details
+            class="group rounded-md border"
+            open={moreOpen()}
+            onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+          >
+            <summary class="flex min-h-12 cursor-pointer items-center px-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {m.item_new_more()}
+            </summary>
+            <div class="grid gap-5 border-t p-3">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid content-start gap-2">
+                  <label for="new-owner" class="text-sm font-medium">
+                    {m.item_field_owner()}
+                  </label>
+                  <OwnerSelect
+                    id="new-owner"
+                    user={ctx().user}
+                    value={owner()}
+                    onChange={setOwner}
+                    disabled={!!created()}
+                  />
+                </div>
+                <VisibilityChoice
+                  name="new-visibility"
+                  value={visibility()}
+                  onChange={setVisibility}
+                  householdOwned={owner().ownerKind === "household"}
                   disabled={!!created()}
                 />
               </div>
-              <VisibilityChoice
-                name="new-visibility"
-                value={visibility()}
-                onChange={setVisibility}
-                householdOwned={owner().ownerKind === "household"}
+              <LocationPicker
+                id="new-place"
+                value={place()}
+                onChange={setPlace}
                 disabled={!!created()}
               />
+              <ItemBaseFields
+                idPrefix="new"
+                values={base}
+                set={setBase}
+                errors={errors()}
+                withPrice
+                stock={type.data?.tracking === "stock"}
+                disabled={!!created()}
+              />
+              <Show when={type.data && activeFields(optionalFields()).length ? type.data : null}>
+                {(t) => (
+                  <section class="grid gap-3" aria-labelledby="new-attrs-h">
+                    <h2 id="new-attrs-h" class="font-medium">
+                      {m.item_type_fields({ type: t().name })}
+                    </h2>
+                    <AttributeFields
+                      form={form}
+                      fields={optionalFields()}
+                      idPrefix="new-attr"
+                      disabled={!!created()}
+                    />
+                  </section>
+                )}
+              </Show>
             </div>
-            <LocationPicker
-              id="new-place"
-              value={place()}
-              onChange={setPlace}
-              disabled={!!created()}
-            />
-            <ItemBaseFields
-              idPrefix="new"
-              values={base}
-              set={setBase}
-              errors={errors()}
-              withPrice
-              stock={type.data?.tracking === "stock"}
-              disabled={!!created()}
-            />
-            <Show when={type.data}>
-              {(t) => (
-                <section class="grid gap-3" aria-labelledby="new-attrs-h">
-                  <h2 id="new-attrs-h" class="font-medium">
-                    {m.item_type_fields({ type: t().name })}
-                  </h2>
-                  <AttributeFields
-                    form={form}
-                    fields={t().effectiveFields}
-                    idPrefix="new-attr"
-                    disabled={!!created()}
-                  />
-                </section>
-              )}
+          </details>
+
+          <div class="sticky bottom-20 z-10 -mx-4 border-t bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
+            <Button
+              type="submit"
+              size="lg"
+              class="w-full sm:w-auto"
+              disabled={busy() || !hydrated()}
+            >
+              {!hydrated()
+                ? m.common_loading()
+                : busy()
+                  ? m.item_saving()
+                  : created()
+                    ? m.attachments_retry()
+                    : m.common_save()}
+            </Button>
+            <Show when={uploadStatus()}>
+              <p role="status" class="mt-2 text-sm text-muted-foreground">
+                {uploadStatus()}
+              </p>
             </Show>
           </div>
-        </details>
-
-        <div class="sticky bottom-20 z-10 -mx-4 border-t bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
-          <Button type="submit" size="lg" class="w-full sm:w-auto" disabled={busy()}>
-            {busy() ? m.item_saving() : created() ? m.attachments_retry() : m.common_save()}
-          </Button>
-          <Show when={uploadStatus()}>
-            <p role="status" class="mt-2 text-sm text-muted-foreground">
-              {uploadStatus()}
-            </p>
-          </Show>
-        </div>
+        </fieldset>
       </form>
     </div>
   );

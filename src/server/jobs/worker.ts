@@ -105,6 +105,7 @@ export function createJobWorker(o: {
   let running = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let current: Promise<boolean> | undefined;
+  let currentAbort: AbortController | undefined;
   let lastPrune = 0;
 
   function scheduleRecurring(kind: string, entry: Entry) {
@@ -114,6 +115,7 @@ export function createJobWorker(o: {
 
   async function execute(job: Job, entry: Entry): Promise<void> {
     const ac = new AbortController();
+    currentAbort = ac;
     const beat = setInterval(
       () => {
         if (!heartbeat(db, job, now() + lockMs)) ac.abort(new Error("lease lost"));
@@ -132,6 +134,7 @@ export function createJobWorker(o: {
         }),
       ]);
     } finally {
+      currentAbort = undefined;
       clearInterval(beat);
       clearTimeout(timeout);
     }
@@ -209,11 +212,32 @@ export function createJobWorker(o: {
         timer = setTimeout(loop, 0);
       }
     },
-    async stop() {
+    /**
+     * Stops polling and waits for the running job. With `timeoutMs`, a job that
+     * is still running then gets its signal aborted and is left behind: its
+     * lease is released at the next start, so it runs again (handlers are
+     * idempotent). Resolves true when no job was left running.
+     */
+    async stop(opts: { timeoutMs?: number } = {}): Promise<boolean> {
       running = false;
       if (timer) clearTimeout(timer);
       timer = undefined;
-      await current?.catch(() => {});
+      const pending = current?.catch(() => false);
+      if (!pending) return true;
+      if (opts.timeoutMs === undefined) {
+        await pending;
+        return true;
+      }
+      let t: ReturnType<typeof setTimeout> | undefined;
+      const finished = await Promise.race([
+        pending.then(() => true),
+        new Promise<false>((r) => {
+          t = setTimeout(() => r(false), opts.timeoutMs);
+        }),
+      ]);
+      clearTimeout(t);
+      if (!finished) currentAbort?.abort(new Error("shutdown"));
+      return finished;
     },
     get running() {
       return running;
@@ -232,4 +256,9 @@ export function startJobWorker(db: AppDb = getDb()): JobWorker {
 /** Nudges the process worker after enqueueing (no-op when none runs, e.g. in tests). */
 export function kickJobWorker() {
   globals().worker?.kick();
+}
+
+/** Stops the process worker at shutdown (see ../shutdown.ts). True when no job was left running. */
+export async function stopJobWorker(opts: { timeoutMs?: number } = {}): Promise<boolean> {
+  return (await globals().worker?.stop(opts)) ?? true;
 }
