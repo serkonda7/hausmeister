@@ -3,14 +3,9 @@
 // "garten" are one tag); the first spelling wins.
 //
 // Matching only considers tags the caller can see (tagVisibleWhere), so typing
-// a name never reveals the spelling or colour of a tag that is used only on
-// items the caller cannot see. Trade-off: typing a case variant of such a
-// hidden tag ("verlobung-geheim" for a hidden "Verlobung-Geheim") creates a
-// second tag in the typed spelling (names are unique exactly, so this is
-// allowed); an admin can merge the two on the tags page. Typing the hidden
-// tag's exact spelling reuses it: the caller already wrote the full name, and
-// the unique name leaves no other choice but refusing, which would confirm the
-// tag's existence just the same (reuse also shows its colour, if any).
+// a name never reveals a tag used only on hidden items. A case variant of such
+// a tag creates a second tag (admins can merge them); the exact spelling reuses
+// it, because refusing would confirm it exists just the same.
 import { and, asc, eq, exists, inArray, not, or, type SQL, sql } from "drizzle-orm";
 import type { TagRef } from "../../lib/items/types";
 import { visibleItemsWhere } from "../authz";

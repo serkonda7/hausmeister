@@ -44,7 +44,7 @@ REST_FILES=$(find "$T/uploads" -type f | wc -l)
 echo "uploads: live $LIVE_FILES files, restored $REST_FILES files"
 
 echo "== throwaway app"
-# Throwaway secret: since the MVP the app refuses to start in production without one.
+# Throwaway secret: the app refuses to start in production without one.
 docker run -d --name "$NAME" --network none -e DATABASE_PATH=/data/db/app.sqlite \
   -e BETTER_AUTH_SECRET="restore-test-$(head -c 24 /dev/urandom | base64)" \
   -v "$T/db:/data/db" "$IMG" >/dev/null

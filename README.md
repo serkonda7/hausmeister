@@ -1,41 +1,73 @@
 # Hausmeister
 
-Family asset manager. Design: [DESIGN.md](DESIGN.md). Phase 0 (infra) is done, see [docs/PHASE0.md](docs/PHASE0.md); the MVP is feature-complete. Conventions and commands: [AGENTS.md](AGENTS.md).
+Self-hosted family asset manager. Design: [DESIGN.md](DESIGN.md). Conventions and commands: [AGENTS.md](AGENTS.md). Server setup: [docs/PHASE0.md](docs/PHASE0.md). Phase 0 and the MVP are done.
 
 ```sh
 bun install
-bun run dev          # http://localhost:3000, /health
-bun run build && bun run start
+bun run dev                     # http://localhost:3000 (health: /health)
+bun run build && bun run start  # production build
 ```
 
 `deploy/` holds the production stack: Tailscale sidecar, Caddy (DNS-01 via deSEC), Litestream and restic (both to Backblaze B2), and the host scripts.
 
-## First start: the first admin account
+## First admin
 
-Accounts are created only through invite links; there is no open sign-up and no setup page.
+There is no sign-up and no setup page; accounts come only from invite links.
 
-1. **Set the secret** (production): put `AUTH_SECRET` in `deploy/.env`, e.g. `openssl rand -base64 48`. Compose passes it to the app as `BETTER_AUTH_SECRET`; without it the app refuses to start. Keep it in your password manager; a new secret signs everyone out.
-2. **Start the app** (`bun run dev` locally, `docker compose up -d` on the server). While there are no users at all, the app prints a one-time admin invite link (valid 24 h) to its log at startup:
+1. Production only: set the session secret in `deploy/.env` and store it in your password manager. The app refuses to start without it; changing it signs everyone out.
+   ```sh
+   sed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 48)|" deploy/.env
+   ```
+2. Start the app (`bun run dev`, or `docker compose up -d` in `deploy/` on the server). While no users exist, it logs a one-time admin invite link (valid 24 h, replaced on every restart):
    ```sh
    docker compose logs app | grep bootstrap
    # [bootstrap] https://sub.example.de/invite/…
    ```
-   Each restart without users replaces the link with a new one.
-3. **Or** create a link by hand:
+   Or create one by hand:
    ```sh
    bun run create-admin-invite                            # local (./data/db/app.sqlite)
-   docker compose exec app bun run create-admin-invite    # in the container
+   docker compose exec app bun run create-admin-invite    # server
    ```
-4. Open the link, choose username, display name and password. You are signed in and invite everyone else under **Verwaltung → Einladungen**.
+3. Open the link and choose username, display name and password. Invite everyone else under **Verwaltung → Einladungen**.
 
-**Recovery** (no admin can sign in): `docker compose exec app bun run create-admin-invite --force` creates an admin link even though admins exist. With the new account, set the old account's password under Verwaltung → Benutzer. Other options: `--role member|guest`, `--hours N`.
+**Locked out** (no admin can sign in):
+
+```sh
+docker compose exec app bun run create-admin-invite --force   # also: --role member|guest, --hours N
+```
+
+Sign in with the new account and reset the old one's password under **Verwaltung → Benutzer**.
 
 ## Operations
 
-- **Upgrade:** `docker compose build app && docker compose up -d` (or `pull` once images come from a registry). Before migrations run on an existing database the app writes `data/db/app.sqlite.pre-migrate-<time>.bak` next to it (`[db] snapshot before migrations` in the log) and keeps the newest three. They are local only: Litestream replicates just `app.sqlite`, and the restore test never sees them. To roll back an upgrade: stop the app, copy the snapshot over `app.sqlite` (delete `app.sqlite-wal`/`-shm`), start the previous image.
-- **Shutdown:** on SIGTERM/SIGINT (`docker stop`, every `up -d` that replaces the container) the app stops taking requests, lets open ones finish for up to 5 s (`SERVER_SHUTDOWN_TIMEOUT`), gives a running background job 3 s (an unfinished one runs again at the next start), checkpoints and closes SQLite and exits 0, usually in well under a second. `[shutdown] done` in the log confirms it.
-- **Content Security Policy:** production HTML pages send a strict CSP with a fresh nonce per request (`src/server/http/csp.ts`): scripts only from the app itself or with that nonce, no inline scripts, no eval, no framing, images from the app plus `blob:` previews. `bun run dev` sends none (Vite's dev server needs inline scripts). A page that breaks with a CSP error in the browser console is a bug.
+Run these in `/opt/hausmeister/deploy`.
+
+**Upgrade**
+
+```sh
+docker compose build app && docker compose up -d
+```
+
+Before migrating an existing database the app writes `data/db/app.sqlite.pre-migrate-<time>.bak` (log: `[db] snapshot before migrations`) and keeps the newest three. They are local only: Litestream replicates just `app.sqlite`.
+
+**Roll back an upgrade**
+
+```sh
+docker compose stop app
+ls data/db/*.pre-migrate-*.bak
+cp data/db/app.sqlite.pre-migrate-<time>.bak data/db/app.sqlite
+rm -f data/db/app.sqlite-wal data/db/app.sqlite-shm
+# then start the previous version: check out the old code, docker compose build app && docker compose up -d
+```
+
+**Shutdown**: on SIGTERM/SIGINT (`docker stop`, any `up -d` that replaces the container) the app stops accepting requests, waits up to 5 s for open ones (`SERVER_SHUTDOWN_TIMEOUT`) and 3 s for a running job (an unfinished job reruns at next start), closes SQLite and exits 0. Look for `[shutdown] done` in the log.
+
+**Content Security Policy**: production pages send a strict CSP with a per-request nonce (`src/server/http/csp.ts`): no inline scripts without the nonce, no eval, no framing, images from the app and `blob:`. `bun run dev` sends none. A CSP error in the browser console is a bug.
 
 ## Tests
 
-`bun run check` runs lint, typecheck and unit tests. `bun run e2e` builds the app into its own directory and runs Playwright (Chromium, phone viewport) against it on port 3211 with a throwaway database. Once per machine: `bunx playwright install chromium`.
+```sh
+bun run check                    # lint + typecheck + unit tests
+bunx playwright install chromium # once per machine
+bun run e2e                      # Playwright, phone viewport, own build on port 3211, throwaway DB
+```

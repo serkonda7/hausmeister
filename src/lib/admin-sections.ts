@@ -1,5 +1,5 @@
 // Sections of the admin area (/admin). The layout shows the entries a role may
-// open; each section route must still guard itself with `requireSectionRole`
+// open; each section route must still guard itself with `guardSection`
 // (and its server functions with roleMiddleware). Add new sections here.
 import { notFound } from "@tanstack/solid-router";
 import { m } from "~/paraglide/messages";

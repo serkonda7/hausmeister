@@ -1,17 +1,10 @@
-// A consistent read view of the database for the length of one export.
-// The app keeps running while a large export streams for minutes, so the export
-// reads through its own read-only connection inside one read transaction: in
-// WAL mode that transaction sees the database as of its first read, while the
-// app's connection keeps writing (readers never block writers, and vice
-// versa). Every page of the export is read from that snapshot, so items,
-// attachments and events agree with each other.
-// Cost: while the snapshot is open, checkpoints cannot move past it and the WAL
-// file grows by whatever the app writes meanwhile; it shrinks again after the
-// export ends. Attachment files are content-addressed and immutable, so the
-// only race left is a blob deleted by gc after its row was deleted; the export
-// marks such a file as missing instead of failing.
-// In-memory databases (tests) cannot be opened twice; there the export reads
-// the given connection directly, without a snapshot.
+// A consistent read view for one export: its own read-only connection in one
+// read transaction. In WAL mode that sees the database as of its first read
+// while the app keeps writing, so items, attachments and events agree.
+// Cost: the WAL grows while the snapshot is open and shrinks after it.
+// Blobs are immutable; one deleted by gc meanwhile is marked missing.
+// In-memory databases (tests) can't be opened twice: there the export reads
+// the given connection directly.
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import type { AppDb } from "../db/client";

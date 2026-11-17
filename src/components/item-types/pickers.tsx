@@ -107,7 +107,7 @@ export type ItemSearchFn = (query: string) => Promise<ItemSearchResult[]>;
 /** The real item search (visible, not gone, max 20) via pickItemsFn. */
 export const searchVisibleItems: ItemSearchFn = (q) => pickItemsFn({ data: { q } });
 
-/** Kept under its old name: field-input.tsx uses it as the default search. */
+/** Alias of searchVisibleItems: field-input.tsx's default search. */
 export const searchItemsStub: ItemSearchFn = searchVisibleItems;
 
 /**

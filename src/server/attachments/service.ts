@@ -153,11 +153,9 @@ export function deleteAttachment(db: AppDb, ctx: AuthCtx, attachmentId: string):
 }
 
 /**
- * Changes the kind. Needs `edit` both ways: moving to or from `receipt` changes
- * who can see the file (viewers lose or gain it), but an editor can already
- * download any receipt and re-upload it as a photo, so `manage` would protect
- * nothing. The stored type must be accepted by the new kind (a PDF cannot
- * become a photo).
+ * Changes the kind; needs `edit`, also to or from `receipt` (an editor could
+ * re-upload a receipt as a photo anyway, so `manage` would protect nothing).
+ * The new kind must accept the stored type (a PDF cannot become a photo).
  */
 export function setAttachmentKind(
   db: AppDb,

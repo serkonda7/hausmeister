@@ -1,4 +1,4 @@
-// Item: graceful shutdown. Starts a second copy of the e2e production build
+// Graceful shutdown. Starts a second copy of the e2e production build
 // (own port and data dir), writes to it, sends SIGTERM/SIGINT and measures the
 // exit: code 0, quickly (docker stop kills after 10 s), SQLite closed cleanly
 // (no -wal/-shm left) and the data intact.

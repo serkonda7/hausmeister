@@ -1,4 +1,4 @@
-# Hausmeister – production stack (Phase 0). Run from /opt/hausmeister/deploy.
+# Hausmeister production stack. Run from /opt/hausmeister/deploy.
 # Nothing here publishes a host port: Caddy lives in the Tailscale netns.
 name: hausmeister
 

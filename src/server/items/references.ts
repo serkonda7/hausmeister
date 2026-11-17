@@ -9,10 +9,9 @@
 //  - multiple fields: hidden ids are appended to whatever the client sends;
 //  - single fields: an empty value keeps the hidden reference; choosing another
 //    item replaces it (the form says so next to the field).
-// Legacy values of fields the type no longer has (e.g. after a type change)
-// have no known kind; a string there that is the id of an existing item the
-// caller cannot see is treated the same way. Legacy values are kept on save by
-// prepareItemAttributes anyway.
+// Legacy values (fields the type no longer has) have no known kind; a string
+// there that is the id of an existing hidden item is stripped the same way
+// (prepareItemAttributes keeps legacy values on save).
 import { inArray } from "drizzle-orm";
 import { type FieldDefinition, isMultiple } from "../../lib/item-types/fields";
 import type { AuthCtx } from "../authz/ctx";

@@ -194,7 +194,7 @@ export async function acceptInvite(db: AppDb, input: AcceptInviteInput, now = ()
 }
 
 /**
- * First-admin bootstrap (README "Erster Start"): while the instance has no
+ * First-admin bootstrap (README "First admin"): while the instance has no
  * users at all, replace any earlier unused bootstrap invites with a fresh
  * admin invite and return its link (printed to the server log at startup).
  * Returns null once any user exists.

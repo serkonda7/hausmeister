@@ -1,7 +1,7 @@
 // Better Auth configuration (DESIGN §7, §8.4).
 //  - username + password, no email; public sign-up is impossible
 //    (emailAndPassword.disableSignUp + /sign-up/* disabled). Accounts are
-//    created only server-side via createUserWithPassword() (invite flow, T2).
+//    created only server-side via createUserWithPassword() (invite flow).
 //  - passkeys with RP ID = hostname of ORIGIN; registration needs a session.
 //  - production (https ORIGIN): host-only `__Host-` cookies, Secure, Path=/, SameSite=Lax.
 //  - disabled users: session creation is refused (covers password and passkey).

@@ -1,5 +1,4 @@
-// Admin pages built on existing server functions: household settings, tags,
-// and reassigning a user's items.
+// Admin pages: household settings, tags, reassigning a user's items.
 import { execFileSync } from "node:child_process";
 import { E2E_DB } from "./env";
 import { expect, test, uniqueName } from "./fixtures";

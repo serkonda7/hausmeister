@@ -1,10 +1,10 @@
 # Export archive format (version 1)
 
-`GET /api/v1/export` returns one ZIP file (`hausmeister-export_YYYY-MM-DD_HH-MM.zip`,
-Europe/Berlin time). This document is the contract for anyone reading it back,
-including a future import. Code: `src/server/export/` (`build.ts` writes it,
-`PATHS` lists the files). Bump `EXPORT_FORMAT_VERSION` in
-`src/lib/export/types.ts` when a file or field changes meaning.
+`GET /api/v1/export` returns one ZIP (`hausmeister-export_YYYY-MM-DD_HH-MM.zip`,
+Europe/Berlin time). This is the contract for anything that reads it back,
+including a future import. Writer: `src/server/export/build.ts` (`PATHS` lists
+the files). When a file or field changes meaning, bump `EXPORT_FORMAT_VERSION`
+in `src/lib/export/types.ts`.
 
 ## Container
 

@@ -20,7 +20,7 @@ export default definePlugin((nitroApp) => {
     const db = getDb();
     // Starter item types, once per instance (DESIGN §4.4); see item-types/seed.ts.
     seedStarterTemplates(db);
-    // First admin (README "Erster Start"): while there are no users at all,
+    // First admin (README "First admin"): while there are no users at all,
     // print a fresh one-time admin invite link. Nothing is printed afterwards.
     const link = bootstrapInviteAtStartup(db, env.ORIGIN);
     if (link) {

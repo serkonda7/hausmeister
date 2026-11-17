@@ -16,7 +16,7 @@ Hausmeister: self-hosted family asset manager. Read DESIGN.md first. Bun 1.4, Ta
 ## Conventions
 - English code, identifiers and comments. Every user-facing string goes in `messages/de.json`, never inline.
 - Every server function that touches data uses `authMiddleware` (or `roleMiddleware(...)`). Server routes use `withAuth`. Items the caller can't see answer **404, never 403** (DESIGN §11).
-- Never filter items in JS: item visibility goes through the SQL predicate builder (T3). Money fields are dropped while serializing (§3.4).
+- Never filter items in JS: item visibility goes through the SQL predicate builder. Money fields are dropped while serializing (§3.4).
 - Schema: edit `schema.ts`, run `bun run db:generate`, commit `drizzle/*`. Hand-written SQL: `bun --bun drizzle-kit generate --custom --name x`. Ids come from `$defaultFn(Bun.randomUUIDv7)`, timestamps are `timestamp_ms`. `items_fts` (in `0001_*.sql`) is filled by app code.
 - Users are created only through invites (`acceptInvite` in `auth/invites.ts`) or, in tests, `createUserWithPassword(db, {...})`; public sign-up is off. Admin changes go through `server/admin/users.ts` (guards: last active admin, self-disable).
 - `bun:sqlite` is synchronous: `db.select()...all()/get()/run()`, and `db.transaction((tx) => …)` takes a sync callback.
@@ -103,7 +103,7 @@ Server: `src/server/attachments/` (`service.ts` logic, `functions.ts` server fns
 - Helpers: `cliInvite(role)` (link from the CLI), `acceptInvite`, `signIn`, `submitLogin`, `userMenu(page, "Mein Konto" | "Abmelden")`, `uniqueName(prefix)`. Each test has its own `X-Forwarded-For`, so per-IP limits don't leak; use unique names, the DB is shared by all tests of a run.
 - Item helpers (`e2e/item-helpers.ts`): `addItem(page, {type, name, photo?, more?})` → id, `ownMore({private?, price?})`, `searchItems`, `results(page)`, `selectByText(select, /re/)`, `token()`, `photoFile()`. Visually hidden radios/checkboxes: click their label. Accessibility: `@axe-core/playwright` (`e2e/a11y.e2e.ts`).
 
-## Hardening (T9)
+## Hardening
 - CSP (production only): every inline script needs the request nonce. Router scripts get it via `ssr.nonce` (`src/lib/csp-nonce.ts`); never add `<script>` or `<style>` elements by hand, never `eval`/`new Function` (Zod runs `jitless`, `src/lib/zod-config.ts` must stay the first import of `router.tsx`). `style` attributes are allowed. Every e2e test fails on a CSP violation (`cspViolations` fixture).
 - Slow links: use `useHydrated()` / `adoptTypedValue()` from `src/lib/hydrated.ts` for forms (submit disabled with "Lädt …" until hydrated; `<html data-hydrated>` is set in `__root.tsx`). Test with `slowLink()` in `e2e/hydration.e2e.ts`.
 - Shutdown: `src/server/shutdown.ts` (wired in the startup plugin). The DB connection is one per process (`getDb()`, on globalThis); close with `closeDb()`/`closeDatabase()`, never `$client.close()` alone. Long-running work must watch the job `signal`.

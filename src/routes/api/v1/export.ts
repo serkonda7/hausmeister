@@ -8,11 +8,9 @@ import { handleExportRequest } from "~/server/export/handler";
 // (admin: everything, member: own and household items; DESIGN §3.5).
 // See src/server/export/handler.ts.
 //
-// Guests must not be able to tell this URL from a missing one (DESIGN §11).
-// The app answers an unknown URL with the router's not-found page (HTML 404,
-// or 406 JSON for non-HTML Accept headers), whose body does not contain the
-// path. So a guest gets exactly that: the same request, rendered for a path
-// no route matches.
+// Guests must not tell this URL from a missing one (DESIGN §11), so they get
+// the router's not-found answer for a path no route matches (its body does
+// not contain the path).
 const NO_SUCH_PATH = "/__hausmeister_no_such_page__";
 
 async function routerNotFound(request: Request): Promise<Response> {

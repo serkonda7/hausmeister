@@ -2,10 +2,8 @@
 //  - admins and members: the whole tree. Locations are household structure,
 //    not anyone's property; members create and edit them (§3.5).
 //  - guests: only the locations on the path of an item they can see (its
-//    location and the ancestors). A guest is someone who "sees only items
-//    explicitly shared with them", so room names like "Lenas Zimmer" are none
-//    of their business unless a shared item lives there; that is also exactly
-//    what they need to find the shared thing.
+//    location and ancestors): enough to find the shared thing, and no room
+//    names ("Lenas Zimmer") beyond that.
 import { sql } from "drizzle-orm";
 import { visibleItemsWhere } from "../authz";
 import type { AuthCtx } from "../authz/ctx";

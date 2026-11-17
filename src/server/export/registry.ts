@@ -1,15 +1,10 @@
-// Running exports, in memory (one process, one household). Limits: one export
-// per user at a time, and at most `maxGlobal` at once (each holds a read
-// snapshot, a file handle and some CPU for deflate on a 1-vCPU VPS).
-//
-// The export page first reserves a slot with a server function (so "busy" and
-// "too many" come back as German errors, not as a failed browser download),
-// then the browser downloads GET /api/v1/export?ticket=… which claims it. A
-// reservation that is not claimed within `ticketTtlMs` lapses. API clients
-// call the endpoint without a ticket and acquire a slot directly.
-// A slot is released in the producer's finally block, so a finished export, a
-// disconnect, an idle consumer or an error all free it. The registry also
-// keeps the progress of the running export and the last result per user.
+// Running exports, in memory. Limits: one per user, `maxGlobal` overall (each
+// holds a snapshot, a file handle and deflate CPU on a 1-vCPU VPS).
+// The export page reserves a slot first (so "busy" is a German error, not a
+// failed download), then GET /api/v1/export?ticket=… claims it within
+// `ticketTtlMs`. API clients call without a ticket and acquire a slot directly.
+// The producer's finally block releases the slot (done, disconnect, idle,
+// error). Also keeps the running export's progress and each user's last result.
 import type { ExportProgress } from "../../lib/export/types";
 
 export type ExportSlot = {

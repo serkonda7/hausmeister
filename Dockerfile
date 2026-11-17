@@ -1,4 +1,4 @@
-# App image. Built on the VPS (compose `build:`) in Phase 0; CI/ghcr later.
+# App image, built on the VPS by compose (`build: ..`).
 FROM oven/bun:1.4.4 AS build
 WORKDIR /app
 COPY package.json bun.lock ./

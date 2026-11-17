@@ -38,7 +38,8 @@ cat > /etc/docker/daemon.json <<'CONF'
 CONF
 systemctl restart docker
 
-# Firewall: nothing inbound except SSH. (No app port is ever published.)
+# Firewall: nothing inbound except SSH (no app port is ever published).
+# Close 22 once Tailscale SSH works: docs/PHASE0.md step 10.
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow OpenSSH

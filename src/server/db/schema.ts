@@ -1,4 +1,4 @@
-// Drizzle schema for the MVP (DESIGN §6). After editing, run `bun run db:generate`
+// Drizzle schema (DESIGN §6). After editing, run `bun run db:generate`
 // and commit the generated SQL in ./drizzle. Timestamps are integer milliseconds
 // (Drizzle `timestamp_ms` -> Date); calendar dates (acquired_on) are 'YYYY-MM-DD' text.
 // The FTS5 table `items_fts` lives in a hand-written migration (see drizzle/), not here.
@@ -50,7 +50,7 @@ const updatedAt = () =>
 const inList = (col: string, values: readonly string[]) =>
   sql.raw(`${col} IN (${values.map((v) => `'${v}'`).join(",")})`);
 
-// --- Phase 0 ----------------------------------------------------------------
+// --- Server -----------------------------------------------------------------
 /** One row per server start. deploy/restore-test.sh compares its count. */
 export const boots = sqliteTable("boots", {
   id: integer("id").primaryKey(),

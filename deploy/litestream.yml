@@ -1,9 +1,8 @@
 # Continuous SQLite replication to Backblaze B2 (S3-compatible API).
 # Credentials and bucket come from .env.backup.
 #
-# B2 has free tier cap for Class C transactions of 2,500/day.
-# Litestream by default easily does 100k+ list calls a day.
-# Therefore, the intervals are prolonged while still having 15 min RPO.
+# The B2 free tier caps Class C transactions at 2,500/day; Litestream's defaults
+# make 100k+ list calls a day. These intervals stay under the cap (RPO 15 min).
 levels: # compaction; defaults are 30s / 5m / 1h
   - interval: 5m
   - interval: 1h

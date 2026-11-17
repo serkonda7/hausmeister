@@ -1,6 +1,6 @@
 // Item permission levels and the resolution rules of DESIGN §3.4.
 // Pure functions: no database access. The SQL twin of `itemLevel` lives in
-// ./predicates.ts; a property test (authz.property.test.ts) keeps them in sync.
+// ./predicates.ts; a property test (predicates.property.test.ts) keeps them in sync.
 import type { GrantLevel, Item, ItemGrant } from "../db/schema";
 import type { AuthCtx, Role } from "./ctx";
 
@@ -94,12 +94,10 @@ export function itemLevel(ctx: AuthCtx, item: ItemAuthFields, grants: readonly G
 export const canSeeMoney = (lvl: Level): boolean => atLeast(lvl, "edit");
 
 /**
- * Who may change an item's owner (DESIGN §3.6, MVP rule). Until accept-based
- * transfers exist, `manage` is not enough: a grantee or a co-member of an
- * owning group could otherwise take the item and lock the owner out. Only an
- * admin or the item's direct user owner may; a group-owned item only an admin.
- * Which owners the direct owner may pick is checked separately (household,
- * themselves, their own groups).
+ * Who may change an item's owner (DESIGN §3.6): an admin, or the item's direct
+ * user owner; a group-owned item only an admin. `manage` is not enough until
+ * accept-based transfers exist, or a grantee or group co-member could take the
+ * item and lock the owner out. Which owners may be picked is checked separately.
  */
 export function canChangeOwner(ctx: AuthCtx, item: Pick<Item, "ownerKind" | "ownerId">): boolean {
   if (ctx.role === "admin") return true;
