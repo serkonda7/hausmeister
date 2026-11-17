@@ -153,6 +153,8 @@ sudo systemctl start hausmeister-backup       # first run creates the restic rep
 
 Store `.env`, `.env.backup` and a copy of `ts-state/` in your password manager or an encrypted backup.
 
+**B2 transactions:** the free tier allows 2,500 Class C calls/day (mostly `ListObjectsV2`). Litestream's defaults (1s sync, 30s compaction, 15s L0 checks) generate far more and, once capped, B2 answers lists with 403 while Litestream retries in a tight loop. `deploy/litestream.yml` therefore widens those loops (sync every 15m, compaction 5m/1h/24h, L0 checks hourly). Keep Litestream retention enabled so old files are deleted (hidden in B2) and the 30-day lifecycle rule from step 6 can purge them — a small bucket also means fewer list pages. Check *Caps & Alerts → Class C → Today* in the B2 dashboard after a day. If the count is still close to 2,500, raise `sync-interval` further (e.g. to `30m`).
+
 ## 10. Enable Tailscale SSH on the host
 1. ```sh
    curl -fsSL https://tailscale.com/install.sh | sh
