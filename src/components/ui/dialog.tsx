@@ -20,7 +20,7 @@ export function DialogContent<T extends ValidComponent = "div">(
   const [local, others] = splitProps(props as ContentProps, ["class", "children"]);
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay class="hm-animate-fade fixed inset-0 z-50 bg-black/50" />
+      <DialogPrimitive.Overlay class="hm-animate-fade fixed inset-0 z-50 bg-black/70" />
       <div class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
         <DialogPrimitive.Content
           class={cn(

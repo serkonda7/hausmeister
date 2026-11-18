@@ -53,7 +53,7 @@ export function AttributeList(props: {
             <dd class="flex items-center gap-2 break-words">
               <Show when={swatch(e)}>
                 <span
-                  class="inline-block size-4 rounded-sm border"
+                  class="inline-block size-4 rounded-sm border border-foreground/40"
                   style={{ "background-color": swatch(e) }}
                   aria-hidden="true"
                 />

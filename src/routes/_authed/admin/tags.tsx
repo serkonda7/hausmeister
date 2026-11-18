@@ -142,7 +142,10 @@ function TagCard(props: { tag: TagSummary; allTags: TagSummary[]; refresh: () =>
         <CardContent class="grid gap-3 pt-4">
           <div class="flex flex-wrap items-center gap-2">
             <span
-              class={cn("size-4 shrink-0 rounded-full border", !tag().color && "border-dashed")}
+              class={cn(
+                "size-4 shrink-0 rounded-full border border-foreground/40",
+                !tag().color && "border-dashed",
+              )}
               style={{ "background-color": tag().color ?? "transparent" }}
               aria-hidden="true"
             />
@@ -216,7 +219,7 @@ function TagCard(props: { tag: TagSummary; allTags: TagSummary[]; refresh: () =>
                       variant="outline"
                       size="icon"
                       class={cn(
-                        "rounded-full",
+                        "rounded-full border-foreground/40",
                         tag().color === c.value && "ring-2 ring-ring ring-offset-2",
                       )}
                       style={{ "background-color": c.value }}

@@ -233,7 +233,7 @@ function ItemView(props: { detail: ItemDetail }) {
                       >
                         <Show when={t.color}>
                           <span
-                            class="inline-block size-2.5 rounded-full"
+                            class="inline-block size-2.5 rounded-full border border-foreground/40"
                             style={{ "background-color": t.color ?? undefined }}
                             aria-hidden="true"
                           />
