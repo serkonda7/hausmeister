@@ -535,7 +535,7 @@
   "export_readme_scope_member": "Umfang: deine eigenen Gegenstände, die deiner Gruppen und die des Haushalts, mit ihren Typen, Orten, Schlagwörtern, Dateien und ihrem Verlauf. Gegenstände anderer Personen sind nicht enthalten, auch nicht als Verweis.",
   "export_readme_counts": "Enthalten: {items} Gegenstände, {files} Dateien, {events} Einträge im Verlauf.",
   "export_readme_contents": "Was wo liegt:",
-  "export_readme_tables": "tabellen/: Tabellen für Excel oder LibreOffice (Semikolon getrennt, UTF-8). „gegenstaende.csv“ enthält alle Gegenstände, „typ_….csv“ je Typ die Gegenstände dieses Typs mit seinen Feldern als Spalten.",
+  "export_readme_tables": "tabellen/: Tabellen für Excel oder LibreOffice (Semikolon getrennt, UTF-8). „gegenstaende.csv“ enthält alle Gegenstände, „typ_….csv“ je Typ die Gegenstände dieses Typs mit seinen Feldern als Spalten, „ausleihen.csv“ die Ausleihen.",
   "export_readme_files": "dateien/: Fotos, Belege, Anleitungen und andere Dateien, ein Ordner je Gegenstand. Die Spalte „Dateien“ in den Tabellen nennt die Pfade.",
   "export_readme_json": "json/: alle Daten vollständig und maschinenlesbar, für Programme und einen späteren Import. Beträge stehen dort in Cent, Zeitpunkte in UTC (ISO 8601).",
   "export_readme_manifest": "manifest.json: Formatversion, Zeitpunkt, Umfang und Anzahl der Einträge.",
@@ -1028,5 +1028,11 @@
   "shelf_add_anyway": "Trotzdem anlegen",
   "shelf_missing_fields": "Nicht alle Pflichtfelder ließen sich ausfüllen.",
   "shelf_open_quick_add": "Selbst ausfüllen",
-  "shelf_undo": "Rückgängig"
+  "shelf_undo": "Rückgängig",
+  "export_col_borrower": "Ausgeliehen an",
+  "export_col_requested_at": "Angelegt am",
+  "export_col_out_at": "Ausgeliehen am",
+  "export_col_due_on": "Rückgabe bis",
+  "export_col_returned_at": "Zurück am",
+  "export_col_note": "Notiz"
 }

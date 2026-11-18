@@ -1,4 +1,4 @@
-# Export archive format (version 1)
+# Export archive format (version 2)
 
 `GET /api/v1/export` returns one ZIP (`hausmeister-export_YYYY-MM-DD_HH-MM.zip`,
 Europe/Berlin time). This is the contract for anything that reads it back,
@@ -26,11 +26,16 @@ json/tags.json               tags
 json/attachments.json        attachment metadata (+ path inside the archive)
 json/grants.json             item grants
 json/events.json             event log
+json/loans.json              loans (version 2)
+json/contacts.json           external borrowers (version 2)
+json/transfers.json          ownership transfers (version 2)
+json/stock-moves.json        stock ledger (version 2)
 json/users.json              admin export only
 json/groups.json             admin export only
 json/settings.json           admin export only
 json/people.json             member export only
 tabellen/gegenstaende.csv    all items, for people
+tabellen/ausleihen.csv       the loans, for people (version 2)
 tabellen/typ_<Typname>.csv   one table per item type that has items
 dateien/<Item name> (<short code>)/<file name>   attachment files
 ```
@@ -40,7 +45,7 @@ dateien/<Item name> (<short code>)/<file name>   attachment files
 ```json
 {
   "format": "hausmeister-export",
-  "formatVersion": 1,
+  "formatVersion": 2,
   "appVersion": "0.0.1",
   "createdAt": "2026-11-16T13:03:00.000Z",
   "scope": "all | own_and_household",
@@ -48,9 +53,10 @@ dateien/<Item name> (<short code>)/<file name>   attachment files
   "exportedBy": { "id": "…", "username": "…", "displayName": "…", "role": "admin" },
   "household": { "name": "…", "currency": "EUR", "locale": "de-DE" },
   "counts": { "items": 0, "itemTypes": 0, "locations": 0, "tags": 0, "attachments": 0,
-              "files": 0, "missingFiles": 0, "events": 0, "grants": 0, "users": 0, "groups": 0 },
+              "files": 0, "missingFiles": 0, "events": 0, "grants": 0, "users": 0, "groups": 0,
+              "loans": 0, "contacts": 0, "transfers": 0, "stockMoves": 0 },
   "files": { "items": "json/items.json", "…": "…" },
-  "tables": { "items": "tabellen/gegenstaende.csv",
+  "tables": { "items": "tabellen/gegenstaende.csv", "loans": "tabellen/ausleihen.csv",
               "byType": [{ "typeId": "…", "path": "tabellen/typ_Werkzeug.csv" }] }
 }
 ```
@@ -88,6 +94,19 @@ fields) are `YYYY-MM-DD`; money is integer cents (`priceCents`) plus
 - **grants**: `itemId, principalKind, principalId, level`.
 - **events**: `id, itemId, actorId, action, diff, at`. Item diffs are
   `{ field: { from, to } }`, attribute changes `attributes.<key>`.
+- **loans**: `id, itemId, quantity, borrowerUserId, borrowerContactId,
+  status, note, requestedBy, createdAt, decidedBy, decidedAt, lentBy, outAt,
+  dueOn, returnedAt, returnedBy, updatedAt`. `status` is `requested`,
+  `approved`, `out`, `returned`, `declined` or `cancelled`; `dueOn` is a
+  calendar date (`YYYY-MM-DD`, Europe/Berlin). Exactly one borrower id is set,
+  except on closed loans of a deleted contact (both null).
+- **contacts**: `id, name, email, phone, notes, createdBy, createdAt,
+  updatedAt`.
+- **transfers**: `id, itemId, fromOwnerKind, fromOwnerId, toOwnerKind,
+  toOwnerId, status, note, createdBy, createdAt, resolvedBy, resolvedAt`.
+  `status` is `pending`, `accepted`, `declined`, `forced` or `cancelled`.
+- **stock-moves**: `id, itemId, delta, quantityAfter, reason, note, userId,
+  at`; `reason` is `used`, `restocked`, `counted`, `edited` or `other`.
 - **users** (admin): `id, username, displayUsername, displayName, email, role,
   locale, createdAt, updatedAt, disabledAt, groupIds`.
 - **groups** (admin): `id, name, createdAt, memberIds`.
@@ -114,11 +133,16 @@ fields) are `YYYY-MM-DD`; money is integer cents (`priceCents`) plus
   null. The item lists the removed keys in `omittedReferences`
   (e.g. `["containerItemId", "attributes.fits"]`) so an import knows they are
   unknown, not empty.
+  Loans of those items: out and returned ones for every exported item (who
+  had it), requests (requested, approved, declined, cancelled) only on items
+  the member manages or that they asked for; the contacts these loans name;
+  transfers of items the member manages, started or was offered; the stock
+  ledger of the exported items.
 - **none** (guest): no export; the endpoint answers like an unknown URL.
 
 Never in any export: password hashes and other `accounts` columns, sessions,
 passkeys, verifications, invites (token hashes), jobs, `users.auth_email`,
-`users.email_verified`, `users.image`.
+`users.email_verified`, `users.image`, and notifications (each user's inbox).
 
 ## CSV tables
 
@@ -135,6 +159,16 @@ column is the item id, which links a row to `json/items.json`.
 common columns, one column per active field (inherited ones included; the
 field label, with the key appended when two labels collide), `Alte Felder`
 for hidden or removed fields, and the id.
+
+`ausleihen.csv` has one row per exported loan, oldest first: item, short
+code, borrower (name), quantity, status, created, out, due, returned, note,
+loan id.
+
+## Version history
+
+- **2** (v1.1): `loans`, `contacts`, `transfers`, `stock-moves`,
+  `tabellen/ausleihen.csv`, the matching `counts` and `tables.loans`.
+- **1** (MVP): the first format.
 
 ## Files
 

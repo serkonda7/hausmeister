@@ -9,6 +9,8 @@ import { activeFields } from "../../lib/item-types/fields";
 import type { EffectiveField } from "../../lib/item-types/tree";
 import type { ItemStatus } from "../../lib/items/constants";
 import { statusLabel } from "../../lib/items/labels";
+import { loanStatusLabel } from "../../lib/loans/labels";
+import type { LoanStatus } from "../../lib/loans/types";
 import { m } from "../../paraglide/messages";
 
 /** The parts of an exported item record the tables read. */
@@ -189,4 +191,47 @@ export function typeTable(fields: readonly EffectiveField[]) {
     ];
   };
   return { headers, row };
+}
+
+export const LOAN_HEADERS = () => [
+  m.export_col_name(),
+  m.export_col_short_code(),
+  m.export_col_borrower(),
+  m.export_col_quantity(),
+  m.export_col_status(),
+  m.export_col_requested_at(),
+  m.export_col_out_at(),
+  m.export_col_due_on(),
+  m.export_col_returned_at(),
+  m.export_col_note(),
+  m.export_col_id(),
+];
+
+/** One row of tabellen/ausleihen.csv. */
+export function loanRow(
+  l: {
+    id: string;
+    quantity: number;
+    status: LoanStatus;
+    note: string | null;
+    createdAt: Date;
+    outAt: Date | null;
+    dueOn: string | null;
+    returnedAt: Date | null;
+  },
+  x: { itemName: string; shortCode: string | null; borrower: string },
+): CsvCell[] {
+  return [
+    x.itemName,
+    x.shortCode,
+    x.borrower,
+    csvNumber(l.quantity),
+    loanStatusLabel(l.status),
+    csvDateTime(l.createdAt),
+    csvDateTime(l.outAt),
+    csvDate(l.dueOn),
+    csvDateTime(l.returnedAt),
+    l.note,
+    l.id,
+  ];
 }

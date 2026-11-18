@@ -8,6 +8,7 @@ import { tempStore } from "../attachments/test-helpers";
 import { recordEvent } from "../audit";
 import { exportItemsWhere } from "../authz";
 import type { AuthCtx } from "../authz/ctx";
+import { createContact } from "../contacts/service";
 import {
   accounts,
   attachments,
@@ -21,7 +22,10 @@ import {
 } from "../db/schema";
 import { recordItemEvent } from "../history/record";
 import { setupFixture } from "../items/test-fixtures";
+import { checkoutItem, requestLoan } from "../loans/service";
 import { createLocation } from "../locations/service";
+import { adjustStock } from "../stock/service";
+import { startTransfer } from "../transfers/service";
 import { writeExport } from "./build";
 import { createExportRegistry } from "./registry";
 import { getExportInfo, reserveExport } from "./service";
@@ -144,6 +148,23 @@ async function world() {
     },
   });
 
+  // Loans, contacts, transfers, stock (format version 2).
+  const tom = createContact(db, anna, { name: "Nachbar Tom", phone: "0171 555" });
+  const unused = createContact(db, admin, { name: "Kontakt ohne Ausleihe" });
+  const drillLoan = checkoutItem(db, anna, {
+    itemId: drill.id,
+    borrower: { kind: "contact", id: tom.id },
+    dueOn: "2026-12-01",
+  });
+  // A request on the household drill: Anna (edit) is not its manager.
+  const adminRequest = requestLoan(db, admin, { itemId: annaInBox.id });
+  const benRequest = requestLoan(db, ben, { itemId: formula.id, note: "Bitte" });
+  const offer = startTransfer(db, anna, {
+    itemId: formula.id,
+    to: { ownerKind: "user", ownerId: ben.userId },
+  });
+  adjustStock(db, admin, { id: annaInBox.id, delta: 1, reason: "restocked" });
+
   const jpeg = crypto.getRandomValues(new Uint8Array(3000));
   const photo = await addAttachment(annaPrivate.id, "photo", "seite1.jpg", jpeg);
   const receipt = await addAttachment(
@@ -234,6 +255,12 @@ async function world() {
     drillPhoto,
     benPhoto,
     jpeg,
+    tom,
+    unused,
+    drillLoan,
+    adminRequest,
+    benRequest,
+    offer,
   };
 }
 
@@ -280,6 +307,7 @@ function assertFilesMatch(a: ReadArchive) {
     "manifest.json",
     ...Object.values(manifest.files as Record<string, string>),
     manifest.tables.items,
+    manifest.tables.loans,
     ...manifest.tables.byType.map((t: { path: string }) => t.path),
   ]);
   for (const n of a.names)
@@ -382,13 +410,69 @@ describe("admin export", () => {
     const man = a.json("manifest.json");
     expect(man).toMatchObject({
       format: "hausmeister-export",
-      formatVersion: 1,
+      formatVersion: 2,
       scope: "all",
       exportedBy: { id: admin.userId, role: "admin" },
     });
     expect(man.counts.items).toBe(scopeIds(admin).length);
     expect(man.counts.files).toBe(5);
     expect(a.text("LIESMICH.txt")).toContain("Admin-Export");
+  });
+});
+
+describe("loans, contacts, transfers, stock (format 2)", () => {
+  test("admin: everything", async () => {
+    const a = await exportToMemory(db, admin, store.store);
+    const loanIds = a.json<Json[]>("json/loans.json").map((l) => l.id);
+    expect(loanIds.sort()).toEqual(
+      [w.drillLoan.loanId, w.adminRequest.loanId, w.benRequest.loanId].sort(),
+    );
+    expect(
+      a
+        .json<Json[]>("json/contacts.json")
+        .map((c) => c.name)
+        .sort(),
+    ).toEqual(["Kontakt ohne Ausleihe", "Nachbar Tom"]);
+    expect(a.json<Json[]>("json/transfers.json").map((t) => t.id)).toEqual([w.offer.transferId]);
+    expect(a.json<Json[]>("json/stock-moves.json")).toEqual([
+      expect.objectContaining({ itemId: w.annaInBox.id, delta: 1, quantityAfter: 2 }),
+    ]);
+    const man = a.json("manifest.json");
+    expect(man.counts).toMatchObject({ loans: 3, contacts: 2, transfers: 1, stockMoves: 1 });
+    const csv = a.text(man.tables.loans);
+    expect(csv).toContain("Ausgeliehen an");
+    expect(csv).toContain("Nachbar Tom");
+    expect(csv).toContain("01.12.2026");
+  });
+
+  test("member: loans of their items, requests only where they manage or asked", async () => {
+    const a = await exportToMemory(db, anna, store.store);
+    const loans = a.json<Json[]>("json/loans.json");
+    // The drill's out loan (household item) and the requests on Anna's own items.
+    expect(loans.map((l) => l.id).sort()).toEqual(
+      [w.drillLoan.loanId, w.adminRequest.loanId, w.benRequest.loanId].sort(),
+    );
+    expect(a.json<Json[]>("json/contacts.json").map((c) => c.name)).toEqual(["Nachbar Tom"]);
+    expect(a.json<Json[]>("json/transfers.json")).toHaveLength(1);
+    // Every person a loan or transfer names resolves in people.json.
+    const people = new Set(a.json("json/people.json").users.map((u: { id: string }) => u.id));
+    expect(people.has(ben.userId)).toBe(true);
+    expect(people.has(admin.userId)).toBe(true);
+
+    // Ben: the household drill's loan (who has it), nothing of Anna's items,
+    // not even the offer of one of them to him.
+    const b = await exportToMemory(db, ben, store.store);
+    expect(b.json<Json[]>("json/loans.json").map((l) => l.id)).toEqual([w.drillLoan.loanId]);
+    expect(b.json<Json[]>("json/contacts.json").map((c) => c.name)).toEqual(["Nachbar Tom"]);
+    expect(b.json<Json[]>("json/transfers.json")).toEqual([]);
+    expect(b.json<Json[]>("json/stock-moves.json")).toEqual([]);
+  });
+
+  test("member: a request on a household item someone else asked for stays out", async () => {
+    const r = requestLoan(db, admin, { itemId: w.drill.id, note: "admin fragt" });
+    const a = await exportToMemory(db, anna, store.store);
+    expect(a.json<Json[]>("json/loans.json").map((l) => l.id)).not.toContain(r.loanId);
+    expect(a.text("json/loans.json")).not.toContain("admin fragt");
   });
 });
 

@@ -12,9 +12,14 @@
 //    groups they refer to. References to items outside the export (a private
 //    container, an `item` field, ids in history diffs) are removed; the item
 //    record lists the removed keys in `omittedReferences`.
+//    Loans of their items: out and returned ones (who had it), requests only
+//    on items they manage or that they asked for themselves; the contacts
+//    those loans name; transfers of items they manage or that involve them;
+//    the stock ledger of their items.
 //  - "none" (guest): nothing; the caller answers 404 before getting here.
 // Never exported: password hashes (accounts), sessions, passkeys,
-// verifications, invite token hashes, jobs, auth e-mail aliases.
+// verifications, invite token hashes, jobs, auth e-mail aliases, and the
+// per-user inbox (notifications: derived, personal, not household data).
 // Memory: data is read in pages of `pageSize` rows from a snapshot (see
 // snapshot.ts) and written as it is read; files are streamed in 256 KiB
 // chunks; between pages the loop yields to the event loop, so other requests
@@ -45,15 +50,20 @@ import type { AppDb } from "../db/client";
 import {
   type Attachment,
   attachments,
+  contacts,
   events,
   groupMembers,
   groups,
   itemGrants,
   items,
   itemTags,
+  type Loan,
+  loans,
   locations,
   settings,
+  stockMoves,
   tags,
+  transfers,
   users,
 } from "../db/schema";
 import { receiptAttachmentIds, redactEvent } from "../history/service";
@@ -66,6 +76,8 @@ import {
   csvRows,
   ITEM_HEADERS,
   itemRow,
+  LOAN_HEADERS,
+  loanRow,
   type TableItem,
   type TableLookups,
   typeTable,
@@ -87,7 +99,12 @@ export const PATHS = {
   groups: "json/groups.json",
   settings: "json/settings.json",
   people: "json/people.json",
+  loans: "json/loans.json",
+  contacts: "json/contacts.json",
+  transfers: "json/transfers.json",
+  stockMoves: "json/stock-moves.json",
   itemsTable: "tabellen/gegenstaende.csv",
+  loansTable: "tabellen/ausleihen.csv",
   filesDir: "dateien",
 } as const;
 
@@ -235,6 +252,10 @@ async function build(
     grants: 0,
     users: 0,
     groups: 0,
+    loans: 0,
+    contacts: 0,
+    transfers: 0,
+    stockMoves: 0,
   };
 
   async function textEntry(path: string) {
@@ -562,6 +583,123 @@ async function build(
     })(),
   );
 
+  // --- loans, contacts, transfers, stock ledger -------------------------------------
+  // Admins: whole tables, paged by id. Members: the rows of exported items,
+  // 500 items at a time, then the rules in the header comment.
+  const exportedItemIds = [...levels.keys()];
+  async function* rowsOfItems<T extends { id: string }>(
+    load: (itemIds: string[] | null, after: string) => T[],
+  ): AsyncGenerator<T[]> {
+    if (isAdmin) {
+      let after = "";
+      for (;;) {
+        const page = load(null, after);
+        if (page.length === 0) return;
+        after = page[page.length - 1]?.id ?? after;
+        yield page;
+        await tick();
+      }
+    }
+    for (let i = 0; i < exportedItemIds.length; i += 500) {
+      yield load(exportedItemIds.slice(i, i + 500), "");
+      await tick();
+    }
+  }
+  const pageOf = (itemIds: string[] | null) => (itemIds ? 1_000_000 : pageSize);
+
+  const exportedLoans: Loan[] = [];
+  counts.loans = await jsonArray(
+    PATHS.loans,
+    (async function* () {
+      for await (const page of rowsOfItems((ids, after) =>
+        db
+          .select()
+          .from(loans)
+          .where(and(ids ? inArray(loans.itemId, ids) : undefined, gt(loans.id, after)))
+          .orderBy(asc(loans.id))
+          .limit(pageOf(ids))
+          .all(),
+      )) {
+        const kept = isAdmin
+          ? page
+          : page.filter(
+              (l) =>
+                levels.get(l.itemId) === "manage" ||
+                l.status === "out" ||
+                l.status === "returned" ||
+                l.borrowerUserId === ctx.userId ||
+                l.requestedBy === ctx.userId,
+            );
+        for (const l of kept) {
+          exportedLoans.push(l);
+          for (const id of [l.borrowerUserId, l.requestedBy, l.decidedBy, l.lentBy, l.returnedBy])
+            notePrincipal(id);
+        }
+        yield kept;
+      }
+    })(),
+  );
+
+  const contactIds = new Set(
+    exportedLoans.flatMap((l) => (l.borrowerContactId ? [l.borrowerContactId] : [])),
+  );
+  const contactRows = db
+    .select()
+    .from(contacts)
+    .orderBy(asc(contacts.name), asc(contacts.id))
+    .all()
+    .filter((c) => isAdmin || contactIds.has(c.id));
+  const contactName = new Map(contactRows.map((c) => [c.id, c.name]));
+  counts.contacts = await jsonArray(PATHS.contacts, [contactRows]);
+  for (const c of contactRows) notePrincipal(c.createdBy);
+
+  counts.transfers = await jsonArray(
+    PATHS.transfers,
+    (async function* () {
+      for await (const page of rowsOfItems((ids, after) =>
+        db
+          .select()
+          .from(transfers)
+          .where(and(ids ? inArray(transfers.itemId, ids) : undefined, gt(transfers.id, after)))
+          .orderBy(asc(transfers.id))
+          .limit(pageOf(ids))
+          .all(),
+      )) {
+        const kept = isAdmin
+          ? page
+          : page.filter(
+              (t) =>
+                levels.get(t.itemId) === "manage" ||
+                t.createdBy === ctx.userId ||
+                (t.toOwnerKind === "user" && t.toOwnerId === ctx.userId) ||
+                (t.toOwnerKind === "group" && ctx.groupIds.has(t.toOwnerId)),
+            );
+        for (const t of kept)
+          for (const id of [t.fromOwnerId, t.toOwnerId, t.createdBy, t.resolvedBy])
+            notePrincipal(id);
+        yield kept;
+      }
+    })(),
+  );
+
+  counts.stockMoves = await jsonArray(
+    PATHS.stockMoves,
+    (async function* () {
+      for await (const page of rowsOfItems((ids, after) =>
+        db
+          .select()
+          .from(stockMoves)
+          .where(and(ids ? inArray(stockMoves.itemId, ids) : undefined, gt(stockMoves.id, after)))
+          .orderBy(asc(stockMoves.id))
+          .limit(pageOf(ids))
+          .all(),
+      )) {
+        for (const mv of page) notePrincipal(mv.userId);
+        yield page;
+      }
+    })(),
+  );
+
   // --- item types, locations, tags --------------------------------------------------
   const typeIds = new Set<string>();
   if (isAdmin) for (const t of types) typeIds.add(t.id);
@@ -672,6 +810,34 @@ async function build(
     await w.close();
     tables.push(path);
   }
+  {
+    const path = allocPath(PATHS.loansTable);
+    const w = await textEntry(path);
+    await w.put(csvHeader(LOAN_HEADERS()));
+    const borrower = (l: Loan) =>
+      l.borrowerUserId
+        ? (userById.get(l.borrowerUserId)?.displayName ?? m.items_owner_unknown())
+        : l.borrowerContactId
+          ? (contactName.get(l.borrowerContactId) ?? m.loans_contact_deleted())
+          : m.loans_contact_deleted();
+    const sorted = [...exportedLoans].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id),
+    );
+    for (let i = 0; i < sorted.length; i += pageSize)
+      await w.put(
+        csvRows(
+          sorted.slice(i, i + pageSize).map((l) =>
+            loanRow(l, {
+              itemName: itemInfo.get(l.itemId)?.name ?? "",
+              shortCode: itemInfo.get(l.itemId)?.shortCode ?? null,
+              borrower: borrower(l),
+            }),
+          ),
+        ),
+      );
+    await w.close();
+    tables.push(path);
+  }
   const typesWithItems = types
     .filter((t) => typeCounts.has(t.id))
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
@@ -738,11 +904,15 @@ async function build(
       attachments: PATHS.attachments,
       grants: PATHS.grants,
       events: PATHS.events,
+      loans: PATHS.loans,
+      contacts: PATHS.contacts,
+      transfers: PATHS.transfers,
+      stockMoves: PATHS.stockMoves,
       ...(isAdmin
         ? { users: PATHS.users, groups: PATHS.groups, settings: PATHS.settings }
         : { people: PATHS.people }),
     },
-    tables: { items: tables[0], byType: typeTables },
+    tables: { items: tables[0], loans: tables[1], byType: typeTables },
   };
   await jsonValue(PATHS.manifest, manifest);
 
