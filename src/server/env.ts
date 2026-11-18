@@ -24,6 +24,11 @@ const schema = z.object({
   VAPID_PUBLIC_KEY: optional,
   VAPID_PRIVATE_KEY: optional,
   PORT: z.coerce.number().int().positive().default(3000),
+  /** ISBN auto-fill asks DNB / Open Library / Google Books; "off" keeps every lookup local. */
+  ISBN_LOOKUP: z
+    .string()
+    .optional()
+    .transform((v) => (v === "off" ? "off" : "on")),
 });
 
 export type Env = Omit<z.output<typeof schema>, "BETTER_AUTH_SECRET"> & {

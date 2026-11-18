@@ -52,6 +52,7 @@ export const ITEMS_ERROR_CODES = [
   "TRANSFER_PENDING",
   "TRANSFER_SAME_OWNER",
   "TRANSFER_TO_SELF",
+  "ISBN_INVALID",
 ] as const;
 export type ItemsErrorCode = (typeof ITEMS_ERROR_CODES)[number];
 
@@ -185,6 +186,8 @@ export function itemsErrorText(err: unknown): string {
       return m.transfers_error_same_owner();
     case "TRANSFER_TO_SELF":
       return m.transfers_error_to_self();
+    case "ISBN_INVALID":
+      return m.scan_isbn_invalid();
     default:
       return errorText(err);
   }

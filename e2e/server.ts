@@ -34,6 +34,8 @@ const child = spawn("bun", ["run", entry], {
     HOST: "127.0.0.1",
     DATABASE_PATH: E2E_DB,
     UPLOAD_DIR: `${E2E_DIR}/uploads`,
+    // No calls to the real book databases from tests.
+    ISBN_LOOKUP: "off",
   },
   stdio: ["ignore", "pipe", "inherit"],
 });

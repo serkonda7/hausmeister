@@ -9,6 +9,8 @@ describe("parseEnv", () => {
     expect(e.UPLOAD_DIR).toBe("./data/uploads");
     expect(e.BETTER_AUTH_SECRET.length).toBeGreaterThanOrEqual(32);
     expect(e.isProduction).toBe(false);
+    expect(e.ISBN_LOOKUP).toBe("on");
+    expect(parseEnv({ ISBN_LOOKUP: "off" }).ISBN_LOOKUP).toBe("off");
   });
 
   test("production requires a real secret", () => {

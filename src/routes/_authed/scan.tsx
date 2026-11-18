@@ -3,7 +3,7 @@
 // on after "Weiter scannen". Without BarcodeDetector (or camera) the code
 // field does the same; QR labels also open from the phone's camera app,
 // because they carry the full /q/<code> URL. Typed ISBNs are checked first.
-import { createFileRoute } from "@tanstack/solid-router";
+import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createSignal, Show } from "solid-js";
 import { CameraScanner, useScanSupport } from "~/components/scan/camera-scanner";
 import { ScanResult } from "~/components/scan/scan-result";
@@ -64,7 +64,14 @@ function ScanPage() {
 
   return (
     <div class="grid gap-4">
-      <h1 class="text-2xl font-semibold">{m.scan_title()}</h1>
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="mr-auto text-2xl font-semibold">{m.scan_title()}</h1>
+        <Show when={canAdd()}>
+          <Link to="/items/shelf" class="text-sm text-primary underline-offset-4 hover:underline">
+            {m.shelf_link()}
+          </Link>
+        </Show>
+      </div>
 
       <Show when={support() === "yes"}>
         <CameraScanner paused={!!result() || busy()} onCode={(raw) => void lookup(raw)} />

@@ -39,6 +39,7 @@ services:
       DATABASE_PATH: /data/db/app.sqlite
       UPLOAD_DIR: /data/uploads
       BETTER_AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env (openssl rand -base64 48)}
+      ISBN_LOOKUP: ${ISBN_LOOKUP:-on}
     volumes: ["./data:/data"]
     restart: unless-stopped
 

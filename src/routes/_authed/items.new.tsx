@@ -13,6 +13,7 @@ import { z } from "zod";
 import { attachmentErrorText } from "~/components/attachments/errors";
 import { downscaleForUpload, uploadFile } from "~/components/attachments/upload-client";
 import { AttributeFields } from "~/components/item-types/attribute-fields";
+import { type FoundBook, IsbnFill } from "~/components/items/isbn-fill";
 import {
   applyAttributeErrors,
   focusFirstError,
@@ -27,8 +28,9 @@ import { Button, buttonVariants } from "~/components/ui/button";
 import { MAX_FILE_BYTES } from "~/lib/attachments/rules";
 import { goToLogin } from "~/lib/error-text";
 import { useHydrated } from "~/lib/hydrated";
-import { activeFields } from "~/lib/item-types/fields";
+import { activeFields, type FieldDefinition } from "~/lib/item-types/fields";
 import { itemTypeQuery, itemTypesQuery } from "~/lib/item-types/queries";
+import { flattenTree } from "~/lib/item-types/tree";
 import { parseItemsError } from "~/lib/items/errors";
 import { type BaseErrors, emptyBaseValues, parseBaseValues } from "~/lib/items/form";
 import { locationsQuery, principalsQuery, tagsQuery } from "~/lib/items/queries";
@@ -96,9 +98,15 @@ function NewItemPage() {
     !!(search().loc || search().container || search().barcode),
   );
 
+  // A scanned ISBN without a type: the starter type "book" if it exists.
+  createEffect(() => {
+    if (typeId() || search().type || !search().isbn) return;
+    const book = flattenTree(types.data ?? []).find((t) => t.key === "book");
+    if (book) setTypeId(book.id);
+  });
   // Remember the last type for the next quick add.
   createEffect(() => {
-    if (typeId() || search().type) return;
+    if (typeId() || search().type || search().isbn) return;
     try {
       const last = localStorage.getItem(LAST_TYPE_KEY);
       if (last && JSON.stringify(types.data ?? []).includes(`"id":"${last}"`)) setTypeId(last);
@@ -112,6 +120,21 @@ function NewItemPage() {
   onCleanup(() => {
     for (const p of photos()) URL.revokeObjectURL(p.url);
   });
+
+  // ISBN auto-fill: for types whose ISBN field names lookup sources.
+  const isbnField = () =>
+    activeFields(type.data?.effectiveFields ?? []).some(
+      (f) =>
+        f.kind === "isbn" && !!(f as Extract<FieldDefinition, { kind: "isbn" }>).lookup?.length,
+    );
+  let autoName = "";
+  function applyBook(r: FoundBook) {
+    setTouched(true);
+    if (!base.name.trim() || base.name === autoName) setBase("name", r.name);
+    autoName = r.name;
+    const set = form.setFieldValue as (name: string, value: unknown) => void;
+    for (const [k, v] of Object.entries(r.attributes)) set(`attributes.${k}`, v);
+  }
 
   const form = createForm(() => ({
     defaultValues: { attributes: {} as Record<string, unknown> },
@@ -392,6 +415,22 @@ function NewItemPage() {
               }}
             />
           </section>
+
+          <Show when={typeId() && isbnField() ? typeId() : null} keyed>
+            {(tid) => (
+              <IsbnFill
+                typeId={tid}
+                initial={search().isbn}
+                onFound={applyBook}
+                onIsbn={(isbn) => {
+                  const set = form.setFieldValue as (name: string, value: unknown) => void;
+                  for (const f of activeFields(type.data?.effectiveFields ?? []))
+                    if (f.kind === "isbn") set(`attributes.${f.key}`, isbn);
+                }}
+                disabled={!!created()}
+              />
+            )}
+          </Show>
 
           <NameField
             id="new-name"
