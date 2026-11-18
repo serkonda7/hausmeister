@@ -101,8 +101,10 @@ export type ItemPermissions = {
   canUse: boolean;
   canEdit: boolean;
   canManage: boolean;
-  /** Admin, or the item's direct user owner (DESIGN §3.6 until transfers exist). */
+  /** Direct owner change: admin, or the item's direct user owner (DESIGN §3.6). */
   canChangeOwner: boolean;
+  /** Offer the item to another user or group (manage). */
+  canTransfer: boolean;
 };
 
 export type ItemDetail = {

@@ -12,6 +12,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 export const ROLES = ["admin", "member", "guest"] as const;
@@ -42,6 +43,15 @@ export const LOAN_STATUSES = [
   "declined",
   "cancelled",
 ] as const;
+/** pending → accepted | declined | cancelled; an admin may force a pending one (forced). */
+export const TRANSFER_STATUSES = [
+  "pending",
+  "accepted",
+  "declined",
+  "forced",
+  "cancelled",
+] as const;
+export const TRANSFER_TARGET_KINDS = ["user", "group"] as const;
 /** Why a stock quantity changed (stock_moves.reason). */
 export const STOCK_REASONS = ["used", "restocked", "counted", "edited", "other"] as const;
 
@@ -456,6 +466,39 @@ export const loans = sqliteTable(
 );
 
 /**
+ * Ownership transfers (DESIGN §3.6): someone with `manage` offers the item to
+ * a user or group, the new owner accepts. `from_*` is the owner when it was
+ * offered; accepting fails if the owner changed meanwhile. At most one
+ * pending transfer per item.
+ */
+export const transfers = sqliteTable(
+  "transfers",
+  {
+    id: id(),
+    itemId: text("item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    fromOwnerKind: text("from_owner_kind", { enum: OWNER_KINDS }).notNull(),
+    fromOwnerId: text("from_owner_id"),
+    toOwnerKind: text("to_owner_kind", { enum: TRANSFER_TARGET_KINDS }).notNull(),
+    toOwnerId: text("to_owner_id").notNull(),
+    status: text("status", { enum: TRANSFER_STATUSES }).notNull().default("pending"),
+    note: text("note"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    resolvedBy: text("resolved_by").references(() => users.id, { onDelete: "set null" }),
+    resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    uniqueIndex("transfers_pending_idx").on(t.itemId).where(sql`status = 'pending'`),
+    index("transfers_to_idx").on(t.toOwnerKind, t.toOwnerId, t.status),
+    check("transfers_status", inList("status", TRANSFER_STATUSES)),
+    check("transfers_to_kind", inList("to_owner_kind", TRANSFER_TARGET_KINDS)),
+    check("transfers_from_kind", inList("from_owner_kind", OWNER_KINDS)),
+  ],
+);
+
+/**
  * Stock changes of an item (DESIGN §4.2 `stock`): one row per adjustment or
  * quantity edit, with the quantity it left. Events carry the same change for
  * the history; this table is the stock ledger.
@@ -554,6 +597,8 @@ export type NewEvent = typeof events.$inferInsert;
 export type Contact = typeof contacts.$inferSelect;
 export type Loan = typeof loans.$inferSelect;
 export type LoanStatus = (typeof LOAN_STATUSES)[number];
+export type Transfer = typeof transfers.$inferSelect;
+export type TransferStatus = (typeof TRANSFER_STATUSES)[number];
 export type StockMove = typeof stockMoves.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type Job = typeof jobs.$inferSelect;

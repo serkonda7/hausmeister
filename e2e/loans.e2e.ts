@@ -130,3 +130,36 @@ test("stock: use one below the minimum, owners get a notice", async ({ adminPage
     ben.page.getByRole("region", { name: "Verlauf" }).getByText("Gezählt (neuer Bestand)"),
   ).toBeVisible();
 });
+
+test("ownership transfer: offer a private item, the new owner accepts", async ({ newUser }) => {
+  const anna = await newUser("member", `Anna ${token()}`);
+  const ben = await newUser("member", `Ben ${token()}`);
+  const name = `Jacke ${token()}`;
+  const id = await addItem(anna.page, { type: "Werkzeug", name, more: ownMore({ private: true }) });
+  await hydrated(anna.page);
+  await anna.page.getByRole("button", { name: "Übergeben …" }).click();
+  const dialog = anna.page.getByRole("dialog");
+  await dialog.getByLabel("An wen?").selectOption({ label: ben.displayName });
+  await dialog.getByLabel("Nachricht (optional)").fill("Ist dir hoffentlich nicht zu groß");
+  await dialog.getByRole("button", { name: "Übergabe anbieten" }).click();
+  await expect(anna.page.getByText("Übergabe angeboten").first()).toBeVisible();
+  await expect(anna.page.getByTestId("transfer")).toContainText(`Angeboten an ${ben.displayName}`);
+
+  // Ben cannot open the private item yet, but the offer is on his home page.
+  await ben.page.goto("/");
+  await hydrated(ben.page);
+  const offer = ben.page
+    .getByRole("region", { name: "Übergaben an dich" })
+    .getByTestId("transfer")
+    .filter({ hasText: name });
+  await expect(offer).toContainText(`${anna.displayName} möchte dir das übergeben`);
+  await expect(offer).toContainText("Ist dir hoffentlich nicht zu groß");
+  await offer.getByRole("button", { name: "Annehmen" }).click();
+  await expect(ben.page.getByText(`${name} hat den Besitzer gewechselt`)).toBeVisible();
+
+  await ben.page.goto(`/items/${id}`);
+  await expect(ben.page.getByTestId("item-owner")).toHaveText(ben.displayName);
+  await expect(ben.page.getByTestId("item-visibility")).toContainText("Privat");
+  await anna.page.goto(`/items/${id}`);
+  await expect(anna.page.getByText("Gegenstand nicht gefunden")).toBeVisible();
+});

@@ -94,10 +94,11 @@ export function itemLevel(ctx: AuthCtx, item: ItemAuthFields, grants: readonly G
 export const canSeeMoney = (lvl: Level): boolean => atLeast(lvl, "edit");
 
 /**
- * Who may change an item's owner (DESIGN §3.6): an admin, or the item's direct
- * user owner; a group-owned item only an admin. `manage` is not enough until
- * accept-based transfers exist, or a grantee or group co-member could take the
- * item and lock the owner out. Which owners may be picked is checked separately.
+ * Who may change an item's owner directly, without the new owner accepting
+ * (DESIGN §3.6): an admin, or the item's direct user owner; a group-owned item
+ * only an admin. Everyone else with `manage` offers a transfer instead
+ * (server/transfers), or a grantee or group co-member could take the item and
+ * lock the owner out. Which owners may be picked is checked separately.
  */
 export function canChangeOwner(ctx: AuthCtx, item: Pick<Item, "ownerKind" | "ownerId">): boolean {
   if (ctx.role === "admin") return true;

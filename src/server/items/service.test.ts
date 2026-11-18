@@ -924,6 +924,7 @@ describe("serialization below edit", () => {
       canEdit: false,
       canManage: false,
       canChangeOwner: false,
+      canTransfer: false,
     });
     const owner = getItem(f.db, f.anna, a.id);
     expect(owner.item.priceCents).toBe(89900);

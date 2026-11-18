@@ -28,7 +28,10 @@ export type ItemEventAction =
   | "item.loan_cancelled"
   | "item.loan_due_changed"
   | "item.lent"
-  | "item.returned";
+  | "item.returned"
+  | "item.transfer_started"
+  | "item.transfer_declined"
+  | "item.transfer_cancelled";
 
 export type CatalogEventAction =
   | "location.created"

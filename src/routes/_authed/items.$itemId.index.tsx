@@ -23,6 +23,7 @@ import { ItemSharing } from "~/components/items/item-sharing";
 import { isMissing, NotFoundCard } from "~/components/items/not-found";
 import { StockControl } from "~/components/items/stock-control";
 import { ItemLoansSection } from "~/components/loans/item-loans";
+import { TransferAction, TransferBanner } from "~/components/transfers/transfer";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { formatCents, formatDate, formatNumber } from "~/lib/format";
@@ -31,6 +32,7 @@ import { statusLabel } from "~/lib/items/labels";
 import { itemQuery } from "~/lib/items/queries";
 import type { ItemDetail } from "~/lib/items/types";
 import { itemLoansQuery } from "~/lib/loans/queries";
+import { itemTransferQuery } from "~/lib/transfers/queries";
 import { m } from "~/paraglide/messages";
 
 export const Route = createFileRoute("/_authed/items/$itemId/")({
@@ -41,6 +43,7 @@ export const Route = createFileRoute("/_authed/items/$itemId/")({
       await Promise.all([
         context.queryClient.ensureQueryData(attachmentsQuery(params.itemId)),
         context.queryClient.ensureQueryData(itemLoansQuery(params.itemId)),
+        context.queryClient.ensureQueryData(itemTransferQuery(params.itemId)),
       ]);
       return { name: d.item.name };
     } catch (err) {
@@ -170,12 +173,17 @@ function ItemView(props: { detail: ItemDetail }) {
           <Show when={perms().canChangeOwner}>
             <OwnerAction detail={d()} user={ctx().user} />
           </Show>
+          <Show when={perms().canTransfer}>
+            <TransferAction detail={d()} user={ctx().user} />
+          </Show>
           <Show when={perms().canManage}>
             <VisibilityAction detail={d()} />
             <DeleteAction detail={d()} />
           </Show>
         </div>
       </Show>
+
+      <TransferBanner itemId={it().id} itemName={it().name} />
 
       <ItemLoansSection detail={d()} user={ctx().user} />
 

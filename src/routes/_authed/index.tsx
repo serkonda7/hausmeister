@@ -6,6 +6,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { ItemResults } from "~/components/items/item-card";
 import { LoanListCard } from "~/components/loans/loan-actions";
+import { TransferCard } from "~/components/transfers/transfer";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
@@ -16,6 +17,7 @@ import { roleLabel } from "~/lib/labels";
 import { loanOverviewQuery } from "~/lib/loans/queries";
 import type { LoanListRow } from "~/lib/loans/types";
 import { myProfileQuery } from "~/lib/session-query";
+import { transferOverviewQuery } from "~/lib/transfers/queries";
 import { m } from "~/paraglide/messages";
 
 const MINE: SearchItemsInput = { mine: true, sort: "updated_desc", limit: 6 };
@@ -30,6 +32,7 @@ export const Route = createFileRoute("/_authed/")({
     return Promise.all([
       qc.ensureQueryData(myProfileQuery()),
       qc.ensureQueryData(loanOverviewQuery()),
+      qc.ensureQueryData(transferOverviewQuery()),
       ...lists.map((i) => qc.ensureInfiniteQueryData(itemListQuery(i))),
     ]);
   },
@@ -108,6 +111,7 @@ function Home() {
   const navigate = useNavigate();
   const profile = useQuery(() => myProfileQuery());
   const loans = useQuery(() => loanOverviewQuery());
+  const transfers = useQuery(() => transferOverviewQuery());
   const isGuest = () => ctx().user.role === "guest";
   const [q, setQ] = createSignal("");
 
@@ -168,6 +172,16 @@ function Home() {
         </Link>
       </Show>
 
+      <Show when={transfers.data?.incoming.length}>
+        <section class="grid gap-3" aria-labelledby="home-transfers">
+          <h2 id="home-transfers" class="text-lg font-semibold">
+            {m.transfers_group_incoming()}
+          </h2>
+          <ul class="grid gap-2">
+            <For each={transfers.data?.incoming}>{(t) => <TransferCard t={t} />}</For>
+          </ul>
+        </section>
+      </Show>
       <LoanTeaser
         id="home-requests"
         title={m.loans_group_requests()}

@@ -46,6 +46,12 @@ export const ITEMS_ERROR_CODES = [
   "LOAN_BORROWER_INVALID",
   "CONTACT_NOT_FOUND",
   "CONTACT_IN_USE",
+  "TRANSFER_NOT_FOUND",
+  "TRANSFER_STATE",
+  "TRANSFER_STALE",
+  "TRANSFER_PENDING",
+  "TRANSFER_SAME_OWNER",
+  "TRANSFER_TO_SELF",
 ] as const;
 export type ItemsErrorCode = (typeof ITEMS_ERROR_CODES)[number];
 
@@ -167,6 +173,18 @@ export function itemsErrorText(err: unknown): string {
       return m.contacts_error_not_found();
     case "CONTACT_IN_USE":
       return m.contacts_error_in_use();
+    case "TRANSFER_NOT_FOUND":
+      return m.transfers_error_not_found();
+    case "TRANSFER_STATE":
+      return m.transfers_error_state();
+    case "TRANSFER_STALE":
+      return m.transfers_error_stale();
+    case "TRANSFER_PENDING":
+      return m.transfers_error_pending();
+    case "TRANSFER_SAME_OWNER":
+      return m.transfers_error_same_owner();
+    case "TRANSFER_TO_SELF":
+      return m.transfers_error_to_self();
     default:
       return errorText(err);
   }

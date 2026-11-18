@@ -43,6 +43,7 @@ const SKIP = new Set([
   "kind",
   "originalName",
   "loanId",
+  "transferId",
   "borrowerUserId",
   "borrowerName",
   "lentQuantity",
@@ -220,6 +221,8 @@ export function formatHistoryEntry(e: HistoryEntry, ctx: HistoryContext): Format
     summary = [r, note].filter(Boolean).join(": ") || null;
   } else if (d.reason === "location_deleted") summary = m.item_history_reason_location_deleted();
   else if (d.reason === "container_deleted") summary = m.item_history_reason_container_deleted();
+  else if (d.reason === "transfer") summary = m.item_history_reason_transfer();
+  else if (d.reason === "transfer_forced") summary = m.item_history_reason_transfer_forced();
 
   const list = changes(d);
   const owner = list.filter(([k]) => k === "ownerKind" || k === "ownerId");

@@ -394,6 +394,7 @@ export function getItem(db: AppDb, ctx: AuthCtx, id: string): ItemDetail {
       canEdit: atLeast(level, "edit"),
       canManage: atLeast(level, "manage"),
       canChangeOwner: canChangeOwner(ctx, item),
+      canTransfer: atLeast(level, "manage"),
     },
     grants: atLeast(level, "manage") ? grantRows(db, item.id) : null,
   };
