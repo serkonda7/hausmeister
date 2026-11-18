@@ -205,7 +205,7 @@ describe("user guards", () => {
     expect((await signInRequest(f.handler, "member", "brand-new-password")).status).toBe(200);
     expect(
       await codeOfAsync(() =>
-        resetUserPassword(f.db, f.adminCtx, { userId: f.member.id, password: "short" }),
+        resetUserPassword(f.db, f.adminCtx, { userId: f.member.id, password: "" }),
       ),
     ).toContain("PASSWORD_TOO_SHORT");
   });

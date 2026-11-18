@@ -87,7 +87,7 @@ describe("createUserWithPassword", () => {
       await err(
         createUserWithPassword(db, {
           username: "abc",
-          password: "short",
+          password: "",
           displayName: "x",
           role: "guest",
         }),

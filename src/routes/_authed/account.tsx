@@ -110,7 +110,7 @@ function PasswordCard() {
       setError(m.auth_error_password_mismatch());
       return;
     }
-    if (newPassword.length < 10) {
+    if (newPassword.length === 0) {
       setError(m.auth_error_password_too_short());
       return;
     }
@@ -172,12 +172,8 @@ function PasswordCard() {
               name="newPassword"
               type="password"
               autocomplete="new-password"
-              aria-describedby="new-password-hint"
               required
             />
-            <p id="new-password-hint" class="text-xs text-muted-foreground">
-              {m.auth_password_hint()}
-            </p>
           </div>
           <div class="grid gap-2">
             <Label for="newPassword2">{m.auth_password_repeat()}</Label>

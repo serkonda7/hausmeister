@@ -126,13 +126,8 @@ function InvitePage() {
                         name="password"
                         type="password"
                         autocomplete="new-password"
-                        minLength={10}
-                        aria-describedby="password-hint"
                         required
                       />
-                      <p id="password-hint" class="text-xs text-muted-foreground">
-                        {m.auth_password_hint()}
-                      </p>
                     </div>
                     <div class="grid gap-2">
                       <Label for="password2">{m.auth_password_repeat()}</Label>

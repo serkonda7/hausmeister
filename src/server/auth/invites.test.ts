@@ -138,7 +138,7 @@ describe("invite lifecycle", () => {
     const taken = await rejection(acceptInvite(db, accept(token, "ADMIN")));
     expect(taken).toBeInstanceOf(UserInputError);
     expect((taken as UserInputError).code).toBe("USERNAME_TAKEN");
-    const short = await rejection(acceptInvite(db, { ...accept(token), password: "short" }));
+    const short = await rejection(acceptInvite(db, { ...accept(token), password: "" }));
     expect((short as UserInputError).code).toBe("PASSWORD_TOO_SHORT");
     expect(inviteStatus(db, token)).toEqual({ role: "member" });
     expect((await acceptInvite(db, accept(token))).username).toBe("lena");

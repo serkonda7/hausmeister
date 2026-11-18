@@ -16,7 +16,9 @@ import type { AppDb } from "../db/client";
 import * as schema from "../db/schema";
 import type { Env } from "../env";
 
-export const PASSWORD_MIN_LENGTH = 10;
+// No real minimum: the app is reachable only over the tailnet, so passwords
+// only need to be non-empty.
+export const PASSWORD_MIN_LENGTH = 1;
 export const PASSWORD_MAX_LENGTH = 128;
 export const USERNAME_PATTERN = /^[a-z0-9_.]{3,30}$/;
 /**

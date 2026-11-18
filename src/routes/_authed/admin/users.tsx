@@ -195,18 +195,7 @@ function ResetPasswordDialog(props: { user: AdminUserRow | null; onClose: () => 
           </DialogHeader>
           <div class="grid gap-2">
             <Label for="reset-password">{m.account_new_password()}</Label>
-            <Input
-              id="reset-password"
-              name="password"
-              type="text"
-              autocomplete="off"
-              minLength={10}
-              aria-describedby="reset-password-hint"
-              required
-            />
-            <p id="reset-password-hint" class="text-xs text-muted-foreground">
-              {m.auth_password_hint()}
-            </p>
+            <Input id="reset-password" name="password" type="text" autocomplete="off" required />
           </div>
           <DialogFooter>
             <Button variant="outline" type="button" onClick={props.onClose}>
