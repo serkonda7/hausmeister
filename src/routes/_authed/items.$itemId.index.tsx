@@ -21,6 +21,7 @@ import { ItemResults } from "~/components/items/item-card";
 import { ItemHistory } from "~/components/items/item-history";
 import { ItemSharing } from "~/components/items/item-sharing";
 import { isMissing, NotFoundCard } from "~/components/items/not-found";
+import { StockControl } from "~/components/items/stock-control";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { formatCents, formatDate, formatNumber } from "~/lib/format";
@@ -171,6 +172,12 @@ function ItemView(props: { detail: ItemDetail }) {
         </div>
       </Show>
 
+      <Show when={isStock() || it().minQuantity != null}>
+        <Section title={m.stock_title()} id="item-stock">
+          <StockControl item={it()} canUse={perms().canUse} />
+        </Section>
+      </Show>
+
       <Section title={m.attachments_photos()} id="item-photos">
         <PhotoGallery itemId={it().id} level={it().level} />
         <AttachmentUploader itemId={it().id} level={it().level} kinds={["photo"]} />
@@ -189,7 +196,7 @@ function ItemView(props: { detail: ItemDetail }) {
           <Fact label={m.item_field_location()}>
             <ItemBreadcrumbs path={d().path} label={m.item_place_of({ name: it().name })} />
           </Fact>
-          <Show when={isStock() || it().quantity !== 1 || it().unit}>
+          <Show when={!isStock() && it().minQuantity == null && (it().quantity !== 1 || it().unit)}>
             <Fact label={m.item_field_quantity()}>
               {formatNumber(it().quantity, 3)} {it().unit ?? ""}
               <Show when={it().minQuantity != null}>

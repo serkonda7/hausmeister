@@ -12,6 +12,7 @@ import {
   OWNER_KINDS,
   PRINCIPAL_KINDS,
   SEARCH_PAGE_MAX,
+  STOCK_ADJUST_REASONS,
   TAG_NAME_MAX,
   VISIBILITIES,
 } from "./constants";
@@ -183,6 +184,23 @@ export const reassignItemsInput = z.object({
   ]),
 });
 export type ReassignItemsInput = z.infer<typeof reassignItemsInput>;
+
+/**
+ * Needs `use`. Either `delta` (e.g. -1 used, +10 restocked) or `quantity` (a
+ * count: the new total). Stock changes add up, so no version is needed.
+ */
+export const adjustStockInput = z
+  .object({
+    id: idSchema,
+    delta: z.number().finite().min(-1e9).max(1e9).optional(),
+    quantity: itemFields.quantity.optional(),
+    reason: z.enum(STOCK_ADJUST_REASONS),
+    note: optText(200),
+  })
+  .refine((v) => (v.delta === undefined) !== (v.quantity === undefined), {
+    message: "delta or quantity required",
+  });
+export type AdjustStockInput = z.input<typeof adjustStockInput>;
 
 export const tagAttachInput = z.object({ itemId: idSchema, version, name: tagNameSchema });
 export const tagDetachInput = z.object({ itemId: idSchema, version, tagId: idSchema });

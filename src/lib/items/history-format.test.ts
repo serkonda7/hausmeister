@@ -155,3 +155,16 @@ test("a kind change names the file and both kinds, and is not merged into upload
   expect(g.map((x) => x.e.id)).toEqual(["4", "2", "1"]);
   expect(g[0]!.f.summary).toBe("2 Dateien");
 });
+
+test("stock adjustments show the reason and note, then the quantity", () => {
+  const f = formatHistoryEntry(
+    entry("item.stock_adjusted", {
+      quantity: { from: 10, to: 8 },
+      reason: "used",
+      note: "Regal gebaut",
+    }),
+    ctx,
+  );
+  expect(f.summary).toBe("Verbraucht: Regal gebaut");
+  expect(f.lines.map((l) => `${l.label}: ${l.from} → ${l.to}`)).toEqual(["Menge: 10 → 8"]);
+});

@@ -84,6 +84,7 @@ import {
 import { canSeeLocation, visibleLocationIds } from "../locations/visibility";
 import { reindexItems, removeFromIndex } from "../search/indexer";
 import { ownerRefs, tagsOfItems } from "../search/query";
+import { recordStockChange } from "../stock/service";
 import { findOrCreateTags, itemTagNames, replaceItemTags } from "../tags/core";
 import { assertVersion, requireItem, uniqueShortCode, writeVersioned } from "./access";
 import { forbidden, ItemsError, parseInput } from "./errors";
@@ -473,6 +474,15 @@ export function updateItem(db: AppDb, ctx: AuthCtx, raw: UpdateItemInput): { ver
     if (next.name !== undefined) set.nameSort = normalizeSearchText(String(next.name));
     const version = writeVersioned(tx, item.id, item.version, set);
     if (tagIds) replaceItemTags(tx, item.id, tagIds);
+    if (diff.quantity || diff.minQuantity)
+      recordStockChange(
+        tx,
+        ctx,
+        { ...item, unit: (after.unit as string | null) ?? null },
+        { quantity: item.quantity, minQuantity: item.minQuantity },
+        { quantity: after.quantity as number, minQuantity: after.minQuantity as number | null },
+        "edited",
+      );
     recordItemEvent(tx, {
       actorId: ctx.userId,
       action: "item.updated",

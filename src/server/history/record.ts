@@ -20,7 +20,8 @@ export type ItemEventAction =
   | "item.visibility_changed"
   | "item.grant_set"
   | "item.grant_removed"
-  | "item.deleted";
+  | "item.deleted"
+  | "item.stock_adjusted";
 
 export type CatalogEventAction =
   | "location.created"

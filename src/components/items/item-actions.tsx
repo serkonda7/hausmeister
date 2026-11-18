@@ -51,7 +51,10 @@ export function useItemWrite() {
     ]);
   return async <T,>(
     fn: () => Promise<T>,
-    opts: { success?: string; onError?: (err: unknown) => boolean | undefined } = {},
+    opts: {
+      success?: string | ((r: T) => string);
+      onError?: (err: unknown) => boolean | undefined;
+    } = {},
   ): Promise<T | undefined> => {
     const r = await runAction(fn, {
       success: opts.success,

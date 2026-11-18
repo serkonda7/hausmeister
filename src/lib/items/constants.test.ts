@@ -8,5 +8,6 @@ test("enum constants match the schema", () => {
   expect([...c.VISIBILITIES]).toEqual([...schema.VISIBILITIES]);
   expect([...c.GRANT_LEVELS]).toEqual([...schema.GRANT_LEVELS]);
   expect([...c.PRINCIPAL_KINDS]).toEqual([...schema.PRINCIPAL_KINDS]);
+  expect([...c.STOCK_REASONS]).toEqual([...schema.STOCK_REASONS]);
   for (const s of c.GONE_STATUSES) expect(c.ITEM_STATUSES).toContain(s);
 });

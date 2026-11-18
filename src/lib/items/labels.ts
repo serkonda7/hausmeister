@@ -1,6 +1,6 @@
 // German labels for item enums and history actions.
 import { m } from "~/paraglide/messages";
-import type { ItemStatus, LocationKind } from "./constants";
+import type { ItemStatus, LocationKind, StockReason } from "./constants";
 
 export const statusLabel = (s: ItemStatus): string =>
   ({
@@ -36,6 +36,15 @@ export const levelLabel = (l: "view" | "use" | "edit" | "manage"): string =>
     manage: m.items_level_manage,
   })[l]();
 
+export const stockReasonLabel = (r: StockReason): string =>
+  ({
+    used: m.stock_reason_used,
+    restocked: m.stock_reason_restocked,
+    counted: m.stock_reason_counted,
+    edited: m.stock_reason_edited,
+    other: m.stock_reason_other,
+  })[r]();
+
 const ACTIONS: Record<string, () => string> = {
   "item.created": m.history_action_item_created,
   "item.updated": m.history_action_item_updated,
@@ -47,6 +56,7 @@ const ACTIONS: Record<string, () => string> = {
   "item.grant_set": m.history_action_item_grant_set,
   "item.grant_removed": m.history_action_item_grant_removed,
   "item.attributes_migrated": m.history_action_item_attributes_migrated,
+  "item.stock_adjusted": m.history_action_item_stock_adjusted,
   "attachment.added": m.history_action_attachment_added,
   "attachment.removed": m.history_action_attachment_removed,
   "attachment.kind_changed": m.history_action_attachment_kind_changed,

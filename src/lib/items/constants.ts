@@ -74,5 +74,16 @@ export const SEARCH_PAGE_MAX = 200;
 /** FTS5 trigram needs 3 characters; shorter queries use a name prefix match. */
 export const SEARCH_MIN_FTS = 3;
 
+/** Why a stock quantity changed (DESIGN §4.2). "edited" is a quantity change in the item form. */
+export const STOCK_REASONS = ["used", "restocked", "counted", "edited", "other"] as const;
+export type StockReason = (typeof STOCK_REASONS)[number];
+/** The reasons a person picks when adjusting stock (not "edited"). */
+export const STOCK_ADJUST_REASONS = [
+  "used",
+  "restocked",
+  "counted",
+  "other",
+] as const satisfies readonly StockReason[];
+
 export const TAG_NAME_MAX = 40;
 export const ITEM_NAME_MAX = 200;

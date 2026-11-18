@@ -33,6 +33,8 @@ export const ITEM_STATUSES = [
   "sold",
   "disposed",
 ] as const;
+/** Why a stock quantity changed (stock_moves.reason). */
+export const STOCK_REASONS = ["used", "restocked", "counted", "edited", "other"] as const;
 
 const id = () =>
   text("id")
@@ -391,6 +393,58 @@ export const events = sqliteTable(
   (t) => [index("events_item_idx").on(t.itemId, t.at), index("events_at_idx").on(t.at)],
 );
 
+/**
+ * Stock changes of an item (DESIGN §4.2 `stock`): one row per adjustment or
+ * quantity edit, with the quantity it left. Events carry the same change for
+ * the history; this table is the stock ledger.
+ */
+export const stockMoves = sqliteTable(
+  "stock_moves",
+  {
+    id: id(),
+    itemId: text("item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    delta: real("delta").notNull(),
+    quantityAfter: real("quantity_after").notNull(),
+    reason: text("reason", { enum: STOCK_REASONS }).notNull(),
+    note: text("note"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    at: integer("at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    index("stock_moves_item_idx").on(t.itemId, t.at),
+    check("stock_moves_reason", inList("reason", STOCK_REASONS)),
+  ],
+);
+
+/**
+ * A user's in-app inbox (low stock, loan requests and answers, transfers).
+ * No FK on item_id, like events: a notice may outlive its item. The payload
+ * holds display data (names at the time); item names are read live and only
+ * when the user can still see the item.
+ */
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    itemId: text("item_id"),
+    payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    readAt: integer("read_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("notifications_user_idx").on(t.userId, t.createdAt),
+    index("notifications_item_idx").on(t.itemId, t.kind),
+  ],
+);
+
 export const jobs = sqliteTable(
   "jobs",
   {
@@ -435,6 +489,8 @@ export type Attachment = typeof attachments.$inferSelect;
 export type NewAttachment = typeof attachments.$inferInsert;
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
+export type StockMove = typeof stockMoves.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
 export type ItemStatus = (typeof ITEM_STATUSES)[number];

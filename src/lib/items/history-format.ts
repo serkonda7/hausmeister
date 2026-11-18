@@ -5,9 +5,9 @@ import { formatCents, formatDate } from "~/lib/format";
 import { formatAttributeValue, formatUnknown } from "~/lib/item-types/display";
 import type { FieldDefinition } from "~/lib/item-types/fields";
 import { m } from "~/paraglide/messages";
-import { ITEM_STATUSES, type ItemStatus } from "./constants";
+import { ITEM_STATUSES, type ItemStatus, STOCK_REASONS, type StockReason } from "./constants";
 import { BASE_LABEL, type ItemBaseValues } from "./form";
-import { levelLabel, statusLabel } from "./labels";
+import { levelLabel, statusLabel, stockReasonLabel } from "./labels";
 import type { HistoryEntry, HistoryPage, JsonValue } from "./types";
 
 export type HistoryLine = { key: string; label: string; from: string; to: string };
@@ -181,6 +181,12 @@ export function formatHistoryEntry(e: HistoryEntry, ctx: HistoryContext): Format
       from: attachmentKindLabel(k.from),
       to: attachmentKindLabel(k.to),
     });
+  } else if (e.action === "item.stock_adjusted") {
+    const r = (STOCK_REASONS as readonly string[]).includes(String(d.reason))
+      ? stockReasonLabel(d.reason as StockReason)
+      : null;
+    const note = typeof d.note === "string" && d.note ? d.note : null;
+    summary = [r, note].filter(Boolean).join(": ") || null;
   } else if (d.reason === "location_deleted") summary = m.item_history_reason_location_deleted();
   else if (d.reason === "container_deleted") summary = m.item_history_reason_container_deleted();
 

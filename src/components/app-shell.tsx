@@ -1,5 +1,6 @@
+import { useQuery } from "@tanstack/solid-query";
 import { Link, useLocation, useNavigate } from "@tanstack/solid-router";
-import { For, type JSX } from "solid-js";
+import { For, type JSX, Show } from "solid-js";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +12,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { authClient } from "~/lib/auth-client";
 import { cn } from "~/lib/cn";
+import { unreadNotificationsQuery } from "~/lib/notification-queries";
 import { m } from "~/paraglide/messages";
 import type { SessionUser } from "~/server/auth/functions";
 
@@ -32,6 +34,35 @@ const NAV: NavItem[] = [
 export async function logout() {
   await authClient.signOut();
   window.location.assign("/login");
+}
+
+/** The inbox with its unread count (polled every two minutes and on focus). */
+function InboxLink() {
+  const q = useQuery(() => unreadNotificationsQuery());
+  const unread = () => q.data?.unread ?? 0;
+  return (
+    <Link
+      to="/notifications"
+      class="relative inline-flex size-11 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={
+        unread() ? m.notifications_link_unread({ count: unread() }) : m.notifications_title()
+      }
+      data-testid="inbox-link"
+    >
+      <span aria-hidden="true" class="text-xl leading-none">
+        ✉
+      </span>
+      <Show when={unread() > 0}>
+        <span
+          aria-hidden="true"
+          class="absolute right-1 top-1 min-w-5 rounded-full bg-destructive px-1 text-center text-xs font-semibold leading-5 text-destructive-foreground"
+          data-testid="inbox-count"
+        >
+          {unread() > 99 ? "99+" : unread()}
+        </span>
+      </Show>
+    </Link>
+  );
 }
 
 /** Phone-first layout: top bar, content, bottom tab bar (side links from `md`). */
@@ -65,7 +96,8 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
               )}
             </For>
           </nav>
-          <div class="ml-auto">
+          <div class="ml-auto flex items-center gap-1">
+            <InboxLink />
             <DropdownMenu>
               <DropdownMenuTrigger as={Button} variant="ghost" size="sm">
                 {props.user.displayName}

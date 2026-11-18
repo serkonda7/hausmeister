@@ -36,6 +36,7 @@ export const ITEMS_ERROR_CODES = [
   "SEARCH_ATTRIBUTE_NEEDS_TYPE",
   "CURSOR_INVALID",
   "SHORT_CODE_NOT_FOUND",
+  "STOCK_NEGATIVE",
 ] as const;
 export type ItemsErrorCode = (typeof ITEMS_ERROR_CODES)[number];
 
@@ -137,6 +138,8 @@ export function itemsErrorText(err: unknown): string {
       return m.search_error_cursor();
     case "SHORT_CODE_NOT_FOUND":
       return m.search_error_short_code();
+    case "STOCK_NEGATIVE":
+      return m.stock_error_negative();
     default:
       return errorText(err);
   }
