@@ -112,3 +112,42 @@
     animation: none;
   }
 }
+
+/* Label sheets (src/routes/_authed/labels.tsx). Named pages give each format
+   its paper size: Avery Zweckform L4732 on A4 (5 × 16 labels of
+   35.6 × 16.9 mm, 13.3 mm top and 11 mm side margins) and 62 × 29 mm
+   thermal labels (one label per page). */
+@page labels-a4 {
+  size: A4 portrait;
+  margin: 0;
+}
+@page labels-thermal {
+  size: 62mm 29mm;
+  margin: 0;
+}
+.label-sheet-a4 {
+  page: labels-a4;
+  width: 210mm;
+  height: 297mm;
+  padding: 13.3mm 11mm 0;
+  display: grid;
+  grid-template-columns: repeat(5, 35.6mm);
+  grid-auto-rows: 16.9mm;
+  column-gap: 2.5mm;
+  align-content: start;
+  break-after: page;
+}
+.label-sheet-thermal {
+  page: labels-thermal;
+  width: 62mm;
+  height: 29mm;
+  break-after: page;
+}
+@media print {
+  /* Paper is white: the dark tokens flip for printing. */
+  :root {
+    --background: #fff;
+    --foreground: #000;
+    --card: #fff;
+  }
+}

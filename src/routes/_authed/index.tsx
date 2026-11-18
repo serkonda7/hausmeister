@@ -166,11 +166,23 @@ function Home() {
         </div>
       </form>
 
-      <Show when={!isGuest()}>
-        <Link to="/items/new" class={buttonVariants({ size: "lg", class: "w-full sm:w-auto" })}>
-          + {m.home_quick_add()}
+      <div class="grid grid-cols-2 gap-2 sm:flex">
+        <Show when={!isGuest()}>
+          <Link to="/items/new" class={buttonVariants({ size: "lg" })}>
+            + {m.home_quick_add()}
+          </Link>
+        </Show>
+        <Link
+          to="/scan"
+          class={buttonVariants({
+            size: "lg",
+            variant: "secondary",
+            class: isGuest() ? "col-span-2" : "",
+          })}
+        >
+          {m.home_scan()}
         </Link>
-      </Show>
+      </div>
 
       <Show when={transfers.data?.incoming.length}>
         <section class="grid gap-3" aria-labelledby="home-transfers">

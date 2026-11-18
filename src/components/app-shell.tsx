@@ -17,16 +17,17 @@ import { m } from "~/paraglide/messages";
 import type { SessionUser } from "~/server/auth/functions";
 
 type NavItem = {
-  to: "/" | "/items" | "/locations" | "/admin";
+  to: "/" | "/items" | "/scan" | "/locations" | "/admin";
   label: () => string;
   icon: string;
   roles?: SessionUser["role"][];
 };
 
-// Guests see Start, items and locations (only what is shared with them).
+// Guests see Start, items, scan and locations (only what is shared with them).
 const NAV: NavItem[] = [
   { to: "/", label: m.nav_home, icon: "⌂" },
   { to: "/items", label: m.nav_items, icon: "▦" },
+  { to: "/scan", label: m.nav_scan, icon: "⌗" },
   { to: "/locations", label: m.nav_locations, icon: "⌖" },
   { to: "/admin", label: m.nav_admin, icon: "⚙", roles: ["admin", "member"] },
 ];
@@ -75,7 +76,7 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
 
   return (
     <div class="flex min-h-dvh flex-col">
-      <header class="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+      <header class="sticky top-0 z-40 border-b bg-background/95 backdrop-blur print:hidden">
         <div class="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
           <Link to="/" class="text-lg font-semibold">
             {m.app_name()}
@@ -123,10 +124,12 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
         </div>
       </header>
 
-      <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-4 pb-24 md:pb-4">{props.children}</main>
+      <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-4 pb-24 md:pb-4 print:max-w-none print:p-0">
+        {props.children}
+      </main>
 
       <nav
-        class="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+        class="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
         aria-label={m.nav_menu()}
       >
         <ul class="grid" style={{ "grid-template-columns": `repeat(${items().length}, 1fr)` }}>

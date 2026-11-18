@@ -371,7 +371,7 @@ function decodeCursor(raw: string, sort: ItemSort, n: number): Cursor {
 
 // --- Rows ----------------------------------------------------------------------------
 
-const listColumns = {
+export const listColumns = {
   id: items.id,
   name: items.name,
   shortCode: items.shortCode,

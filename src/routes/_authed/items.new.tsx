@@ -40,6 +40,10 @@ const searchSchema = z.object({
   type: z.string().max(64).optional().catch(undefined),
   loc: z.string().max(64).optional().catch(undefined),
   container: z.string().max(64).optional().catch(undefined),
+  /** A scanned code without a match: prefilled as the barcode. */
+  barcode: z.string().max(64).optional().catch(undefined),
+  /** A scanned ISBN-13 without a match: a type with an ISBN field, filled in by lookup. */
+  isbn: z.string().max(20).optional().catch(undefined),
 });
 
 const LAST_TYPE_KEY = "hm.lastTypeId";
@@ -71,7 +75,7 @@ function NewItemPage() {
 
   const [typeId, setTypeId] = createSignal<string | null>(search().type ?? null);
   const type = useQuery(() => ({ ...itemTypeQuery(typeId() ?? ""), enabled: !!typeId() }));
-  const [base, setBase] = createStore(emptyBaseValues());
+  const [base, setBase] = createStore({ ...emptyBaseValues(), barcode: search().barcode ?? "" });
   const [errors, setErrors] = createSignal<BaseErrors>({});
   const [typeError, setTypeError] = createSignal<string>();
   const [owner, setOwner] = createSignal<OwnerValue>({ ownerKind: "household", ownerId: null });
@@ -88,7 +92,9 @@ function NewItemPage() {
   const [touched, setTouched] = createSignal(false);
   // Radios, photo inputs and the name are controlled: inert until hydrated.
   const hydrated = useHydrated();
-  const [moreOpen, setMoreOpen] = createSignal(!!(search().loc || search().container));
+  const [moreOpen, setMoreOpen] = createSignal(
+    !!(search().loc || search().container || search().barcode),
+  );
 
   // Remember the last type for the next quick add.
   createEffect(() => {

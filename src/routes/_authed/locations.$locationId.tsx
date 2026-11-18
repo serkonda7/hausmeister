@@ -104,6 +104,20 @@ function LocationView(props: { loc: LocationDetail }) {
               <span class="sr-only">{m.item_short_code()}: </span>
               {l().shortCode}
             </span>
+            <Link
+              to="/labels"
+              search={{
+                location: [
+                  l().id,
+                  ...l()
+                    .children.filter((c) => c.shortCode)
+                    .map((c) => c.id),
+                ],
+              }}
+              class="text-primary underline-offset-4 hover:underline"
+            >
+              {l().children.length ? m.labels_print_location_tree() : m.labels_print_one()}
+            </Link>
           </Show>
           <span class="text-muted-foreground">
             {m.locations_counts({

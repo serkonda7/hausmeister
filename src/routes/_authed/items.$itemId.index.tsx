@@ -158,6 +158,13 @@ function ItemView(props: { detail: ItemDetail }) {
               <span class="sr-only">{m.item_short_code()}: </span>
               {it().shortCode}
             </span>
+            <Link
+              to="/labels"
+              search={{ item: [it().id] }}
+              class="text-primary underline-offset-4 hover:underline"
+            >
+              {m.labels_print_one()}
+            </Link>
           </Show>
         </div>
       </header>
