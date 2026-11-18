@@ -31,7 +31,10 @@ export type ItemEventAction =
   | "item.returned"
   | "item.transfer_started"
   | "item.transfer_declined"
-  | "item.transfer_cancelled";
+  | "item.transfer_cancelled"
+  | "item.attributes_migrated"
+  | "item.relation_added"
+  | "item.relation_removed";
 
 export type CatalogEventAction =
   | "location.created"

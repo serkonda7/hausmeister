@@ -53,6 +53,11 @@ export const ITEMS_ERROR_CODES = [
   "TRANSFER_SAME_OWNER",
   "TRANSFER_TO_SELF",
   "ISBN_INVALID",
+  "RELATION_SELF",
+  "RELATION_EXISTS",
+  "RELATION_NOT_FOUND",
+  "RELATION_CYCLE",
+  "RELATION_LIMIT",
 ] as const;
 export type ItemsErrorCode = (typeof ITEMS_ERROR_CODES)[number];
 
@@ -188,6 +193,16 @@ export function itemsErrorText(err: unknown): string {
       return m.transfers_error_to_self();
     case "ISBN_INVALID":
       return m.scan_isbn_invalid();
+    case "RELATION_SELF":
+      return m.relations_error_self();
+    case "RELATION_EXISTS":
+      return m.relations_error_exists();
+    case "RELATION_NOT_FOUND":
+      return m.relations_error_not_found();
+    case "RELATION_CYCLE":
+      return m.relations_error_cycle();
+    case "RELATION_LIMIT":
+      return m.relations_error_limit({ max: detail || "200" });
     default:
       return errorText(err);
   }

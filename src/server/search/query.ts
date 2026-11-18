@@ -27,6 +27,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import { isoDayInBerlin } from "../../lib/format";
 import { formatSizeValue } from "../../lib/item-types/display";
 import { activeFields, isMultiple } from "../../lib/item-types/fields";
 import {
@@ -60,6 +61,7 @@ import type {
   TagRef,
 } from "../../lib/items/types";
 import { normalizeSearchText } from "../../lib/normalize";
+import { addDays, WARRANTY_NOTICE_DAYS } from "../../lib/warranty";
 import { m } from "../../paraglide/messages";
 import { moneyVisibleWhere, serializeItemsForCtx, visibleItemsWhere } from "../authz";
 import type { AuthCtx } from "../authz/ctx";
@@ -79,6 +81,7 @@ import { loadTypes } from "../item-types/service";
 import { ItemsError, parseInput } from "../items/errors";
 import { visibleItemIds } from "../items/placement";
 import { locationSubtreeIds, visibleLocationIds } from "../locations/visibility";
+import { loadWarrantyKeys, warrantyEndsBetweenWhere } from "../warranty/reminders";
 import { itemsFts } from "./fts";
 
 // --- Search text -----------------------------------------------------------------
@@ -134,6 +137,7 @@ export type Dim =
   | "attributes"
   | "price"
   | "lowStock"
+  | "warranty"
   | "exclude";
 
 type Conditions = Map<Dim, SQL>;
@@ -295,6 +299,15 @@ export function buildConditions(
       "lowStock",
       sql`${items.minQuantity} is not null and ${items.quantity} < ${items.minQuantity}`,
     );
+  if (f.warrantyEnding) {
+    const today = isoDayInBerlin();
+    const w = warrantyEndsBetweenWhere(
+      loadWarrantyKeys(db),
+      today,
+      addDays(today, WARRANTY_NOTICE_DAYS),
+    );
+    conds.set("warranty", w ?? FALSE);
+  }
   if (opts.excludeIds?.length) conds.set("exclude", notInArray(items.id, opts.excludeIds));
   return { conds, text };
 }

@@ -31,6 +31,8 @@ export type ItemsSearch = {
   mine?: boolean;
   gone?: boolean;
   low?: boolean;
+  /** Warranty ends within the next 30 days (src/lib/warranty.ts). */
+  warranty?: boolean;
   /** Neither a location nor a container ("noch nicht weggeräumt"). Wins over `loc`. */
   unplaced?: boolean;
   /** Price range in euros (inclusive); the server only matches prices the caller may see. */
@@ -88,6 +90,7 @@ export function parseItemsSearch(raw: Record<string, unknown>): ItemsSearch {
     mine: one(flag, raw.mine),
     gone: one(flag, raw.gone),
     low: one(flag, raw.low),
+    warranty: one(flag, raw.warranty),
     unplaced: one(flag, raw.unplaced),
     pmin: one(euros, raw.pmin),
     pmax: one(euros, raw.pmax),
@@ -111,6 +114,7 @@ export function cleanSearch(s: ItemsSearch): ItemsSearch {
   if (s.mine) out.mine = true;
   if (s.gone && !s.status?.length) out.gone = true;
   if (s.low) out.low = true;
+  if (s.warranty) out.warranty = true;
   if (s.pmin !== undefined) out.pmin = s.pmin;
   if (s.pmax !== undefined) out.pmax = s.pmax;
   if (s.sort && s.sort !== defaultSort(s)) out.sort = s.sort;
@@ -174,6 +178,7 @@ export function toSearchFilters(s: ItemsSearch): SearchFilters {
   else if (s.gone) f.includeGone = true;
   if (s.tag?.length) f.tagIds = s.tag;
   if (s.low) f.lowStock = true;
+  if (s.warranty) f.warrantyEnding = true;
   const attr = s.type ? (s.attr ?? []).filter(isActiveAttributeFilter) : [];
   if (attr.length) f.attributes = attr;
   return f;
@@ -195,6 +200,7 @@ export function activeFilterCount(s: ItemsSearch): number {
     (s.mine ? 1 : 0) +
     (s.gone ? 1 : 0) +
     (s.low ? 1 : 0) +
+    (s.warranty ? 1 : 0) +
     (s.type ? (s.attr ?? []).filter(isActiveAttributeFilter).length : 0)
   );
 }

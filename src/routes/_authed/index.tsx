@@ -1,4 +1,4 @@
-// Home (DESIGN §9): search, quick add, requests waiting for the user, what they borrow and lent out, low stock (each only when not empty), my items, recently changed.
+// Home (DESIGN §9): search, quick add, requests waiting for the user, what they borrow and lent out, low stock, warranties ending soon (each only when not empty), my items, recently changed.
 import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
 import { createSignal, For, type JSX, Show } from "solid-js";
@@ -21,12 +21,13 @@ import { m } from "~/paraglide/messages";
 const MINE: SearchItemsInput = { mine: true, sort: "updated_desc", limit: 6 };
 const RECENT: SearchItemsInput = { sort: "updated_desc", limit: 6 };
 const LOW: SearchItemsInput = { lowStock: true, sort: "name_asc", limit: 6 };
+const WARRANTY: SearchItemsInput = { warrantyEnding: true, sort: "name_asc", limit: 6 };
 
 export const Route = createFileRoute("/_authed/")({
   // Loader warms the Query cache (SSR-dehydrated); the component reads via useQuery.
   loader: ({ context }) => {
     const qc = context.queryClient;
-    const lists = context.user?.role === "guest" ? [RECENT, LOW] : [MINE, RECENT, LOW];
+    const lists = context.user?.role === "guest" ? [RECENT, LOW] : [MINE, RECENT, LOW, WARRANTY];
     return Promise.all([
       qc.ensureQueryData(myProfileQuery()),
       qc.ensureQueryData(loanOverviewQuery()),
@@ -212,6 +213,17 @@ function Home() {
         more={moreLink({ low: true }, m.home_show_all())}
         empty={null}
       />
+
+      <Show when={!isGuest()}>
+        <Teaser
+          id="home-warranty"
+          title={m.home_warranty_ending()}
+          input={WARRANTY}
+          hideWhenEmpty
+          more={moreLink({ warranty: true }, m.home_show_all())}
+          empty={null}
+        />
+      </Show>
 
       <Show when={!isGuest()}>
         <Teaser

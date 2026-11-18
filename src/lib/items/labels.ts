@@ -67,6 +67,8 @@ const ACTIONS: Record<string, () => string> = {
   "item.transfer_started": m.history_action_item_transfer_started,
   "item.transfer_declined": m.history_action_item_transfer_declined,
   "item.transfer_cancelled": m.history_action_item_transfer_cancelled,
+  "item.relation_added": m.history_action_item_relation_added,
+  "item.relation_removed": m.history_action_item_relation_removed,
   "attachment.added": m.history_action_attachment_added,
   "attachment.removed": m.history_action_attachment_removed,
   "attachment.kind_changed": m.history_action_attachment_kind_changed,

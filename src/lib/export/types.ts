@@ -3,7 +3,7 @@
 // EXPORT_FORMAT_VERSION whenever a file or field changes meaning.
 
 export const EXPORT_FORMAT = "hausmeister-export";
-export const EXPORT_FORMAT_VERSION = 2;
+export const EXPORT_FORMAT_VERSION = 3;
 export const EXPORT_URL = "/api/v1/export";
 
 export type ExportScopeName = "all" | "own_and_household";
@@ -34,6 +34,7 @@ export type ExportCounts = {
   contacts: number;
   transfers: number;
   stockMoves: number;
+  relations: number;
 };
 
 /** What /admin/export shows before and while an export runs. */

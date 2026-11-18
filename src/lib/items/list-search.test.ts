@@ -68,6 +68,7 @@ describe("parseItemsSearch", () => {
       owner: ["group:g"],
       gone: true,
       low: true,
+      warranty: true,
       sort: "updated_desc",
     });
     expect(parseItemsSearch(JSON.parse(JSON.stringify(s)))).toEqual(s);
@@ -121,6 +122,7 @@ describe("toSearchFilters / toSearchInput", () => {
         mine: true,
         gone: true,
         low: true,
+        warranty: true,
         attr: [{ key: "k", values: [true] }],
       }),
     ).toEqual({
@@ -136,6 +138,7 @@ describe("toSearchFilters / toSearchInput", () => {
       includeGone: true,
       tagIds: ["x"],
       lowStock: true,
+      warrantyEnding: true,
       attributes: [{ key: "k", values: [true] }],
       sort: "relevance",
     });

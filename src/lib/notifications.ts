@@ -9,6 +9,7 @@
 //   transfer.accepted   { actorName }                       to whoever started it
 //   transfer.declined   { actorName }                       to whoever started it
 //   transfer.cancelled  { actorName }                       to the new owner(s)
+//   warranty.ending     { until, field }                    to the item's managers, WARRANTY_NOTICE_DAYS ahead (src/lib/warranty.ts)
 import { m } from "~/paraglide/messages";
 import { formatDate, formatNumber } from "./format";
 import type { JsonObject } from "./items/types";
@@ -23,6 +24,7 @@ export const NOTIFICATION_KINDS = [
   "transfer.accepted",
   "transfer.declined",
   "transfer.cancelled",
+  "warranty.ending",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -78,6 +80,8 @@ export function notificationText(n: Pick<NotificationEntry, "kind" | "item" | "p
       return m.notifications_transfer_declined({ actor, name });
     case "transfer.cancelled":
       return m.notifications_transfer_cancelled({ actor, name });
+    case "warranty.ending":
+      return m.notifications_warranty_ending({ name, date: day(p.until) });
     default:
       return name;
   }

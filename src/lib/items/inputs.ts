@@ -279,6 +279,8 @@ export const searchFiltersInput = z.object({
   priceMax: z.number().int().min(0).optional(),
   /** Only items whose quantity is below their min_quantity. */
   lowStock: z.boolean().optional(),
+  /** Only items whose warranty ends within the next WARRANTY_NOTICE_DAYS days, today included (src/lib/warranty.ts). */
+  warrantyEnding: z.boolean().optional(),
 });
 export type SearchFilters = z.infer<typeof searchFiltersInput>;
 

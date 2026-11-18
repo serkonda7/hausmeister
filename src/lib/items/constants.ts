@@ -75,6 +75,10 @@ export const SEARCH_PAGE_MAX = 200;
 export const SEARCH_MIN_FTS = 3;
 
 /** Why a stock quantity changed (DESIGN §4.2). "edited" is a quantity change in the item form. */
+/** Item relations, "from <kind> to" (DESIGN §4.5). */
+export const ITEM_RELATION_KINDS = ["fits", "accessory_of", "part_of", "replaces"] as const;
+export type ItemRelationKind = (typeof ITEM_RELATION_KINDS)[number];
+
 export const STOCK_REASONS = ["used", "restocked", "counted", "edited", "other"] as const;
 export type StockReason = (typeof STOCK_REASONS)[number];
 /** The reasons a person picks when adjusting stock (not "edited"). */

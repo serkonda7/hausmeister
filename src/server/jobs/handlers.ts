@@ -3,6 +3,7 @@
 // handlers here (relative imports only: Nitro bundles this outside Vite's `~`).
 import { addAttachmentJobs } from "../attachments/jobs";
 import { getBlobStore } from "../attachments/storage";
+import { addWarrantyJobs } from "../warranty/reminders";
 import { jobRegistry } from "./worker";
 
 let done = false;
@@ -12,4 +13,5 @@ export function registerAllJobHandlers() {
   done = true;
   const registry = jobRegistry();
   addAttachmentJobs(registry, getBlobStore);
+  addWarrantyJobs(registry);
 }

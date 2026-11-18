@@ -149,7 +149,14 @@ export const fieldDefinitionSchema = z.discriminatedUnion("kind", [
     .refine(minLeMax, minMaxCheck),
   z.object({ ...base, kind: z.literal("boolean") }),
   z
-    .object({ ...base, kind: z.literal("date"), min: isoDate.optional(), max: isoDate.optional() })
+    .object({
+      ...base,
+      kind: z.literal("date"),
+      min: isoDate.optional(),
+      max: isoDate.optional(),
+      /** The date a warranty ends: its managers get a notice shortly before (src/lib/warranty.ts). */
+      warranty: z.boolean().optional(),
+    })
     .refine(minLeMax, minMaxCheck),
   z.object({ ...base, kind: z.literal("select"), options: optionList }),
   z.object({ ...base, kind: z.literal("multiselect"), options: optionList }),

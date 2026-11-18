@@ -217,10 +217,10 @@ renders the form (TanStack Form) and validates server function input.
 | --- | --- | --- |
 | Book (_Buch_) | individual | authors, ISBN (auto-fill, §5), publisher, year, format, series, language, read by |
 | Tool (_Werkzeug_) → Power tool (_Elektrowerkzeug_) | individual | brand, model, serial, power source, battery system ("Bosch 18V", "Makita 18V LXT") |
-| Spare part (_Ersatzteil_) | stock | manufacturer, part number, **fits** (item refs), dimensions, min quantity |
+| Spare part (_Ersatzteil_) | stock | manufacturer, part number, dimensions, min quantity; what it **fits** is an item relation (§4.5) |
 | Consumable (_Verbrauchsmaterial_) | stock | unit, min quantity, preferred shop |
 | Clothing (_Kleidung_) | individual | category, size + size system (child 50–176, women's/men's 34–58 or XS–XXL, EU shoes), colour, season, fits (user) |
-| Electronics (_Elektronik_) | individual | brand, model, serial, warranty until (reminder), receipt (attachment) |
+| Electronics (_Elektronik_) | individual | brand, model, serial, warranty until (a `date` field with `warranty: true`: reminder, §5.6), receipt (attachment) |
 
 ### 4.5 Relationships
 
@@ -230,6 +230,9 @@ renders the form (TanStack Form) and validates server function input.
 - **Item relations**: `fits` (vacuum bag → vacuum), `accessory_of`, `part_of`
   (kit), `replaces`. The vacuum's page lists "Spare parts that fit this" with
   stock levels.
+  - A relation shows on both items, but only to someone who can see both. Adding or removing one needs edit on either item and the other one visible.
+  - No self relations and no loops of `accessory_of`, `part_of` or `replaces`; `fits` may go both ways.
+  - Each change is an event on both items.
 
 ### 4.6 Statuses
 
@@ -277,6 +280,7 @@ but are hidden from default views.
    size matches and starts a transfer.
 6. **Reminders** at 08:00 Europe/Berlin through **Web Push** (installed PWA) and optionally email: loans due, low stock, warranties ending, pending transfers or loan requests. Push uses the browser vendors' services, so it works VPN-only.
    - Since v1.1 the same notices land in an **in-app inbox** (header badge): falling below a minimum stock (to the item's owners: user, group members, or every admin and member for household items; withdrawn when restocked), loan requests and answers, transfer offers and outcomes.
+   - **Warranties** (v1.2): a `date` field marked `warranty` holds the day a warranty ends. 30 days before, the item's managers (owner or owning group, admins for household items, `manage` grantees) get one inbox notice per end date; gone items get none. The item page shows "Garantie endet in 12 Tagen" or "abgelaufen", and the list filter and home page show "Garantie endet bald".
 7. **History**: every change is an event with actor, time and field diff
    ("Who moved my drill?").
 8. **Attachments**: photos (thumbnails, **EXIF/GPS stripped**), receipts and

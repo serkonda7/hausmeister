@@ -9,7 +9,7 @@ import {
   updateItemTypeInput,
 } from "~/lib/item-types/type-input";
 import { authMiddleware, roleMiddleware } from "../auth/middleware";
-import { getDb } from "../db/client";
+import { itemsDb } from "../search/ready";
 import {
   archiveItemType,
   createItemType,
@@ -26,36 +26,36 @@ export const listItemTypesFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator(z.object({ includeArchived: z.boolean().optional() }).optional())
   .handler(({ context: { ctx }, data }) =>
-    listItemTypes(getDb(), ctx, { includeArchived: data?.includeArchived }),
+    listItemTypes(itemsDb(), ctx, { includeArchived: data?.includeArchived }),
   );
 
 /** One type with own and effective (inherited) fields. */
 export const getItemTypeFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator(typeIdInput)
-  .handler(({ context: { ctx }, data }) => getItemType(getDb(), ctx, data.id));
+  .handler(({ context: { ctx }, data }) => getItemType(itemsDb(), ctx, data.id));
 
 export const createItemTypeFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(createItemTypeInput)
-  .handler(({ context: { ctx }, data }) => createItemType(getDb(), ctx, data));
+  .handler(({ context: { ctx }, data }) => createItemType(itemsDb(), ctx, data));
 
 /** Returns {status:"confirm", preview} when stored values would change (see service). */
 export const updateItemTypeFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(updateItemTypeInput)
-  .handler(({ context: { ctx }, data }) => updateItemType(getDb(), ctx, data));
+  .handler(({ context: { ctx }, data }) => updateItemType(itemsDb(), ctx, data));
 
 export const previewItemTypeUpdateFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(updateItemTypeInput)
-  .handler(({ context: { ctx }, data }) => previewItemTypeUpdate(getDb(), ctx, data));
+  .handler(({ context: { ctx }, data }) => previewItemTypeUpdate(itemsDb(), ctx, data));
 
 export const archiveItemTypeFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(archiveItemTypeInput)
   .handler(({ context: { ctx }, data }) => {
-    archiveItemType(getDb(), ctx, data);
+    archiveItemType(itemsDb(), ctx, data);
     return { ok: true as const };
   });
 
@@ -63,11 +63,11 @@ export const deleteItemTypeFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(typeIdInput)
   .handler(({ context: { ctx }, data }) => {
-    deleteItemType(getDb(), ctx, data);
+    deleteItemType(itemsDb(), ctx, data);
     return { ok: true as const };
   });
 
 /** Active users (id, display name) for the `user` field picker; admins and members. */
 export const listPickerUsersFn = createServerFn({ method: "GET" })
   .middleware([roleMiddleware("admin", "member")])
-  .handler(({ context: { ctx } }) => listActiveUsers(getDb(), ctx));
+  .handler(({ context: { ctx } }) => listActiveUsers(itemsDb(), ctx));

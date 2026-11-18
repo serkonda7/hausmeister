@@ -1,5 +1,5 @@
 // Item detail: photos, fields, place, owner, visibility, tags, contents,
-// files, history, sharing, and the actions the caller's level allows.
+// relations, files, history, sharing, and the actions the caller's level allows.
 import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute, Link, notFound } from "@tanstack/solid-router";
 import { createMemo, For, type JSX, Show } from "solid-js";
@@ -19,6 +19,7 @@ import {
 } from "~/components/items/item-actions";
 import { ItemResults } from "~/components/items/item-card";
 import { ItemHistory } from "~/components/items/item-history";
+import { ItemRelationsSection } from "~/components/items/item-relations";
 import { ItemSharing } from "~/components/items/item-sharing";
 import { isMissing, NotFoundCard } from "~/components/items/not-found";
 import { StockControl } from "~/components/items/stock-control";
@@ -32,6 +33,7 @@ import { statusLabel } from "~/lib/items/labels";
 import { itemQuery } from "~/lib/items/queries";
 import type { ItemDetail } from "~/lib/items/types";
 import { itemLoansQuery } from "~/lib/loans/queries";
+import { itemRelationsQuery } from "~/lib/relations/queries";
 import { itemTransferQuery } from "~/lib/transfers/queries";
 import { m } from "~/paraglide/messages";
 
@@ -44,6 +46,7 @@ export const Route = createFileRoute("/_authed/items/$itemId/")({
         context.queryClient.ensureQueryData(attachmentsQuery(params.itemId)),
         context.queryClient.ensureQueryData(itemLoansQuery(params.itemId)),
         context.queryClient.ensureQueryData(itemTransferQuery(params.itemId)),
+        context.queryClient.ensureQueryData(itemRelationsQuery(params.itemId)),
       ]);
       return { name: d.item.name };
     } catch (err) {
@@ -328,6 +331,8 @@ function ItemView(props: { detail: ItemDetail }) {
           </Link>
         </p>
       </Show>
+
+      <ItemRelationsSection itemId={it().id} itemName={it().name} />
 
       <Show when={perms().canEdit || hasFiles()}>
         <Section title={m.item_files()} id="item-files">

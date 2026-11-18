@@ -1,4 +1,4 @@
-# Export archive format (version 2)
+# Export archive format (version 3)
 
 `GET /api/v1/export` returns one ZIP (`hausmeister-export_YYYY-MM-DD_HH-MM.zip`,
 Europe/Berlin time). This is the contract for anything that reads it back,
@@ -30,6 +30,7 @@ json/loans.json              loans (version 2)
 json/contacts.json           external borrowers (version 2)
 json/transfers.json          ownership transfers (version 2)
 json/stock-moves.json        stock ledger (version 2)
+json/item-relations.json     relations between items (version 3)
 json/users.json              admin export only
 json/groups.json             admin export only
 json/settings.json           admin export only
@@ -45,7 +46,7 @@ dateien/<Item name> (<short code>)/<file name>   attachment files
 ```json
 {
   "format": "hausmeister-export",
-  "formatVersion": 2,
+  "formatVersion": 3,
   "appVersion": "0.0.1",
   "createdAt": "2026-11-16T13:03:00.000Z",
   "scope": "all | own_and_household",
@@ -54,7 +55,7 @@ dateien/<Item name> (<short code>)/<file name>   attachment files
   "household": { "name": "…", "currency": "EUR", "locale": "de-DE" },
   "counts": { "items": 0, "itemTypes": 0, "locations": 0, "tags": 0, "attachments": 0,
               "files": 0, "missingFiles": 0, "events": 0, "grants": 0, "users": 0, "groups": 0,
-              "loans": 0, "contacts": 0, "transfers": 0, "stockMoves": 0 },
+              "loans": 0, "contacts": 0, "transfers": 0, "stockMoves": 0, "relations": 0 },
   "files": { "items": "json/items.json", "…": "…" },
   "tables": { "items": "tabellen/gegenstaende.csv", "loans": "tabellen/ausleihen.csv",
               "byType": [{ "typeId": "…", "path": "tabellen/typ_Werkzeug.csv" }] }
@@ -98,6 +99,7 @@ fields) are `YYYY-MM-DD`; money is integer cents (`priceCents`) plus
 - **contacts**: `id, name, email, phone, notes, createdBy, createdAt, updatedAt`.
 - **transfers**: `id, itemId, fromOwnerKind, fromOwnerId, toOwnerKind, toOwnerId, status, note, createdBy, createdAt, resolvedBy, resolvedAt`. `status` is `pending`, `accepted`, `declined`, `forced` or `cancelled`.
 - **stock-moves**: `id, itemId, delta, quantityAfter, reason, note, userId, at`; `reason` is `used`, `restocked`, `counted`, `edited` or `other`.
+- **item-relations**: `fromItemId, toItemId, kind, createdBy, createdAt`, read "from <kind> to"; `kind` is `fits` (the bag fits the vacuum), `accessory_of`, `part_of` or `replaces`. No id: the three keys are the identity.
 - **users** (admin): `id, username, displayUsername, displayName, email, role,
   locale, createdAt, updatedAt, disabledAt, groupIds`.
 - **groups** (admin): `id, name, createdAt, memberIds`.
@@ -124,7 +126,7 @@ fields) are `YYYY-MM-DD`; money is integer cents (`priceCents`) plus
   null. The item lists the removed keys in `omittedReferences`
   (e.g. `["containerItemId", "attributes.fits"]`) so an import knows they are
   unknown, not empty.
-  Loans of those items: out and returned ones for every exported item (who had it), requests (requested, approved, declined, cancelled) only on items the member manages or that they asked for; the contacts these loans name; transfers of items the member manages, started or was offered; the stock ledger of the exported items.
+  Loans of those items: out and returned ones for every exported item (who had it), requests (requested, approved, declined, cancelled) only on items the member manages or that they asked for; the contacts these loans name; transfers of items the member manages, started or was offered; the stock ledger of the exported items; the relations whose two items are both exported.
 - **none** (guest): no export; the endpoint answers like an unknown URL.
 
 Never in any export: password hashes and other `accounts` columns, sessions,
@@ -152,6 +154,7 @@ for hidden or removed fields, and the id.
 
 ## Version history
 
+- **3** (v1.2): `item-relations` and `counts.relations`. Date fields may carry `warranty: true` (in `item-types`). Starter spare parts no longer have the `fits` attribute: an upgrade turned its values into `fits` relations.
 - **2** (v1.1): `loans`, `contacts`, `transfers`, `stock-moves`, `tabellen/ausleihen.csv`, the matching `counts` and `tables.loans`.
 - **1** (MVP): the first format.
 

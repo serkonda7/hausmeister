@@ -12,6 +12,7 @@
 //    Who has the item (item.lent / item.returned) and an accepted transfer (item.owner_changed) are shown to every viewer.
 //  - ownership and visibility events are shown to every viewer: owner and
 //    visibility are part of what a viewer already sees on the item.
+//  - relation events (item.relation_added / _removed) only when the caller can see the related item.
 // Names: actors resolve to display names; ids in diffs (owners, principals,
 // containers, locations, item references in attributes) come with a `names`
 // map, where items and locations appear only if the caller can see them. Ids
@@ -47,6 +48,7 @@ const ATTACHMENT_ACTIONS = new Set([
   "attachment.removed",
   "attachment.kind_changed",
 ]);
+const RELATION_ACTIONS = new Set(["item.relation_added", "item.relation_removed"]);
 /** Stands in for the id of an item the caller cannot see (no name resolves to it). */
 export const HIDDEN_ITEM = "hidden";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -215,6 +217,13 @@ export function getItemHistory(
       .where(inArray(items.id, unseen.slice(i, i + 400)))
       .all())
       hiddenItems.add(r.id);
+  // A relation to an item the caller cannot see is left out entirely (the relation list hides it too).
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const e = entries[i]!;
+    const other = e.diff.relatedItemId;
+    if (RELATION_ACTIONS.has(e.action) && typeof other === "string" && hiddenItems.has(other))
+      entries.splice(i, 1);
+  }
   if (hiddenItems.size)
     for (const e of entries)
       e.diff = walkStrings(e.diff, (x) => (hiddenItems.has(x) ? HIDDEN_ITEM : x)) as JsonObject;

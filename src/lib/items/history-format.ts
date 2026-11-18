@@ -5,6 +5,7 @@ import { formatCents, formatDate, formatIsoDay, formatNumber } from "~/lib/forma
 import { formatAttributeValue, formatUnknown } from "~/lib/item-types/display";
 import type { FieldDefinition } from "~/lib/item-types/fields";
 import { m } from "~/paraglide/messages";
+import { ITEM_RELATION_KINDS, type ItemRelationKind, relationRoleLabel } from "../relations/types";
 import { ITEM_STATUSES, type ItemStatus, STOCK_REASONS, type StockReason } from "./constants";
 import { BASE_LABEL, type ItemBaseValues } from "./form";
 import { levelLabel, statusLabel, stockReasonLabel } from "./labels";
@@ -48,6 +49,9 @@ const SKIP = new Set([
   "borrowerName",
   "lentQuantity",
   "note",
+  "relation",
+  "direction",
+  "relatedItemId",
 ]);
 
 const LOAN_ACTIONS = new Set([
@@ -219,6 +223,18 @@ export function formatHistoryEntry(e: HistoryEntry, ctx: HistoryContext): Format
       : null;
     const note = typeof d.note === "string" && d.note ? d.note : null;
     summary = [r, note].filter(Boolean).join(": ") || null;
+  } else if (e.action === "item.relation_added" || e.action === "item.relation_removed") {
+    const kind = (ITEM_RELATION_KINDS as readonly string[]).includes(String(d.relation))
+      ? (d.relation as ItemRelationKind)
+      : null;
+    const id = typeof d.relatedItemId === "string" ? d.relatedItemId : "";
+    const name = ctx.names.items[id] ?? m.field_unknown_item();
+    summary = kind
+      ? m.item_history_relation({
+          role: relationRoleLabel(kind, d.direction === "in" ? "in" : "out"),
+          name,
+        })
+      : name;
   } else if (d.reason === "location_deleted") summary = m.item_history_reason_location_deleted();
   else if (d.reason === "container_deleted") summary = m.item_history_reason_container_deleted();
   else if (d.reason === "transfer") summary = m.item_history_reason_transfer();

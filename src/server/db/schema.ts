@@ -52,6 +52,8 @@ export const TRANSFER_STATUSES = [
   "cancelled",
 ] as const;
 export const TRANSFER_TARGET_KINDS = ["user", "group"] as const;
+/** Item relations (DESIGN §4.5), read "from <kind> to": the bag fits the vacuum, the battery is an accessory of the drill, the bit is part of the set, the new kettle replaces the old one. */
+export const ITEM_RELATION_KINDS = ["fits", "accessory_of", "part_of", "replaces"] as const;
 /** Why a stock quantity changed (stock_moves.reason). */
 export const STOCK_REASONS = ["used", "restocked", "counted", "edited", "other"] as const;
 
@@ -352,6 +354,31 @@ export const itemGrants = sqliteTable(
   ],
 );
 
+/**
+ * Relations between two items (DESIGN §4.5), directed: `from_item_id` <kind> `to_item_id`.
+ * Both sides are deleted with either item; the events of both items keep the history.
+ */
+export const itemRelations = sqliteTable(
+  "item_relations",
+  {
+    fromItemId: text("from_item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    toItemId: text("to_item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ITEM_RELATION_KINDS }).notNull(),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.fromItemId, t.toItemId, t.kind] }),
+    index("item_relations_to_idx").on(t.toItemId, t.kind),
+    check("item_relations_kind", inList("kind", ITEM_RELATION_KINDS)),
+    check("item_relations_not_self", sql`from_item_id <> to_item_id`),
+  ],
+);
+
 export const tags = sqliteTable("tags", {
   id: id(),
   name: text("name").notNull().unique(),
@@ -583,6 +610,8 @@ export type Item = typeof items.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
 export type ItemGrant = typeof itemGrants.$inferSelect;
 export type NewItemGrant = typeof itemGrants.$inferInsert;
+export type ItemRelation = typeof itemRelations.$inferSelect;
+export type ItemRelationKind = (typeof ITEM_RELATION_KINDS)[number];
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
 export type ItemTag = typeof itemTags.$inferSelect;

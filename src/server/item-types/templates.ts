@@ -1,6 +1,7 @@
 // Starter templates (DESIGN §4.4), seeded once on a fresh instance (see seed.ts).
 // Quantity, unit, min quantity, serial-free receipts etc. are real item columns
 // or attachments (§4.1, §6), so they are not repeated as attributes here.
+// What a spare part fits is an item relation (§4.5), not a field.
 import type { FieldDefinition } from "../../lib/item-types/fields";
 import type { TypeIcon } from "../../lib/item-types/icons";
 import type { TrackingMode } from "../../lib/item-types/type-input";
@@ -78,7 +79,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     fields: [
       { key: "manufacturer", label: "Hersteller", kind: "text" },
       { key: "part_number", label: "Teilenummer", kind: "text" },
-      { key: "fits", label: "Passt zu", kind: "item", multiple: true },
       { key: "dimensions", label: "Maße", kind: "text", help: "z. B. 30 × 12 mm" },
     ],
   },
@@ -142,6 +142,7 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         key: "warranty_until",
         label: "Garantie bis",
         kind: "date",
+        warranty: true,
         help: "Erinnerung kurz vor Ablauf",
       },
     ],

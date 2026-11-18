@@ -196,3 +196,16 @@ test("loan events name the borrower, amount and due date", () => {
     "Rückgabe bis: — → 01.12.2026",
   ]);
 });
+
+test("relation events name the role from this item's side and the other item", () => {
+  const added = formatHistoryEntry(
+    entry("item.relation_added", { relation: "fits", direction: "in", relatedItemId: "i1" }),
+    ctx,
+  );
+  expect(added).toEqual({ summary: "Passende Teile: Werkzeugkiste", lines: [], collapsed: false });
+  const gone = formatHistoryEntry(
+    entry("item.relation_removed", { relation: "part_of", direction: "out", relatedItemId: "x" }),
+    ctx,
+  );
+  expect(gone.summary).toBe("Teil von: Unbekannter Gegenstand");
+});

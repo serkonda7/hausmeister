@@ -24,6 +24,7 @@ import { recordItemEvent } from "../history/record";
 import { setupFixture } from "../items/test-fixtures";
 import { checkoutItem, requestLoan } from "../loans/service";
 import { createLocation } from "../locations/service";
+import { addItemRelation } from "../relations/service";
 import { adjustStock } from "../stock/service";
 import { startTransfer } from "../transfers/service";
 import { writeExport } from "./build";
@@ -164,6 +165,9 @@ async function world() {
     to: { ownerKind: "user", ownerId: ben.userId },
   });
   adjustStock(db, admin, { id: annaInBox.id, delta: 1, reason: "restocked" });
+  // Relations (format version 3): Anna's charger fits the household drill; Ben's private box is an accessory of it.
+  addItemRelation(db, anna, { fromItemId: annaInBox.id, toItemId: drill.id, kind: "fits" });
+  addItemRelation(db, ben, { fromItemId: benBox.id, toItemId: drill.id, kind: "accessory_of" });
 
   const jpeg = crypto.getRandomValues(new Uint8Array(3000));
   const photo = await addAttachment(annaPrivate.id, "photo", "seite1.jpg", jpeg);
@@ -410,13 +414,36 @@ describe("admin export", () => {
     const man = a.json("manifest.json");
     expect(man).toMatchObject({
       format: "hausmeister-export",
-      formatVersion: 2,
+      formatVersion: 3,
       scope: "all",
       exportedBy: { id: admin.userId, role: "admin" },
     });
     expect(man.counts.items).toBe(scopeIds(admin).length);
     expect(man.counts.files).toBe(5);
     expect(a.text("LIESMICH.txt")).toContain("Admin-Export");
+  });
+});
+
+describe("item relations (format 3)", () => {
+  test("admin: every relation; member: only those between two exported items", async () => {
+    const a = await exportToMemory(db, admin, store.store);
+    const all = a.json<Json[]>("json/item-relations.json");
+    expect(all.map((r) => `${r.fromItemId}>${r.kind}>${r.toItemId}`).sort()).toEqual(
+      [`${w.annaInBox.id}>fits>${w.drill.id}`, `${w.benBox.id}>accessory_of>${w.drill.id}`].sort(),
+    );
+    expect(a.json("manifest.json").counts.relations).toBe(2);
+    expect(a.json("manifest.json").files.relations).toBe("json/item-relations.json");
+
+    const m = await exportToMemory(db, anna, store.store);
+    expect(m.json<Json[]>("json/item-relations.json")).toEqual([
+      expect.objectContaining({ fromItemId: w.annaInBox.id, toItemId: w.drill.id, kind: "fits" }),
+    ]);
+    expect(m.text("json/item-relations.json")).not.toContain(w.benBox.id);
+    // The drill's history keeps the relation with the charger, not the one with Ben's box.
+    const drillRelations = m
+      .json<Json[]>("json/events.json")
+      .filter((e) => e.itemId === w.drill.id && e.action === "item.relation_added");
+    expect(drillRelations.map((e) => e.diff.relatedItemId)).toEqual([w.annaInBox.id]);
   });
 });
 

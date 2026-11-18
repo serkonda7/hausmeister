@@ -46,6 +46,7 @@ import {
   TRACKING_MODES,
   type TrackingMode,
 } from "~/lib/item-types/type-input";
+import { WARRANTY_NOTICE_DAYS } from "~/lib/warranty";
 import { m } from "~/paraglide/messages";
 import { createItemTypeFn, updateItemTypeFn } from "~/server/item-types/functions";
 import type { ItemTypeSummary, MigrationPreview } from "~/server/item-types/service";
@@ -679,6 +680,17 @@ function FieldEditor(props: {
                 value={d.max ?? ""}
                 onChange={(e) => patch({ max: e.currentTarget.value || undefined })}
               />
+            </div>
+            <div class="grid gap-1 sm:col-span-2">
+              <Checkbox
+                class="min-h-10"
+                label={m.types_field_warranty()}
+                checked={d.warranty === true}
+                onChange={(on: boolean) => patch({ warranty: on || undefined })}
+              />
+              <p class="text-xs text-muted-foreground">
+                {m.types_field_warranty_hint({ days: String(WARRANTY_NOTICE_DAYS) })}
+              </p>
             </div>
           </div>
         );

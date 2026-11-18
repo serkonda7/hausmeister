@@ -1,7 +1,11 @@
 // Read-only display of an item's attributes, with legacy values under "Alte Felder".
+// A warranty field (src/lib/warranty.ts) says when the warranty is about to end or has ended.
 import { For, Show } from "solid-js";
+import { Badge } from "~/components/ui/badge";
+import { isoDayInBerlin } from "~/lib/format";
 import { formatAttributeValue, formatUnknown, splitAttributes } from "~/lib/item-types/display";
 import { type FieldDefinition, isMultiple } from "~/lib/item-types/fields";
+import { warrantyState } from "~/lib/warranty";
 import { m } from "~/paraglide/messages";
 import { usePickerUsers } from "./pickers";
 
@@ -43,6 +47,22 @@ export function AttributeList(props: {
     e.field ? formatAttributeValue(e.field, e.value, resolvers()) : formatUnknown(e.value);
   const swatch = (e: { field?: FieldDefinition; value: unknown }) =>
     e.field?.kind === "color" && typeof e.value === "string" ? e.value : undefined;
+  const warranty = (e: { field?: FieldDefinition; value: unknown }) => {
+    const f = e.field;
+    if (f?.kind !== "date" || !f.warranty || f.hidden) return null;
+    const st = warrantyState(e.value, isoDayInBerlin());
+    if (!st || st.state === "active") return null;
+    if (st.state === "expired") return { text: m.warranty_expired(), urgent: false };
+    return {
+      text:
+        st.daysLeft === 0
+          ? m.warranty_ends_today()
+          : st.daysLeft === 1
+            ? m.warranty_ends_tomorrow()
+            : m.warranty_ends_in({ count: st.daysLeft }),
+      urgent: true,
+    };
+  };
 
   const Entries = (p: { entries: ReturnType<typeof parts>["active"] }) => (
     <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-[minmax(8rem,auto)_1fr]">
@@ -70,6 +90,13 @@ export function AttributeList(props: {
                 >
                   {e.value as string}
                 </a>
+              </Show>
+              <Show when={warranty(e)}>
+                {(w) => (
+                  <Badge variant={w().urgent ? "default" : "outline"} data-testid="warranty-state">
+                    {w().text}
+                  </Badge>
+                )}
               </Show>
             </dd>
           </>

@@ -258,6 +258,12 @@ export function ItemFilterControls(props: Props) {
           checked={!!s().low}
           onChange={(on: boolean) => set({ low: on || undefined })}
         />
+        <Checkbox
+          class="min-h-11"
+          label={m.items_filter_warranty()}
+          checked={!!s().warranty}
+          onChange={(on: boolean) => set({ warranty: on || undefined })}
+        />
       </Group>
 
       <Show when={tags().length}>
@@ -514,6 +520,11 @@ export function ActiveFilterChips(props: Props) {
       out.push({
         label: m.items_filter_low_stock(),
         remove: () => patchSearch(s(), { low: undefined }),
+      });
+    if (s().warranty)
+      out.push({
+        label: m.items_filter_warranty(),
+        remove: () => patchSearch(s(), { warranty: undefined }),
       });
     for (const t of s().tag ?? []) {
       const tag = f?.tags.find((x) => x.id === t);

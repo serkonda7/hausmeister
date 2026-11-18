@@ -12,7 +12,7 @@
 //    groups they refer to. References to items outside the export (a private
 //    container, an `item` field, ids in history diffs) are removed; the item
 //    record lists the removed keys in `omittedReferences`.
-//    Loans of their items: out and returned ones (who had it), requests only on items they manage or that they asked for themselves; the contacts those loans name; transfers of items they manage or that involve them; the stock ledger of their items.
+//    Loans of their items: out and returned ones (who had it), requests only on items they manage or that they asked for themselves; the contacts those loans name; transfers of items they manage or that involve them; the stock ledger of their items; the relations between two of their items.
 //  - "none" (guest): nothing; the caller answers 404 before getting here.
 // Never exported: password hashes (accounts), sessions, passkeys,
 // verifications, invite token hashes, jobs, auth e-mail aliases.
@@ -52,6 +52,7 @@ import {
   groupMembers,
   groups,
   itemGrants,
+  itemRelations,
   items,
   itemTags,
   type Loan,
@@ -81,7 +82,7 @@ import {
 } from "./tables";
 import { ZipWriter } from "./zip";
 
-/** Archive paths (format version 1). */
+/** Archive paths (format version 3). */
 export const PATHS = {
   readme: "LIESMICH.txt",
   manifest: "manifest.json",
@@ -100,6 +101,7 @@ export const PATHS = {
   contacts: "json/contacts.json",
   transfers: "json/transfers.json",
   stockMoves: "json/stock-moves.json",
+  relations: "json/item-relations.json",
   itemsTable: "tabellen/gegenstaende.csv",
   loansTable: "tabellen/ausleihen.csv",
   filesDir: "dateien",
@@ -253,6 +255,7 @@ async function build(
     contacts: 0,
     transfers: 0,
     stockMoves: 0,
+    relations: 0,
   };
 
   async function textEntry(path: string) {
@@ -540,6 +543,8 @@ async function build(
             if (!level) continue;
             const redacted = redactEvent(e, level, receipts);
             if (!redacted) continue;
+            // Like the history page: a relation with an item outside the export is left out.
+            if (e.action.startsWith("item.relation_") && isHidden(redacted.relatedItemId)) continue;
             diff = scrubDiff(redacted);
           }
           notePrincipal(e.actorId);
@@ -693,6 +698,27 @@ async function build(
         for (const mv of page) notePrincipal(mv.userId);
         yield page;
       }
+    })(),
+  );
+
+  // --- item relations (format 3) ---------------------------------------------------- Admins: all. Members: the relations between two exported items.
+  counts.relations = await jsonArray(
+    PATHS.relations,
+    (function* () {
+      const all = db
+        .select()
+        .from(itemRelations)
+        .orderBy(
+          asc(itemRelations.fromItemId),
+          asc(itemRelations.toItemId),
+          asc(itemRelations.kind),
+        )
+        .all();
+      const kept = isAdmin
+        ? all
+        : all.filter((r) => exportIds.has(r.fromItemId) && exportIds.has(r.toItemId));
+      for (const r of kept) notePrincipal(r.createdBy);
+      yield kept;
     })(),
   );
 
@@ -904,6 +930,7 @@ async function build(
       contacts: PATHS.contacts,
       transfers: PATHS.transfers,
       stockMoves: PATHS.stockMoves,
+      relations: PATHS.relations,
       ...(isAdmin
         ? { users: PATHS.users, groups: PATHS.groups, settings: PATHS.settings }
         : { people: PATHS.people }),
