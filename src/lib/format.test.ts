@@ -3,7 +3,9 @@ import {
   formatCents,
   formatDate,
   formatDateTime,
+  formatIsoDay,
   formatNumber,
+  isoDayInBerlin,
   parseDecimalDe,
   parseEuroToCents,
 } from "./format";
@@ -97,5 +99,13 @@ describe("parseEuroToCents", () => {
     expect(parseEuroToCents("abc")).toBeNull();
     expect(parseEuroToCents("")).toBeNull();
     expect(parseEuroToCents(" € ")).toBeNull();
+  });
+});
+
+describe("isoDayInBerlin", () => {
+  it("is the Berlin calendar day", () => {
+    expect(isoDayInBerlin(new Date("2026-12-31T23:30:00Z"))).toBe("2027-01-01");
+    expect(isoDayInBerlin(new Date("2026-07-01T21:59:00Z"))).toBe("2026-07-01");
+    expect(formatIsoDay("2026-11-21")).toBe("21.11.2026");
   });
 });

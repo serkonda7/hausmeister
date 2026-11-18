@@ -1,7 +1,7 @@
 // Turns a history entry's diff into German lines for the item page:
 //   { label: "Ort", from: "Garage", to: "Keller" }
 // plus a one-line summary for grant and attachment events. Pure.
-import { formatCents, formatDate } from "~/lib/format";
+import { formatCents, formatDate, formatIsoDay, formatNumber } from "~/lib/format";
 import { formatAttributeValue, formatUnknown } from "~/lib/item-types/display";
 import type { FieldDefinition } from "~/lib/item-types/fields";
 import { m } from "~/paraglide/messages";
@@ -42,6 +42,20 @@ const SKIP = new Set([
   "attachmentId",
   "kind",
   "originalName",
+  "loanId",
+  "borrowerUserId",
+  "borrowerName",
+  "lentQuantity",
+  "note",
+]);
+
+const LOAN_ACTIONS = new Set([
+  "item.lent",
+  "item.returned",
+  "item.loan_requested",
+  "item.loan_approved",
+  "item.loan_declined",
+  "item.loan_cancelled",
 ]);
 
 type Change = { from: JsonValue | undefined; to: JsonValue | undefined };
@@ -102,6 +116,8 @@ function labelFor(key: string, ctx: HistoryContext): string {
       return m.item_short_code();
     case "level":
       return m.item_share_level();
+    case "dueOn":
+      return m.loans_due_label();
     default:
       return key;
   }
@@ -132,6 +148,8 @@ export function formatHistoryValue(key: string, v: JsonValue | undefined, ctx: H
       return typeof v === "number" ? formatCents(v) : formatUnknown(v);
     case "acquiredOn":
       return typeof v === "string" ? formatDate(`${v}T12:00:00Z`) : formatUnknown(v);
+    case "dueOn":
+      return typeof v === "string" ? formatIsoDay(v) : formatUnknown(v);
     case "locationId":
       return typeof v === "string"
         ? (ctx.names.locations[v] ?? m.item_history_hidden_location())
@@ -181,6 +199,19 @@ export function formatHistoryEntry(e: HistoryEntry, ctx: HistoryContext): Format
       from: attachmentKindLabel(k.from),
       to: attachmentKindLabel(k.to),
     });
+  } else if (LOAN_ACTIONS.has(e.action)) {
+    const who =
+      typeof d.borrowerUserId === "string"
+        ? (ctx.names.users[d.borrowerUserId] ?? m.items_owner_unknown())
+        : typeof d.borrowerName === "string"
+          ? d.borrowerName
+          : null;
+    const parts = [
+      who,
+      typeof d.lentQuantity === "number" ? formatNumber(d.lentQuantity, 3) : null,
+      typeof d.dueOn === "string" ? m.loans_due({ date: formatIsoDay(d.dueOn) }) : null,
+    ];
+    summary = parts.filter(Boolean).join(" · ") || null;
   } else if (e.action === "item.stock_adjusted") {
     const r = (STOCK_REASONS as readonly string[]).includes(String(d.reason))
       ? stockReasonLabel(d.reason as StockReason)

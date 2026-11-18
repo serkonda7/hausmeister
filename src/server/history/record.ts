@@ -21,7 +21,14 @@ export type ItemEventAction =
   | "item.grant_set"
   | "item.grant_removed"
   | "item.deleted"
-  | "item.stock_adjusted";
+  | "item.stock_adjusted"
+  | "item.loan_requested"
+  | "item.loan_approved"
+  | "item.loan_declined"
+  | "item.loan_cancelled"
+  | "item.loan_due_changed"
+  | "item.lent"
+  | "item.returned";
 
 export type CatalogEventAction =
   | "location.created"

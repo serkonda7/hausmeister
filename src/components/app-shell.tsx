@@ -108,6 +108,14 @@ export function AppShell(props: { user: SessionUser; children: JSX.Element }) {
                 <DropdownMenuItem onSelect={() => navigate({ to: "/account" })}>
                   {m.account_nav()}
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate({ to: "/loans" })}>
+                  {m.loans_title()}
+                </DropdownMenuItem>
+                <Show when={props.user.role !== "guest"}>
+                  <DropdownMenuItem onSelect={() => navigate({ to: "/contacts" })}>
+                    {m.contacts_title()}
+                  </DropdownMenuItem>
+                </Show>
                 <DropdownMenuItem onSelect={logout}>{m.nav_logout()}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

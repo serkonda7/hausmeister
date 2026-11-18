@@ -8,6 +8,9 @@
 //    its name visible through an older "other" event.
 //  - grant events (item.grant_set / item.grant_removed) only at `manage`:
 //    who an item is shared with is the managers' business, like the grant list.
+//  - loan request events (requested, approved, declined, cancelled) only at
+//    `manage`: asking is between the borrower and the item's managers. Who
+//    has the item (item.lent / item.returned) is shown to every viewer.
 //  - ownership and visibility events are shown to every viewer: owner and
 //    visibility are part of what a viewer already sees on the item.
 // Names: actors resolve to display names; ids in diffs (owners, principals,
@@ -29,7 +32,14 @@ import { visibleItemIds } from "../items/placement";
 import { canSeeLocation, visibleLocationIds } from "../locations/visibility";
 
 const MONEY_KEYS = ["priceCents", "currency"];
-const GRANT_ACTIONS = new Set(["item.grant_set", "item.grant_removed"]);
+const MANAGER_ACTIONS = new Set([
+  "item.grant_set",
+  "item.grant_removed",
+  "item.loan_requested",
+  "item.loan_approved",
+  "item.loan_declined",
+  "item.loan_cancelled",
+]);
 const ATTACHMENT_ACTIONS = new Set([
   "attachment.added",
   "attachment.removed",
@@ -105,7 +115,7 @@ export function redactEvent(
     e.diff && typeof e.diff === "object" && !Array.isArray(e.diff)
       ? { ...(e.diff as Record<string, unknown>) }
       : {};
-  if (GRANT_ACTIONS.has(e.action) && !atLeast(level, "manage")) return null;
+  if (MANAGER_ACTIONS.has(e.action) && !atLeast(level, "manage")) return null;
   if (canSeeMoney(level)) return diff;
   if (
     ATTACHMENT_ACTIONS.has(e.action) &&
@@ -224,6 +234,7 @@ export function getItemHistory(
     if (e.actorId) people.add(e.actorId);
     collect(e.diff.ownerId, people);
     collect(e.diff.principalId, people);
+    collect(e.diff.borrowerUserId, people);
     collect(e.diff.containerItemId, itemIds);
     collect(e.diff.locationId, locIds);
   }

@@ -22,6 +22,7 @@ import { ItemHistory } from "~/components/items/item-history";
 import { ItemSharing } from "~/components/items/item-sharing";
 import { isMissing, NotFoundCard } from "~/components/items/not-found";
 import { StockControl } from "~/components/items/stock-control";
+import { ItemLoansSection } from "~/components/loans/item-loans";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { formatCents, formatDate, formatNumber } from "~/lib/format";
@@ -29,6 +30,7 @@ import { typeIconGlyph } from "~/lib/item-types/icons";
 import { statusLabel } from "~/lib/items/labels";
 import { itemQuery } from "~/lib/items/queries";
 import type { ItemDetail } from "~/lib/items/types";
+import { itemLoansQuery } from "~/lib/loans/queries";
 import { m } from "~/paraglide/messages";
 
 export const Route = createFileRoute("/_authed/items/$itemId/")({
@@ -36,7 +38,10 @@ export const Route = createFileRoute("/_authed/items/$itemId/")({
     if (params.itemId.length > 64) throw notFound();
     try {
       const d = await context.queryClient.ensureQueryData(itemQuery(params.itemId));
-      await context.queryClient.ensureQueryData(attachmentsQuery(params.itemId));
+      await Promise.all([
+        context.queryClient.ensureQueryData(attachmentsQuery(params.itemId)),
+        context.queryClient.ensureQueryData(itemLoansQuery(params.itemId)),
+      ]);
       return { name: d.item.name };
     } catch (err) {
       if (isMissing(err, ["ITEM_NOT_FOUND", "NOT_FOUND"])) throw notFound();
@@ -171,6 +176,8 @@ function ItemView(props: { detail: ItemDetail }) {
           </Show>
         </div>
       </Show>
+
+      <ItemLoansSection detail={d()} user={ctx().user} />
 
       <Show when={isStock() || it().minQuantity != null}>
         <Section title={m.stock_title()} id="item-stock">

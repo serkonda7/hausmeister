@@ -33,6 +33,15 @@ export const ITEM_STATUSES = [
   "sold",
   "disposed",
 ] as const;
+/** requested → approved → out → returned; requested/approved can end declined or cancelled. */
+export const LOAN_STATUSES = [
+  "requested",
+  "approved",
+  "out",
+  "returned",
+  "declined",
+  "cancelled",
+] as const;
 /** Why a stock quantity changed (stock_moves.reason). */
 export const STOCK_REASONS = ["used", "restocked", "counted", "edited", "other"] as const;
 
@@ -393,6 +402,59 @@ export const events = sqliteTable(
   (t) => [index("events_item_idx").on(t.itemId, t.at), index("events_at_idx").on(t.at)],
 );
 
+/** External borrowers without an account (DESIGN §5.3): neighbours, friends. */
+export const contacts = sqliteTable("contacts", {
+  id: id(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  notes: text("notes"),
+  createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/**
+ * Loans (DESIGN §5.3). The borrower is a user or a contact (exactly one is set
+ * when the loan is made; a deleted contact leaves both NULL on closed loans).
+ * `lent_by` handed the item out (direct check-out or hand-over after approval).
+ * `due_on` is a calendar date ('YYYY-MM-DD', Europe/Berlin); overdue is
+ * computed (status = 'out' AND due_on < today), never stored.
+ */
+export const loans = sqliteTable(
+  "loans",
+  {
+    id: id(),
+    itemId: text("item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    quantity: real("quantity").notNull().default(1),
+    borrowerUserId: text("borrower_user_id").references(() => users.id, { onDelete: "set null" }),
+    borrowerContactId: text("borrower_contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    status: text("status", { enum: LOAN_STATUSES }).notNull(),
+    note: text("note"),
+    requestedBy: text("requested_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    decidedBy: text("decided_by").references(() => users.id, { onDelete: "set null" }),
+    decidedAt: integer("decided_at", { mode: "timestamp_ms" }),
+    lentBy: text("lent_by").references(() => users.id, { onDelete: "set null" }),
+    outAt: integer("out_at", { mode: "timestamp_ms" }),
+    dueOn: text("due_on"),
+    returnedAt: integer("returned_at", { mode: "timestamp_ms" }),
+    returnedBy: text("returned_by").references(() => users.id, { onDelete: "set null" }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("loans_item_idx").on(t.itemId, t.status),
+    index("loans_due_idx").on(t.status, t.dueOn),
+    index("loans_borrower_idx").on(t.borrowerUserId, t.status),
+    index("loans_contact_idx").on(t.borrowerContactId),
+    check("loans_status", inList("status", LOAN_STATUSES)),
+  ],
+);
+
 /**
  * Stock changes of an item (DESIGN §4.2 `stock`): one row per adjustment or
  * quantity edit, with the quantity it left. Events carry the same change for
@@ -489,6 +551,9 @@ export type Attachment = typeof attachments.$inferSelect;
 export type NewAttachment = typeof attachments.$inferInsert;
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
+export type Contact = typeof contacts.$inferSelect;
+export type Loan = typeof loans.$inferSelect;
+export type LoanStatus = (typeof LOAN_STATUSES)[number];
 export type StockMove = typeof stockMoves.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type Job = typeof jobs.$inferSelect;

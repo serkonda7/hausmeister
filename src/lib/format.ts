@@ -27,6 +27,23 @@ export function formatDateTime(value: Date | string | number): string {
   return DATE_TIME_FORMAT.format(toDate(value));
 }
 
+const ISO_DAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Berlin",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** The calendar day in Europe/Berlin as 'YYYY-MM-DD' (due dates, "today"). */
+export function isoDayInBerlin(value: Date | string | number = new Date()): string {
+  return ISO_DAY.format(toDate(value));
+}
+
+/** 'YYYY-MM-DD' -> "21.11.2026" (noon UTC keeps the day in every zone). */
+export function formatIsoDay(day: string): string {
+  return formatDate(`${day}T12:00:00Z`);
+}
+
 export function formatNumber(n: number, maximumFractionDigits = 2): string {
   return new Intl.NumberFormat("de-DE", { maximumFractionDigits }).format(n);
 }

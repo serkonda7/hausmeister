@@ -73,10 +73,7 @@ function NotificationsPage() {
                   )}
                 </Show>
                 <Show when={n.kind.startsWith("loan.") || n.kind.startsWith("transfer.")}>
-                  <Link
-                    to={"/loans" as "/"}
-                    class="text-primary underline-offset-4 hover:underline"
-                  >
+                  <Link to="/loans" class="text-primary underline-offset-4 hover:underline">
                     {m.notifications_open_requests()}
                   </Link>
                 </Show>

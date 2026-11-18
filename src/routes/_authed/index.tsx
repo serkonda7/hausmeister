@@ -1,9 +1,11 @@
-// Home: search, quick add, my items, recently changed, low stock (if any).
-// Scan, loans and requests come in later phases (DESIGN §10).
+// Home (DESIGN §9): search, quick add, requests waiting for the user, what
+// they borrow and lent out, low stock (each only when not empty), my items,
+// recently changed.
 import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
-import { createSignal, type JSX, Show } from "solid-js";
+import { createSignal, For, type JSX, Show } from "solid-js";
 import { ItemResults } from "~/components/items/item-card";
+import { LoanListCard } from "~/components/loans/loan-actions";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
@@ -11,6 +13,8 @@ import { adoptTypedValue } from "~/lib/hydrated";
 import type { SearchItemsInput } from "~/lib/items/inputs";
 import { itemListQuery } from "~/lib/items/queries";
 import { roleLabel } from "~/lib/labels";
+import { loanOverviewQuery } from "~/lib/loans/queries";
+import type { LoanListRow } from "~/lib/loans/types";
 import { myProfileQuery } from "~/lib/session-query";
 import { m } from "~/paraglide/messages";
 
@@ -25,6 +29,7 @@ export const Route = createFileRoute("/_authed/")({
     const lists = context.user?.role === "guest" ? [RECENT, LOW] : [MINE, RECENT, LOW];
     return Promise.all([
       qc.ensureQueryData(myProfileQuery()),
+      qc.ensureQueryData(loanOverviewQuery()),
       ...lists.map((i) => qc.ensureInfiniteQueryData(itemListQuery(i))),
     ]);
   },
@@ -64,6 +69,30 @@ function Teaser(props: {
   );
 }
 
+const LOANS_SHOWN = 3;
+
+function LoanTeaser(props: { id: string; title: string; rows: LoanListRow[] }) {
+  return (
+    <Show when={props.rows.length}>
+      <section class="grid gap-3" aria-labelledby={props.id}>
+        <div class="flex flex-wrap items-baseline gap-2">
+          <h2 id={props.id} class="mr-auto text-lg font-semibold">
+            {props.title} ({props.rows.length})
+          </h2>
+          <Show when={props.rows.length > LOANS_SHOWN}>
+            <Link to="/loans" class="text-sm text-primary underline-offset-4 hover:underline">
+              {m.home_show_all()}
+            </Link>
+          </Show>
+        </div>
+        <ul class="grid gap-2">
+          <For each={props.rows.slice(0, LOANS_SHOWN)}>{(l) => <LoanListCard loan={l} />}</For>
+        </ul>
+      </section>
+    </Show>
+  );
+}
+
 const moreLink = (search: Record<string, unknown>, label: string) => (
   <Link
     to="/items"
@@ -78,6 +107,7 @@ function Home() {
   const ctx = Route.useRouteContext();
   const navigate = useNavigate();
   const profile = useQuery(() => myProfileQuery());
+  const loans = useQuery(() => loanOverviewQuery());
   const isGuest = () => ctx().user.role === "guest";
   const [q, setQ] = createSignal("");
 
@@ -137,6 +167,18 @@ function Home() {
           + {m.home_quick_add()}
         </Link>
       </Show>
+
+      <LoanTeaser
+        id="home-requests"
+        title={m.loans_group_requests()}
+        rows={loans.data?.requests ?? []}
+      />
+      <LoanTeaser
+        id="home-lent"
+        title={m.loans_group_lent_out()}
+        rows={loans.data?.lentOut ?? []}
+      />
+      <LoanTeaser id="home-borrowed" title={m.loans_group_mine()} rows={loans.data?.mine ?? []} />
 
       <Teaser
         id="home-low"

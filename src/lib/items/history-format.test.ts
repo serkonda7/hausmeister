@@ -168,3 +168,31 @@ test("stock adjustments show the reason and note, then the quantity", () => {
   expect(f.summary).toBe("Verbraucht: Regal gebaut");
   expect(f.lines.map((l) => `${l.label}: ${l.from} → ${l.to}`)).toEqual(["Menge: 10 → 8"]);
 });
+
+test("loan events name the borrower, amount and due date", () => {
+  const lent = formatHistoryEntry(
+    entry("item.lent", {
+      loanId: "l1",
+      borrowerUserId: "u1",
+      dueOn: "2026-12-24",
+      status: { from: "available", to: "on_loan" },
+    }),
+    ctx,
+  );
+  expect(lent.summary).toBe("Anna · bis 24.12.2026");
+  expect(lent.lines.map((l) => `${l.label}: ${l.from} → ${l.to}`)).toEqual([
+    "Status: Verfügbar → Verliehen",
+  ]);
+  const contact = formatHistoryEntry(
+    entry("item.returned", { loanId: "l1", borrowerName: "Nachbar Tom", lentQuantity: 3 }),
+    ctx,
+  );
+  expect(contact.summary).toBe("Nachbar Tom · 3");
+  const due = formatHistoryEntry(
+    entry("item.loan_due_changed", { loanId: "l1", dueOn: { from: null, to: "2026-12-01" } }),
+    ctx,
+  );
+  expect(due.lines.map((l) => `${l.label}: ${l.from} → ${l.to}`)).toEqual([
+    "Rückgabe bis: — → 01.12.2026",
+  ]);
+});

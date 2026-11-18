@@ -37,6 +37,15 @@ export const ITEMS_ERROR_CODES = [
   "CURSOR_INVALID",
   "SHORT_CODE_NOT_FOUND",
   "STOCK_NEGATIVE",
+  "LOAN_NOT_FOUND",
+  "LOAN_STATE",
+  "LOAN_UNAVAILABLE",
+  "LOAN_DUPLICATE",
+  "LOAN_ITEM_GONE",
+  "LOAN_QUANTITY",
+  "LOAN_BORROWER_INVALID",
+  "CONTACT_NOT_FOUND",
+  "CONTACT_IN_USE",
 ] as const;
 export type ItemsErrorCode = (typeof ITEMS_ERROR_CODES)[number];
 
@@ -140,6 +149,24 @@ export function itemsErrorText(err: unknown): string {
       return m.search_error_short_code();
     case "STOCK_NEGATIVE":
       return m.stock_error_negative();
+    case "LOAN_NOT_FOUND":
+      return m.loans_error_not_found();
+    case "LOAN_STATE":
+      return m.loans_error_state();
+    case "LOAN_UNAVAILABLE":
+      return m.loans_error_unavailable();
+    case "LOAN_DUPLICATE":
+      return m.loans_error_duplicate();
+    case "LOAN_ITEM_GONE":
+      return m.loans_error_item_gone();
+    case "LOAN_QUANTITY":
+      return m.loans_error_quantity();
+    case "LOAN_BORROWER_INVALID":
+      return m.loans_error_borrower();
+    case "CONTACT_NOT_FOUND":
+      return m.contacts_error_not_found();
+    case "CONTACT_IN_USE":
+      return m.contacts_error_in_use();
     default:
       return errorText(err);
   }
