@@ -1,6 +1,4 @@
-// Home (DESIGN §9): search, quick add, requests waiting for the user, what
-// they borrow and lent out, low stock (each only when not empty), my items,
-// recently changed.
+// Home (DESIGN §9): search, quick add, requests waiting for the user, what they borrow and lent out, low stock (each only when not empty), my items, recently changed.
 import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
 import { createSignal, For, type JSX, Show } from "solid-js";

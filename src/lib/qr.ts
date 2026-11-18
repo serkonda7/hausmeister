@@ -1,6 +1,4 @@
-// QR codes for labels (DESIGN §5.2): the module matrix from `qrcode` and an
-// SVG path for it, so labels render as plain markup on the server and in the
-// browser (no canvas, no data: URLs, nothing for the CSP to allow).
+// QR codes for labels (DESIGN §5.2): the module matrix from `qrcode` and an SVG path for it, so labels render as plain markup on the server and in the browser (no canvas, no data: URLs, nothing for the CSP to allow).
 import QRCode from "qrcode";
 
 export type QrMatrix = { size: number; dark: (row: number, col: number) => boolean };
@@ -12,8 +10,8 @@ export function qrMatrix(text: string): QrMatrix {
 }
 
 /**
- * One path for all dark modules, offset by `margin` (the quiet zone), in
- * module units: viewBox="0 0 size+2m size+2m". Horizontal runs are merged.
+ * One path for all dark modules, offset by `margin` (the quiet zone), in module units: viewBox="0 0 size+2m size+2m".
+ * Horizontal runs are merged.
  */
 export function qrPath(m: QrMatrix, margin = 2): string {
   const parts: string[] = [];
@@ -37,8 +35,8 @@ export const labelUrl = (origin: string, shortCode: string) =>
   `${origin.replace(/\/+$/, "")}/q/${shortCode}`;
 
 /**
- * The short code in a scanned value: a label URL (any host, path /q/CODE) or
- * a bare code. Null for anything else (EAN, ISBN, foreign QR codes).
+ * The short code in a scanned value: a label URL (any host, path /q/CODE) or a bare code.
+ * Null for anything else (EAN, ISBN, foreign QR codes).
  */
 export function shortCodeFromScan(raw: string, isCode: (s: string) => boolean): string | null {
   const v = raw.trim();

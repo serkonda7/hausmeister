@@ -1,23 +1,17 @@
-// Ownership transfers (DESIGN §3.6): gifts and hand-me-downs between people
-// and groups, with the new owner's consent.
+// Ownership transfers (DESIGN §3.6): gifts and hand-me-downs between people and groups, with the new owner's consent.
 //
-//   start    manage on the item. Target: an active non-guest user or a group,
-//            not the current owner. Someone who is neither an admin nor the
-//            item's direct user owner (a manage grantee, a co-member of the
-//            owning group) may not offer it to themselves or to one of their
-//            own groups: that would take the item from its owner.
+//   start    manage on the item. Target: an active non-guest user or a group, not the current owner.
+//            Someone who is neither an admin nor the item's direct user owner (a manage grantee, a co-member of the owning group) may not offer it to themselves or to one of their own groups: that would take the item from its owner.
 //            One pending transfer per item.
 //   accept / decline
-//            the new owner: that user, or any member of that group. They need
-//            not see the item yet (it was offered to them on purpose), so the
-//            offer shows its name; accepting fails as TRANSFER_STALE (and the
-//            offer is withdrawn) when the owner changed in the meantime.
+//            the new owner: that user, or any member of that group.
+//            They need not see the item yet (it was offered to them on purpose), so the offer shows its name; accepting fails as TRANSFER_STALE (and the offer is withdrawn) when the owner changed in the meantime.
 //   cancel   whoever started it, or anyone with manage on the item.
 //   force    admins: completes a pending transfer without waiting.
-// Visibility stays as it is (a user or group may own private items). Grants
-// and loans are kept. Every step is an item event; the owner change itself is
-// item.owner_changed with reason "transfer". The owners hear about offers
-// started by someone else; the new owner and the starter about the outcome.
+// Visibility stays as it is (a user or group may own private items).
+// Grants and loans are kept.
+// Every step is an item event; the owner change itself is item.owner_changed with reason "transfer".
+// The owners hear about offers started by someone else; the new owner and the starter about the outcome.
 import { and, asc, eq, inArray, or, type SQL } from "drizzle-orm";
 import {
   type StartTransferInput,

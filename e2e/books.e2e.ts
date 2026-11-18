@@ -1,7 +1,5 @@
-// ISBN auto-fill and shelf mode (DESIGN §5.2). The e2e server runs with
-// ISBN_LOOKUP=off (no calls to the real libraries), so lookups answer
-// "unavailable": these tests cover validation, duplicates and the hand-off
-// to quick add; the parsers and the source chain are unit-tested.
+// ISBN auto-fill and shelf mode (DESIGN §5.2).
+// The e2e server runs with ISBN_LOOKUP=off (no calls to the real libraries), so lookups answer "unavailable": these tests cover validation, duplicates and the hand-off to quick add; the parsers and the source chain are unit-tested.
 import { expect, test } from "./fixtures";
 import { addItem, hydrated, token } from "./item-helpers";
 

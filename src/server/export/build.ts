@@ -12,14 +12,11 @@
 //    groups they refer to. References to items outside the export (a private
 //    container, an `item` field, ids in history diffs) are removed; the item
 //    record lists the removed keys in `omittedReferences`.
-//    Loans of their items: out and returned ones (who had it), requests only
-//    on items they manage or that they asked for themselves; the contacts
-//    those loans name; transfers of items they manage or that involve them;
-//    the stock ledger of their items.
+//    Loans of their items: out and returned ones (who had it), requests only on items they manage or that they asked for themselves; the contacts those loans name; transfers of items they manage or that involve them; the stock ledger of their items.
 //  - "none" (guest): nothing; the caller answers 404 before getting here.
 // Never exported: password hashes (accounts), sessions, passkeys,
-// verifications, invite token hashes, jobs, auth e-mail aliases, and the
-// per-user inbox (notifications: derived, personal, not household data).
+// verifications, invite token hashes, jobs, auth e-mail aliases.
+// Nor the per-user inbox (notifications: derived, personal, not household data).
 // Memory: data is read in pages of `pageSize` rows from a snapshot (see
 // snapshot.ts) and written as it is read; files are streamed in 256 KiB
 // chunks; between pages the loop yields to the event loop, so other requests
@@ -583,9 +580,8 @@ async function build(
     })(),
   );
 
-  // --- loans, contacts, transfers, stock ledger -------------------------------------
-  // Admins: whole tables, paged by id. Members: the rows of exported items,
-  // 500 items at a time, then the rules in the header comment.
+  // --- loans, contacts, transfers, stock ledger ------------------------------------- Admins: whole tables, paged by id.
+  // Members: the rows of exported items, 500 items at a time, then the rules in the header comment.
   const exportedItemIds = [...levels.keys()];
   async function* rowsOfItems<T extends { id: string }>(
     load: (itemIds: string[] | null, after: string) => T[],

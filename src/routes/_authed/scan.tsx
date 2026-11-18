@@ -1,8 +1,6 @@
-// Scan mode (DESIGN §5.2, §9): point the camera at a QR label, an ISBN or a
-// product barcode; the hit shows below with quick actions, and scanning goes
-// on after "Weiter scannen". Without BarcodeDetector (or camera) the code
-// field does the same; QR labels also open from the phone's camera app,
-// because they carry the full /q/<code> URL. Typed ISBNs are checked first.
+// Scan mode (DESIGN §5.2, §9): point the camera at a QR label, an ISBN or a product barcode; the hit shows below with quick actions, and scanning goes on after "Weiter scannen".
+// Without BarcodeDetector (or camera) the code field does the same; QR labels also open from the phone's camera app, because they carry the full /q/<code> URL.
+// Typed ISBNs are checked first.
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createSignal, Show } from "solid-js";
 import { CameraScanner, useScanSupport } from "~/components/scan/camera-scanner";

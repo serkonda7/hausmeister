@@ -186,8 +186,9 @@ export const reassignItemsInput = z.object({
 export type ReassignItemsInput = z.infer<typeof reassignItemsInput>;
 
 /**
- * Needs `use`. Either `delta` (e.g. -1 used, +10 restocked) or `quantity` (a
- * count: the new total). Stock changes add up, so no version is needed.
+ * Needs `use`.
+ * Either `delta` (e.g. -1 used, +10 restocked) or `quantity` (a count: the new total).
+ * Stock changes add up, so no version is needed.
  */
 export const adjustStockInput = z
   .object({

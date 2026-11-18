@@ -1,7 +1,6 @@
-// Scanned or typed codes (DESIGN §5.2): a label's short code opens its item
-// or location; any other code (EAN, ISBN, a serial) finds the visible items
-// that carry it, in the barcode column or as any attribute value. ISBNs match
-// in both spellings (ISBN-10 and -13). Invisible items never match.
+// Scanned or typed codes (DESIGN §5.2): a label's short code opens its item or location; any other code (EAN, ISBN, a serial) finds the visible items that carry it, in the barcode column or as any attribute value.
+// ISBNs match in both spellings (ISBN-10 and -13).
+// Invisible items never match.
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { isBooklandEan, isbnVariants, toIsbn13 } from "../../lib/isbn";
 import { normalizeIsbn } from "../../lib/item-types/fields";

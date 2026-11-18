@@ -6,9 +6,8 @@ export type CodeLookup =
   | { kind: "item"; id: string }
   | { kind: "location"; id: string }
   /**
-   * A barcode or ISBN: the visible items carrying it (barcode column or any
-   * attribute value, ISBN-10 and -13 alike). `isbn` is the normalized ISBN-13
-   * when the code is a book's.
+   * A barcode or ISBN: the visible items carrying it (barcode column or any attribute value, ISBN-10 and -13 alike).
+   * `isbn` is the normalized ISBN-13 when the code is a book's.
    */
   | { kind: "matches"; code: string; isbn: string | null; items: ItemListRow[] };
 

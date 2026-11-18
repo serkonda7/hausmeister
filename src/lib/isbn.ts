@@ -1,6 +1,4 @@
-// ISBN helpers beyond validation (src/lib/item-types/fields.ts has
-// normalizeIsbn / isValidIsbn): converting between ISBN-10 and ISBN-13, so a
-// scan of the barcode (always 13 digits) finds a book stored with ISBN-10.
+// ISBN helpers beyond validation (src/lib/item-types/fields.ts has normalizeIsbn / isValidIsbn): converting between ISBN-10 and ISBN-13, so a scan of the barcode (always 13 digits) finds a book stored with ISBN-10.
 import { isValidIsbn, normalizeIsbn } from "./item-types/fields";
 
 /** 978-prefixed ISBN-13 for a valid ISBN-10; the ISBN-13 itself when given one. */

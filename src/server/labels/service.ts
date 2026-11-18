@@ -1,6 +1,5 @@
-// Label sheets (DESIGN §5.2): the items and locations to print, with the
-// origin their QR codes point to. Only what the caller can see; unknown or
-// invisible ids are left out silently (the sheet is a print job, not an API).
+// Label sheets (DESIGN §5.2): the items and locations to print, with the origin their QR codes point to.
+// Only what the caller can see; unknown or invisible ids are left out silently (the sheet is a print job, not an API).
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { idSchema } from "../../lib/items/inputs";

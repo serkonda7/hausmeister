@@ -1,5 +1,5 @@
-// Query options for the inbox (key ["notifications", …]). Invalidate it after
-// writes that may notify the caller or change what they read.
+// Query options for the inbox (key ["notifications", …]).
+// Invalidate it after writes that may notify the caller or change what they read.
 import { infiniteQueryOptions, queryOptions } from "@tanstack/solid-query";
 import { listNotificationsFn, unreadNotificationsFn } from "~/server/notifications/functions";
 

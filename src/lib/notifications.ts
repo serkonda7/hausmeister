@@ -1,5 +1,5 @@
-// Notification kinds, their shapes and German text (shared by the inbox page
-// and the server). The payload of each kind:
+// Notification kinds, their shapes and German text (shared by the inbox page and the server).
+// The payload of each kind:
 //   stock.low           { quantity, minQuantity, unit }
 //   loan.requested      { actorName, quantity, dueOn }      to the item's managers
 //   loan.approved       { actorName, dueOn }                to the borrower

@@ -4,7 +4,7 @@ A self-hosted web app where a family tracks what it owns (books, tools, spare
 parts, clothes, electronics): **who owns each thing**, **where it is**, **who
 has it right now** and **who may do what**.
 
-Status: design v3.2, 2026-11-10. Phase 0 and the MVP are done (§10).
+Status: design v3.3, 2026-11-18. Phase 0, the MVP and v1.1 are done (§10).
 
 ---
 
@@ -148,8 +148,8 @@ export const canSeeMoney = (lvl: number) => lvl >= L.edit;
 
 ### 3.6 Ownership lifecycle
 
-- **Transfer**: anyone with `manage` starts it, the new owner **accepts**
-  (gifts, hand-me-downs). An admin can force it.
+- **Transfer**: anyone with `manage` offers the item to a user or group, the new owner **accepts** (gifts, hand-me-downs); for a group, any member accepts. An admin can force a pending offer. One pending offer per item; accepting fails if the owner changed in the meantime.
+- Someone who is neither an admin nor the item's direct user owner (a `manage` grantee, a co-member of the owning group) may offer it only to others, never to themselves or their own groups, and the owner is told. A direct owner change without acceptance stays with admins and the direct user owner (to the household or their own groups).
 - **User leaves or is disabled**: an admin reassigns their items (singly or in
   bulk) to the household or another user.
 - Every ownership change goes to the event log.
@@ -255,15 +255,15 @@ but are hidden from default views.
      phone's camera app opens them too. Every item and location has a short
      code. Label sheets: A4 Avery-style (Avery Zweckform L4732) and thermal
      labels, generated with `qrcode`.
-   - **Book lookup** for German ISBNs: Deutsche Nationalbibliothek SRU (free,
-     no key, best German coverage) → Open Library → Google Books. Outbound
-     calls from the server.
-   - **Shelf mode**: scan books in a row; each scan creates a filled-in Book.
+   - **Book lookup** for German ISBNs: Deutsche Nationalbibliothek SRU (free, no key, best German coverage) → Open Library → Google Books, in the order the type's ISBN field lists them. Outbound calls from the server, only the ISBN is sent; a failing or rate-limiting source falls through to the next, results are cached for a day. `ISBN_LOOKUP=off` keeps everything local.
+   - **Shelf mode**: scan books in a row; each scan creates a filled-in Book at the chosen place. Books already in the inventory (ISBN-10 or -13) are flagged instead of added twice; unknown ones link to quick add with the ISBN prefilled.
+   - A barcode or ISBN that is no label finds the visible items carrying it (barcode column or any attribute value).
 3. **Loans and check-out**
-   - Household items: anyone with `use` checks them out directly.
-   - Personal items: a loan request goes to the owner for approval.
-   - **External contacts** (neighbours without VPN) can borrow with a due date.
-     They get email reminders only, without app links.
+   - Anyone with `use` checks an item out directly: for household items every member, for shared ones the grantees. Admins and members can also lend it to another user or an external contact; guests only to themselves.
+   - With only `view` (someone else's item), a **loan request** goes to the item's managers (owner, owning group, `manage` grantees; admins for household items). They approve (optionally handing it over at once) or decline; the borrower can withdraw it, pick up an approved loan and return it.
+   - Individual items are out once at a time and show `on_loan`; stock items lend quantities up to the stock. Gone items cannot be lent.
+   - Who has an item (out loans) is visible to everyone who sees it; requests only to the managers and the borrower.
+   - **External contacts** (neighbours without VPN) can borrow with a due date. They get email reminders only, without app links (v1.2).
 4. **Search and filters**: SQLite FTS5 over name, description, tags and
    flattened attributes. Facets: type, owner, location, status, tags and
    type-specific attributes ("Kleidung, Größe 128, Winter").
@@ -275,10 +275,8 @@ but are hidden from default views.
      (`trigram remove_diacritics`); CI checks the bundled version.
 5. **Hand-me-downs**: mark clothing `outgrown`; the app suggests the user whose
    size matches and starts a transfer.
-6. **Reminders** at 08:00 Europe/Berlin through **Web Push** (installed PWA)
-   and optionally email: loans due, low stock, warranties ending, pending
-   transfers or loan requests. Push uses the browser vendors' services, so it
-   works VPN-only.
+6. **Reminders** at 08:00 Europe/Berlin through **Web Push** (installed PWA) and optionally email: loans due, low stock, warranties ending, pending transfers or loan requests. Push uses the browser vendors' services, so it works VPN-only.
+   - Since v1.1 the same notices land in an **in-app inbox** (header badge): falling below a minimum stock (to the item's owners: user, group members, or every admin and member for household items; withdrawn when restocked), loan requests and answers, transfer offers and outcomes.
 7. **History**: every change is an event with actor, time and field diff
    ("Who moved my drill?").
 8. **Attachments**: photos (thumbnails, **EXIF/GPS stripped**), receipts and
@@ -336,16 +334,20 @@ attachments    (id PK, item_id FK, kind CHECK IN ('photo','receipt','manual','ot
                 sha256, mime, bytes, original_name, sort, created_by, created_at)
 
 -- Activity -----------------------------------------------------------------
-contacts       (id PK, name, email NULL, phone NULL)       -- external borrowers
+contacts       (id PK, name, email NULL, phone NULL, notes NULL, created_by, created_at)  -- external borrowers
 loans          (id PK, item_id FK, quantity,
                 borrower_user_id NULL, borrower_contact_id NULL,
-                status CHECK IN ('requested','approved','out','returned','declined'),
-                requested_at, approved_by NULL, out_at NULL, due_at NULL, returned_at NULL, note)
+                status CHECK IN ('requested','approved','out','returned','declined','cancelled'),
+                requested_by, created_at, decided_by NULL, decided_at NULL, lent_by NULL,
+                out_at NULL, due_on DATE NULL, returned_at NULL, returned_by NULL, note)
 transfers      (id PK, item_id, from_owner_kind, from_owner_id, to_owner_kind, to_owner_id,
-                status CHECK IN ('pending','accepted','declined','forced'), created_by, created_at)
-stock_moves    (id PK, item_id, delta REAL, reason, user_id, at)
+                status CHECK IN ('pending','accepted','declined','forced','cancelled'),
+                note, created_by, created_at, resolved_by NULL, resolved_at NULL)
+                -- UNIQUE (item_id) WHERE status = 'pending'
+stock_moves    (id PK, item_id, delta REAL, quantity_after REAL,
+                reason CHECK IN ('used','restocked','counted','edited','other'), note, user_id, at)
 events         (id PK, item_id NULL, actor_id, action, diff JSON, at)
-notifications  (id PK, user_id, kind, payload JSON, read_at NULL, created_at)
+notifications  (id PK, user_id, kind, item_id NULL, payload JSON, read_at NULL, created_at)
 jobs           (id PK, kind, payload JSON, run_at, attempts, locked_until NULL, done_at NULL)
 
 -- Search -------------------------------------------------------------------
@@ -355,9 +357,9 @@ CREATE VIRTUAL TABLE items_fts USING fts5(name, description, tags, attrs,
 
 Notes
 
-- "Overdue" is computed (`status = 'out' AND due_at < now`), not stored.
+- "Overdue" is computed (`status = 'out' AND due_on < today` in Europe/Berlin), not stored.
 - Indexes: `items(owner_kind, owner_id)`, `items(type_id)`,
-  `items(location_id)`, `items(barcode)`, `loans(status, due_at)`.
+  `items(location_id)`, `items(barcode)`, `loans(status, due_on)`.
 - Attribute filters use `json_extract(attributes, '$.size')`; a hot attribute
   can get a generated column + index.
 - Every edit sends `version`; a stale one is rejected as a conflict, so two
@@ -549,14 +551,15 @@ SMTP and VAPID settings join `compose.yaml` with reminders (v1.2).
 
 ## 9. UI map
 
-- **Home**: search, "Scan", my loans, due back, low stock, pending requests.
+- **Home**: search, "Scan", transfer offers, pending loan requests, lent out (overdue first), my loans, low stock.
+- **Loans** (`/loans`): the same lists in full, offers made; **contacts** (`/contacts`) for external borrowers. **Inbox** (`/notifications`) behind the header badge.
 - **Items**: grid or list, faceted filters, saved views ("Winter clothes").
 - **Item detail**: photos, fields, location breadcrumbs, owner, current holder,
   related parts, history; actions borrow, move, transfer, print label.
 - **Add item**: type → dynamic form; scan a barcode or ISBN to fill fields.
 - **Locations**: tree browser ("Garage → Shelf 2").
-- **Scan**: full-screen camera; a hit opens the item or location with quick
-  actions (check out, return, ±stock).
+- **Scan**: full-screen camera; a hit opens the item or location with quick actions (check out, return, ±stock). **Shelf mode** (`/items/shelf`) for books in a row.
+- **Labels** (`/labels`): QR label sheets for items and locations, A4 L4732 (with an offset for partly used sheets) or 62 × 29 mm thermal labels.
 - **Admin**: users and roles, groups, invites, item types (schema editor with
   live preview), tags, settings, export.
 - German only, phone layout first, WCAG AA.
@@ -569,7 +572,7 @@ SMTP and VAPID settings join `compose.yaml` with reminders (v1.2).
 | --- | --- |
 | **0: Infra** ✓ | deSEC zone + restricted token · Strato NS delegation · VPS + Tailscale sidecar · DNS records (A, no AAAA, mail lock-down) · Caddy DNS-01 · Litestream + restic + restore test · "Hallo" page |
 | **MVP** ✓ | Invites and login (password + passkey), roles, groups · item types with custom fields and templates · items, locations, containers, photos · visibility, grants, money hiding · search and filters · event log · export |
-| **v1.1** | QR labels and scan mode · ISBN lookup (DNB → Open Library) and shelf mode · loans (internal and external) · stock with low-stock alerts · ownership transfers |
+| **v1.1** ✓ | QR labels and scan mode · ISBN lookup (DNB → Open Library) and shelf mode · loans (internal and external) · stock with low-stock alerts · ownership transfers |
 | **v1.2** | PWA + Web Push reminders · optional email (external borrowers) · CSV import · hand-me-downs · warranty expiry · item relations ("fits") |
 | **Later** | Offline add queue · personal API tokens · photo search ("what's in this box") |
 

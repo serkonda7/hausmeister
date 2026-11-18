@@ -1,6 +1,4 @@
-// What a scan found, with quick actions (DESIGN §9 "Scan"): an item with
-// check out / return / ±stock, a location to open or fill, or the items
-// carrying a barcode or ISBN (with "add" when there are none).
+// What a scan found, with quick actions (DESIGN §9 "Scan"): an item with check out / return / ±stock, a location to open or fill, or the items carrying a barcode or ISBN (with "add" when there are none).
 import { useQuery } from "@tanstack/solid-query";
 import { Link } from "@tanstack/solid-router";
 import { For, type JSX, Show } from "solid-js";

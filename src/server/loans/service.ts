@@ -1,21 +1,15 @@
 // Loans (DESIGN §3.2, §5.3): who has an item right now.
 //
-//   use      check out directly (to oneself; admins and members also to
-//            another user or an external contact), hand over an approved
-//            loan, return, change the due date
-//   view     request a loan; the item's managers approve or decline
-//   manage   approve, decline
-//   borrower cancel an open request, mark an approved loan as picked up,
-//            return
-// Individual items can be out once at a time and show `on_loan` while out
-// (back to `available` on return). Stock items lend quantities: the sum of
-// out loans never exceeds the quantity; their status does not change.
+//   use       check out directly (to oneself; admins and members also to another user or an external contact), hand over an approved loan, return, change the due date
+//   view      request a loan; the item's managers approve or decline
+//   manage    approve, decline
+//   borrower  cancel an open request, mark an approved loan as picked up, return
+// Individual items can be out once at a time and show `on_loan` while out (back to `available` on return).
+// Stock items lend quantities: the sum of out loans never exceeds the quantity; their status does not change.
 // Gone items (archived, given away, sold, disposed) cannot be lent.
 //
-// Visibility: out loans (the current holder) are part of the item for every
-// viewer; requests and approved loans only for managers and the borrower.
-// A borrower always sees their own loans, with the item's name, even when the
-// item itself is not visible to them (someone lent it to them on purpose).
+// Visibility: out loans (the current holder) are part of the item for every viewer; requests and approved loans only for managers and the borrower.
+// A borrower always sees their own loans, with the item's name, even when the item itself is not visible to them (someone lent it to them on purpose).
 // Request-workflow events are hidden below manage in the history.
 import { and, asc, eq, inArray, ne, or, type SQL, sql } from "drizzle-orm";
 import { isoDayInBerlin } from "../../lib/format";
@@ -166,9 +160,8 @@ function borrowerOf(db: DbOrTx, loan: Loan): Borrower {
 type LoadedLoan = { loan: Loan; item: Item; level: Level };
 
 /**
- * The loan with its item and the caller's level on it. LOAN_NOT_FOUND when it
- * does not exist or the caller can see neither the item nor the loan (as its
- * borrower or requester).
+ * The loan with its item and the caller's level on it.
+ * LOAN_NOT_FOUND when it does not exist or the caller can see neither the item nor the loan (as its borrower or requester).
  */
 function loadLoan(db: DbOrTx, ctx: AuthCtx, loanId: string): LoadedLoan {
   const loan = db.select().from(loans).where(eq(loans.id, loanId)).get();

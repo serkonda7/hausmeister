@@ -52,3 +52,23 @@ test("main pages have no axe violations", async ({ newUser }) => {
   await expect(u.page.getByRole("heading", { level: 1 })).toBeVisible();
   await audit(u.page, new URL(u.page.url()).pathname);
 });
+
+test("loans, scan, labels and inbox pages have no axe violations", async ({ newUser }) => {
+  const u = await newUser("member");
+  const id = await addItem(u.page, { type: "Werkzeug", name: `Leiter ${token()}` });
+  await u.page.getByRole("button", { name: "Ausleihen", exact: true }).click();
+  await u.page.getByRole("dialog").getByRole("button", { name: "Ausleihen", exact: true }).click();
+  await expect(u.page.getByTestId("loan")).toBeVisible();
+  for (const path of [
+    `/items/${id}`,
+    "/loans",
+    "/contacts",
+    "/notifications",
+    "/scan",
+    "/items/shelf",
+    `/labels?item=${id}`,
+    `/labels?item=${id}&format=thermal`,
+    "/q/ZZZZZZ",
+  ])
+    await audit(u.page, path);
+});

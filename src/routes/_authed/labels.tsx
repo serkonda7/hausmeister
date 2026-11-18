@@ -1,9 +1,7 @@
-// Label sheets (DESIGN §5.2): QR labels for items and locations, printed on
-// A4 Avery Zweckform L4732 (80 per sheet, with an offset for a sheet that is
-// already partly used) or on 62 × 29 mm thermal labels. Each QR code is the
-// full /q/<code> URL, so the phone's camera app opens it as well. What to
-// print lives in the URL (?item=…&location=…), so item and location pages
-// link straight here. Page size and layout: src/styles/app.css.
+// Label sheets (DESIGN §5.2): QR labels for items and locations, printed on A4 Avery Zweckform L4732 (80 per sheet, with an offset for a sheet that is already partly used) or on 62 × 29 mm thermal labels.
+// Each QR code is the full /q/<code> URL, so the phone's camera app opens it as well.
+// What to print lives in the URL (?item=…&location=…), so item and location pages link straight here.
+// Page size and layout: src/styles/app.css.
 import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute, useNavigate } from "@tanstack/solid-router";
 import { createMemo, createSignal, For, Show } from "solid-js";

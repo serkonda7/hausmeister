@@ -1,6 +1,5 @@
-// QR labels and scan mode (DESIGN §5.2, §11 "scan → check out"). Headless
-// Chromium has no BarcodeDetector, so these tests use the code field, which
-// is the documented fallback; the label URL is what the camera would read.
+// QR labels and scan mode (DESIGN §5.2, §11 "scan → check out").
+// Headless Chromium has no BarcodeDetector, so these tests use the code field, which is the documented fallback; the label URL is what the camera would read.
 import { expect, test } from "./fixtures";
 import { addItem, hydrated, token } from "./item-helpers";
 

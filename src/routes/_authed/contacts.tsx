@@ -1,6 +1,5 @@
-// External contacts (admins and members): people without an account who
-// borrow things. Name is enough; e-mail and phone help remind them (email
-// reminders come with v1.2).
+// External contacts (admins and members): people without an account who borrow things.
+// Name is enough; e-mail and phone help remind them (email reminders come with v1.2).
 import { useQuery, useQueryClient } from "@tanstack/solid-query";
 import { createFileRoute, notFound } from "@tanstack/solid-router";
 import { createSignal, For, Show } from "solid-js";

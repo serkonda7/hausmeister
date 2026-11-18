@@ -1,9 +1,7 @@
-// Book data -> an item type's attribute values (stored shape, see
-// src/lib/item-types/fields.ts). Matches by field key, the way the starter
-// type "Buch" names its fields (authors, isbn, publisher, year, series,
-// language), plus a few common alternatives; every `isbn` field gets the
-// ISBN. Only active fields of a fitting kind are filled; numbers outside a
-// field's min/max are left out. Pure.
+// Book data -> an item type's attribute values (stored shape, see src/lib/item-types/fields.ts).
+// Matches by field key, the way the starter type "Buch" names its fields (authors, isbn, publisher, year, series, language), plus a few common alternatives; every `isbn` field gets the ISBN.
+// Only active fields of a fitting kind are filled; numbers outside a field's min/max are left out.
+// Pure.
 import type { FieldDefinition } from "../../lib/item-types/fields";
 import type { BookData } from "./lookup";
 

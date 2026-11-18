@@ -1,8 +1,6 @@
-// External contacts (DESIGN §5.3): people without an account who borrow
-// things, e.g. the neighbour. Admins and members list and edit them; guests
-// never see them (only a loan's borrower name on items they can see).
-// A contact with open loans cannot be deleted; closed loans keep their
-// history (events carry the name) and lose the link.
+// External contacts (DESIGN §5.3): people without an account who borrow things, e.g. the neighbour.
+// Admins and members list and edit them; guests never see them (only a loan's borrower name on items they can see).
+// A contact with open loans cannot be deleted; closed loans keep their history (events carry the name) and lose the link.
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
   type ContactInput,

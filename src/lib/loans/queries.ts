@@ -1,5 +1,5 @@
-// Query options for loans and contacts. Loan keys live under ["items", …], so
-// every item write (useItemWrite invalidates ["items"]) refreshes them too.
+// Query options for loans and contacts.
+// Loan keys live under ["items", …], so every item write (useItemWrite invalidates ["items"]) refreshes them too.
 import { queryOptions } from "@tanstack/solid-query";
 import { listContactsFn } from "~/server/contacts/functions";
 import { getItemLoansFn, getLoanOverviewFn } from "~/server/loans/functions";

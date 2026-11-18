@@ -1,14 +1,9 @@
-// Book data for an ISBN (DESIGN §5.2 "Book lookup"): Deutsche
-// Nationalbibliothek SRU (MARC21, free, no key, best German coverage), then
-// Open Library, then Google Books, in the order an `isbn` field's `lookup`
-// lists them. Outbound calls go from the server, with a generic user agent
-// and nothing about the household in them.
+// Book data for an ISBN (DESIGN §5.2 "Book lookup"): Deutsche Nationalbibliothek SRU (MARC21, free, no key, best German coverage), then Open Library, then Google Books, in the order an `isbn` field's `lookup` lists them.
+// Outbound calls go from the server, with a generic user agent and nothing about the household in them.
 //
-// Each source gets a short timeout. A source that fails (network, HTTP error,
-// 429 rate limit, unreadable answer) is skipped like one that knows nothing;
-// the result says "unavailable" only when no source could answer at all.
-// Results are cached in memory (hits a day, misses ten minutes), so shelf
-// mode and repeated scans don't hammer the services.
+// Each source gets a short timeout.
+// A source that fails (network, HTTP error, 429 rate limit, unreadable answer) is skipped like one that knows nothing; the result says "unavailable" only when no source could answer at all.
+// Results are cached in memory (hits a day, misses ten minutes), so shelf mode and repeated scans don't hammer the services.
 import type { IsbnLookup } from "../../lib/item-types/fields";
 
 export type BookData = {

@@ -94,19 +94,10 @@ fields) are `YYYY-MM-DD`; money is integer cents (`priceCents`) plus
 - **grants**: `itemId, principalKind, principalId, level`.
 - **events**: `id, itemId, actorId, action, diff, at`. Item diffs are
   `{ field: { from, to } }`, attribute changes `attributes.<key>`.
-- **loans**: `id, itemId, quantity, borrowerUserId, borrowerContactId,
-  status, note, requestedBy, createdAt, decidedBy, decidedAt, lentBy, outAt,
-  dueOn, returnedAt, returnedBy, updatedAt`. `status` is `requested`,
-  `approved`, `out`, `returned`, `declined` or `cancelled`; `dueOn` is a
-  calendar date (`YYYY-MM-DD`, Europe/Berlin). Exactly one borrower id is set,
-  except on closed loans of a deleted contact (both null).
-- **contacts**: `id, name, email, phone, notes, createdBy, createdAt,
-  updatedAt`.
-- **transfers**: `id, itemId, fromOwnerKind, fromOwnerId, toOwnerKind,
-  toOwnerId, status, note, createdBy, createdAt, resolvedBy, resolvedAt`.
-  `status` is `pending`, `accepted`, `declined`, `forced` or `cancelled`.
-- **stock-moves**: `id, itemId, delta, quantityAfter, reason, note, userId,
-  at`; `reason` is `used`, `restocked`, `counted`, `edited` or `other`.
+- **loans**: `id, itemId, quantity, borrowerUserId, borrowerContactId, status, note, requestedBy, createdAt, decidedBy, decidedAt, lentBy, outAt, dueOn, returnedAt, returnedBy, updatedAt`. `status` is `requested`, `approved`, `out`, `returned`, `declined` or `cancelled`; `dueOn` is a calendar date (`YYYY-MM-DD`, Europe/Berlin). Exactly one borrower id is set, except on closed loans of a deleted contact (both null).
+- **contacts**: `id, name, email, phone, notes, createdBy, createdAt, updatedAt`.
+- **transfers**: `id, itemId, fromOwnerKind, fromOwnerId, toOwnerKind, toOwnerId, status, note, createdBy, createdAt, resolvedBy, resolvedAt`. `status` is `pending`, `accepted`, `declined`, `forced` or `cancelled`.
+- **stock-moves**: `id, itemId, delta, quantityAfter, reason, note, userId, at`; `reason` is `used`, `restocked`, `counted`, `edited` or `other`.
 - **users** (admin): `id, username, displayUsername, displayName, email, role,
   locale, createdAt, updatedAt, disabledAt, groupIds`.
 - **groups** (admin): `id, name, createdAt, memberIds`.
@@ -133,16 +124,13 @@ fields) are `YYYY-MM-DD`; money is integer cents (`priceCents`) plus
   null. The item lists the removed keys in `omittedReferences`
   (e.g. `["containerItemId", "attributes.fits"]`) so an import knows they are
   unknown, not empty.
-  Loans of those items: out and returned ones for every exported item (who
-  had it), requests (requested, approved, declined, cancelled) only on items
-  the member manages or that they asked for; the contacts these loans name;
-  transfers of items the member manages, started or was offered; the stock
-  ledger of the exported items.
+  Loans of those items: out and returned ones for every exported item (who had it), requests (requested, approved, declined, cancelled) only on items the member manages or that they asked for; the contacts these loans name; transfers of items the member manages, started or was offered; the stock ledger of the exported items.
 - **none** (guest): no export; the endpoint answers like an unknown URL.
 
 Never in any export: password hashes and other `accounts` columns, sessions,
 passkeys, verifications, invites (token hashes), jobs, `users.auth_email`,
-`users.email_verified`, `users.image`, and notifications (each user's inbox).
+`users.email_verified`, `users.image`.
+Nor notifications (each user's own inbox).
 
 ## CSV tables
 
@@ -160,14 +148,11 @@ common columns, one column per active field (inherited ones included; the
 field label, with the key appended when two labels collide), `Alte Felder`
 for hidden or removed fields, and the id.
 
-`ausleihen.csv` has one row per exported loan, oldest first: item, short
-code, borrower (name), quantity, status, created, out, due, returned, note,
-loan id.
+`ausleihen.csv` has one row per exported loan, oldest first: item, short code, borrower (name), quantity, status, created, out, due, returned, note, loan id.
 
 ## Version history
 
-- **2** (v1.1): `loans`, `contacts`, `transfers`, `stock-moves`,
-  `tabellen/ausleihen.csv`, the matching `counts` and `tables.loans`.
+- **2** (v1.1): `loans`, `contacts`, `transfers`, `stock-moves`, `tabellen/ausleihen.csv`, the matching `counts` and `tables.loans`.
 - **1** (MVP): the first format.
 
 ## Files

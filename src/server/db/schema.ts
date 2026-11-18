@@ -425,11 +425,10 @@ export const contacts = sqliteTable("contacts", {
 });
 
 /**
- * Loans (DESIGN §5.3). The borrower is a user or a contact (exactly one is set
- * when the loan is made; a deleted contact leaves both NULL on closed loans).
+ * Loans (DESIGN §5.3).
+ * The borrower is a user or a contact (exactly one is set when the loan is made; a deleted contact leaves both NULL on closed loans).
  * `lent_by` handed the item out (direct check-out or hand-over after approval).
- * `due_on` is a calendar date ('YYYY-MM-DD', Europe/Berlin); overdue is
- * computed (status = 'out' AND due_on < today), never stored.
+ * `due_on` is a calendar date ('YYYY-MM-DD', Europe/Berlin); overdue is computed (status = 'out' AND due_on < today), never stored.
  */
 export const loans = sqliteTable(
   "loans",
@@ -466,10 +465,9 @@ export const loans = sqliteTable(
 );
 
 /**
- * Ownership transfers (DESIGN §3.6): someone with `manage` offers the item to
- * a user or group, the new owner accepts. `from_*` is the owner when it was
- * offered; accepting fails if the owner changed meanwhile. At most one
- * pending transfer per item.
+ * Ownership transfers (DESIGN §3.6): someone with `manage` offers the item to a user or group, the new owner accepts.
+ * `from_*` is the owner when it was offered; accepting fails if the owner changed meanwhile.
+ * At most one pending transfer per item.
  */
 export const transfers = sqliteTable(
   "transfers",
@@ -499,9 +497,8 @@ export const transfers = sqliteTable(
 );
 
 /**
- * Stock changes of an item (DESIGN §4.2 `stock`): one row per adjustment or
- * quantity edit, with the quantity it left. Events carry the same change for
- * the history; this table is the stock ledger.
+ * Stock changes of an item (DESIGN §4.2 `stock`): one row per adjustment or quantity edit, with the quantity it left.
+ * Events carry the same change for the history; this table is the stock ledger.
  */
 export const stockMoves = sqliteTable(
   "stock_moves",
@@ -527,9 +524,8 @@ export const stockMoves = sqliteTable(
 
 /**
  * A user's in-app inbox (low stock, loan requests and answers, transfers).
- * No FK on item_id, like events: a notice may outlive its item. The payload
- * holds display data (names at the time); item names are read live and only
- * when the user can still see the item.
+ * No FK on item_id, like events: a notice may outlive its item.
+ * The payload holds display data (names at the time); item names are read live and only when the user can still see the item.
  */
 export const notifications = sqliteTable(
   "notifications",

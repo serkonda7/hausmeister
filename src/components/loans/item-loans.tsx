@@ -1,6 +1,5 @@
-// The loan section of the item page: who has it, open requests, and
-// "Ausleihen" (use: hand it out now) or "Ausleihe anfragen" (view: ask the
-// owner). Reads itemLoansQuery; the loader warms it.
+// The loan section of the item page: who has it, open requests, and "Ausleihen" (use: hand it out now) or "Ausleihe anfragen" (view: ask the owner).
+// Reads itemLoansQuery; the loader warms it.
 import { useQuery } from "@tanstack/solid-query";
 import { createSignal, For, Show } from "solid-js";
 import { useItemWrite } from "~/components/items/item-actions";

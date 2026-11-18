@@ -1,10 +1,7 @@
-// Stock (DESIGN §4.2, §5.6): adjustments at `use` (used up, restocked,
-// counted), the stock ledger (stock_moves) and low-stock alerts. An item is
-// low on stock when min_quantity is set and quantity is below it, the same
-// rule as the list's lowStock filter. Falling below the minimum notifies the
-// item's owners (ownerAudience) once; climbing back withdraws unread notices.
-// Stock changes add up, so adjustments need no version (two phones taking one
-// screw each both count); the item's version still goes up.
+// Stock (DESIGN §4.2, §5.6): adjustments at `use` (used up, restocked, counted), the stock ledger (stock_moves) and low-stock alerts.
+// An item is low on stock when min_quantity is set and quantity is below it, the same rule as the list's lowStock filter.
+// Falling below the minimum notifies the item's owners (ownerAudience) once; climbing back withdraws unread notices.
+// Stock changes add up, so adjustments need no version (two phones taking one screw each both count); the item's version still goes up.
 
 import type { StockReason } from "../../lib/items/constants";
 import { type AdjustStockInput, adjustStockInput } from "../../lib/items/inputs";
@@ -24,9 +21,8 @@ export const isLowStock = (s: StockState) => s.minQuantity !== null && s.quantit
 const round = (n: number) => Math.round(n * 1e6) / 1e6;
 
 /**
- * Records a quantity or minimum change made by any write path: a ledger row
- * when the quantity changed, and the low-stock notice when the item just
- * became low (withdrawn when it no longer is). Call inside the transaction.
+ * Records a quantity or minimum change made by any write path: a ledger row when the quantity changed, and the low-stock notice when the item just became low (withdrawn when it no longer is).
+ * Call inside the transaction.
  */
 export function recordStockChange(
   tx: DbOrTx,

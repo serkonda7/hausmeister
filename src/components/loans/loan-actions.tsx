@@ -1,6 +1,5 @@
-// One loan with the actions the caller may take (LoanRow.actions): approve,
-// decline, hand over, return, withdraw, change the due date. Used on the
-// item page and the loans overview.
+// One loan with the actions the caller may take (LoanRow.actions): approve, decline, hand over, return, withdraw, change the due date.
+// Used on the item page and the loans overview.
 import { useQueryClient } from "@tanstack/solid-query";
 import { Link } from "@tanstack/solid-router";
 import { createSignal, type JSX, Show } from "solid-js";

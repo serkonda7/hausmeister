@@ -1,6 +1,6 @@
-// Stock on the item page and in scan results (DESIGN §4.2, §9): the
-// quantity, the minimum, quick −1 / +1 and a dialog for amounts and counts.
-// Needs `use` (ItemDetail.permissions.canUse). Stock changes need no version.
+// Stock on the item page and in scan results (DESIGN §4.2, §9): the quantity, the minimum, quick −1 / +1 and a dialog for amounts and counts.
+// Needs `use` (ItemDetail.permissions.canUse).
+// Stock changes need no version.
 import { createSignal, For, Show } from "solid-js";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";

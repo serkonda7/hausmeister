@@ -1,5 +1,6 @@
-// Server functions for loans. Rules (levels, borrower rights, visibility) and
-// events: ./service.ts. Errors are ItemsError codes (LOAN_*, CONTACT_*).
+// Server functions for loans.
+// Rules (levels, borrower rights, visibility) and events: ./service.ts.
+// Errors are ItemsError codes (LOAN_*, CONTACT_*).
 import { createServerFn } from "@tanstack/solid-start";
 import { z } from "zod";
 import { idSchema } from "~/lib/items/inputs";

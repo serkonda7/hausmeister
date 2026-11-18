@@ -1,16 +1,10 @@
-// The in-app inbox (DESIGN §5.6): low stock, loan requests and answers,
-// ownership transfers. Written by the stock, loans and transfers services
-// inside their transactions; v1.2 sends the same notices as Web Push.
+// The in-app inbox (DESIGN §5.6): low stock, loan requests and answers, ownership transfers.
+// Written by the stock, loans and transfers services inside their transactions; v1.2 sends the same notices as Web Push.
 //
 // Who hears about an item:
-//   ownerAudience    the people the item belongs to: its user owner, the
-//                    members of its owning group, or for household items
-//                    every active admin and member (low stock).
-//   managerAudience  the people who decide about it (loan requests): its
-//                    user owner or owning group's members, for household
-//                    items the admins, plus everyone with a `manage` grant.
-// Item names are read live and only when the reader can still see the item;
-// the payload carries the other display data (names at the time).
+//   ownerAudience    the people the item belongs to: its user owner, the members of its owning group, or for household items every active admin and member (low stock).
+//   managerAudience  the people who decide about it (loan requests): its user owner or owning group's members, for household items the admins, plus everyone with a `manage` grant.
+// Item names are read live and only when the reader can still see the item; the payload carries the other display data (names at the time).
 import { and, desc, eq, inArray, isNull, lt, or, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { JsonObject } from "../../lib/items/types";
@@ -87,9 +81,8 @@ export function managerAudience(db: DbOrTx, item: AudienceItem): string[] {
 }
 
 /**
- * Adds one notice per recipient (active users only, `exclude` left out,
- * usually the actor). With `dedupe`, a user who still has an unread notice of
- * the same kind for the item gets no second one.
+ * Adds one notice per recipient (active users only, `exclude` left out, usually the actor).
+ * With `dedupe`, a user who still has an unread notice of the same kind for the item gets no second one.
  */
 export function notify(
   db: DbOrTx,

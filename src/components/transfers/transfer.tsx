@@ -1,6 +1,5 @@
-// Ownership transfers in the UI (DESIGN §3.6): "Übergeben …" on the item page
-// (manage), the pending offer on the item page, and offer cards for the
-// loans page and home. The server checks every rule again.
+// Ownership transfers in the UI (DESIGN §3.6): "Übergeben …" on the item page (manage), the pending offer on the item page, and offer cards for the loans page and home.
+// The server checks every rule again.
 import { useQuery, useQueryClient } from "@tanstack/solid-query";
 import { Link } from "@tanstack/solid-router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";

@@ -1,7 +1,5 @@
-// Loans and transfers (DESIGN §9 "my loans, due back, pending requests"):
-// offers of items to the caller, loan requests waiting for them, what they
-// lent out (overdue first), what they borrow, and offers they made. Contacts
-// for external borrowers are one click away.
+// Loans and transfers (DESIGN §9 "my loans, due back, pending requests"): offers of items to the caller, loan requests waiting for them, what they lent out (overdue first), what they borrow, and offers they made.
+// Contacts for external borrowers are one click away.
 import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { For, type JSX, Show } from "solid-js";

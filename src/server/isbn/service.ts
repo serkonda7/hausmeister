@@ -1,8 +1,7 @@
-// ISBN auto-fill for quick add and shelf mode (DESIGN §5.2). Admins and
-// members only (the ones who add items), rate-limited per user so a stuck
-// scanner cannot hammer the libraries. ISBN_LOOKUP=off (env) turns the outbound
-// calls off: every lookup is then "unavailable" and people type the data in. The sources and their order come from
-// the type's `isbn` field (`lookup`); without a type, DNB then Open Library.
+// ISBN auto-fill for quick add and shelf mode (DESIGN §5.2).
+// Admins and members only (the ones who add items), rate-limited per user so a stuck scanner cannot hammer the libraries.
+// ISBN_LOOKUP=off (env) turns the outbound calls off: every lookup is then "unavailable" and people type the data in.
+// The sources and their order come from the type's `isbn` field (`lookup`); without a type, DNB then Open Library.
 import { z } from "zod";
 import { toIsbn13 } from "../../lib/isbn";
 import type { BookLookupResult } from "../../lib/isbn-types";

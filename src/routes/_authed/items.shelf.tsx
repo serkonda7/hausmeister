@@ -1,8 +1,6 @@
-// Shelf mode (DESIGN §5.2): scan books in a row; each ISBN becomes a filled-in
-// item of the chosen type, at the chosen place and owner. Books already in
-// the inventory are flagged instead of added twice ("add anyway" is one tap);
-// a book the libraries don't know, or that misses a required field, gets a
-// link to quick add with the ISBN prefilled. Each new book can be undone.
+// Shelf mode (DESIGN §5.2): scan books in a row; each ISBN becomes a filled-in item of the chosen type, at the chosen place and owner.
+// Books already in the inventory are flagged instead of added twice ("add anyway" is one tap); a book the libraries don't know, or that misses a required field, gets a link to quick add with the ISBN prefilled.
+// Each new book can be undone.
 // Items are created one after the other, in scan order.
 import { useQuery, useQueryClient } from "@tanstack/solid-query";
 import { createFileRoute, Link, notFound } from "@tanstack/solid-router";

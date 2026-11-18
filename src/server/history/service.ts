@@ -8,11 +8,8 @@
 //    its name visible through an older "other" event.
 //  - grant events (item.grant_set / item.grant_removed) only at `manage`:
 //    who an item is shared with is the managers' business, like the grant list.
-//  - loan request events (requested, approved, declined, cancelled) and
-//    transfer offers (started, declined, cancelled) only at `manage`: they
-//    are between the people involved and the item's managers. Who has the
-//    item (item.lent / item.returned) and an accepted transfer
-//    (item.owner_changed) are shown to every viewer.
+//  - loan request events (requested, approved, declined, cancelled) and transfer offers (started, declined, cancelled) only at `manage`: they are between the people involved and the item's managers.
+//    Who has the item (item.lent / item.returned) and an accepted transfer (item.owner_changed) are shown to every viewer.
 //  - ownership and visibility events are shown to every viewer: owner and
 //    visibility are part of what a viewer already sees on the item.
 // Names: actors resolve to display names; ids in diffs (owners, principals,

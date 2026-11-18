@@ -459,8 +459,7 @@ describe("loans, contacts, transfers, stock (format 2)", () => {
     expect(people.has(ben.userId)).toBe(true);
     expect(people.has(admin.userId)).toBe(true);
 
-    // Ben: the household drill's loan (who has it), nothing of Anna's items,
-    // not even the offer of one of them to him.
+    // Ben: the household drill's loan (who has it), nothing of Anna's items, not even the offer of one of them to him.
     const b = await exportToMemory(db, ben, store.store);
     expect(b.json<Json[]>("json/loans.json").map((l) => l.id)).toEqual([w.drillLoan.loanId]);
     expect(b.json<Json[]>("json/contacts.json").map((c) => c.name)).toEqual(["Nachbar Tom"]);

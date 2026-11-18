@@ -1,7 +1,4 @@
-// Loans and stock (DESIGN §5.3, §4.2, §11 "loan request → approve"): a
-// member asks for someone else's item, the owner approves and hands it over,
-// the borrower returns it; a household item goes to an external contact; a
-// stock item is used up below its minimum and the owners hear about it.
+// Loans and stock (DESIGN §5.3, §4.2, §11 "loan request → approve"): a member asks for someone else's item, the owner approves and hands it over, the borrower returns it; a household item goes to an external contact; a stock item is used up below its minimum and the owners hear about it.
 import { expect, test } from "./fixtures";
 import { addItem, hydrated, ownMore, token } from "./item-helpers";
 

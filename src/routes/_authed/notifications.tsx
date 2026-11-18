@@ -1,6 +1,5 @@
 // The caller's inbox: low stock, loan requests and answers, transfers.
-// Opening the page marks everything as read; entries that were unread keep
-// their "neu" mark until the page is left.
+// Opening the page marks everything as read; entries that were unread keep their "neu" mark until the page is left.
 import { useInfiniteQuery, useQueryClient } from "@tanstack/solid-query";
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createEffect, For, Show } from "solid-js";

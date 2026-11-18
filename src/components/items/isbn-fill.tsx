@@ -1,7 +1,6 @@
-// ISBN auto-fill in quick add (DESIGN §5.2): type or scan the ISBN, fetch
-// the book data (lookupBookFn) and hand name and attribute values to the
-// form. Shown for types whose ISBN field has lookup sources. The ISBN is
-// checksum-validated before anything is sent.
+// ISBN auto-fill in quick add (DESIGN §5.2): type or scan the ISBN, fetch the book data (lookupBookFn) and hand name and attribute values to the form.
+// Shown for types whose ISBN field has lookup sources.
+// The ISBN is checksum-validated before anything is sent.
 import { Link } from "@tanstack/solid-router";
 import { createEffect, createSignal, Show } from "solid-js";
 import { CameraScanner, useScanSupport } from "~/components/scan/camera-scanner";

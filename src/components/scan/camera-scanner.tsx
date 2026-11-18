@@ -1,10 +1,7 @@
-// The camera part of scan mode (DESIGN §5.2): the browser's BarcodeDetector
-// on a getUserMedia <video>, polled at about 8 frames per second. A hit
-// vibrates and beeps. Browsers without BarcodeDetector (desktop Chrome on
-// Windows/Linux, Firefox, Safari) get `supported() === "no"`; the scan page
-// then offers only the code field. The camera starts on a tap (browsers
-// require a gesture for audio, and it saves battery) and stops when the
-// component goes away.
+// The camera part of scan mode (DESIGN §5.2): the browser's BarcodeDetector on a getUserMedia <video>, polled at about 8 frames per second.
+// A hit vibrates and beeps.
+// Browsers without BarcodeDetector (desktop Chrome on Windows/Linux, Firefox, Safari) get `supported() === "no"`; the scan page then offers only the code field.
+// The camera starts on a tap (browsers require a gesture for audio, and it saves battery) and stops when the component goes away.
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Button } from "~/components/ui/button";
 import { m } from "~/paraglide/messages";
