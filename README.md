@@ -45,6 +45,12 @@ Run these in `/opt/hausmeister/deploy`.
 **Upgrade**
 
 ```sh
+./host/update.sh
+```
+
+It pulls the current branch (fast-forward only, dirty tree refused), rebuilds the app image, recreates the stack and ends with `./check-tailnet.sh`. The manual equivalent:
+
+```sh
 docker compose build app && docker compose up -d
 ```
 
@@ -57,7 +63,9 @@ docker compose stop app
 ls data/db/*.pre-migrate-*.bak
 cp data/db/app.sqlite.pre-migrate-<time>.bak data/db/app.sqlite
 rm -f data/db/app.sqlite-wal data/db/app.sqlite-shm
-# then start the previous version: check out the old code, docker compose build app && docker compose up -d
+# then start the previous version:
+git checkout <old-sha>
+./host/update.sh --skip-pull   # or: docker compose build app && docker compose up -d
 ```
 
 **Shutdown**: on SIGTERM/SIGINT (`docker stop`, any `up -d` that replaces the container) the app stops accepting requests, waits up to 5 s for open ones (`SERVER_SHUTDOWN_TIMEOUT`) and 3 s for a running job (an unfinished job reruns at next start), closes SQLite and exits 0. Look for `[shutdown] done` in the log.

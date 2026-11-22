@@ -116,6 +116,32 @@ Store `.env`, `.env.backup` and a copy of `ts-state/` in your password manager o
 
 ---
 
+## 7. Updates
+
+`/opt/hausmeister` is a git checkout: the dev machine pushes to GitHub, the VPS pulls. On the VPS, in `/opt/hausmeister/deploy`:
+
+```sh
+./host/update.sh
+```
+
+It refuses a dirty tree, pulls the current branch fast-forward only, rebuilds the app image, recreates the stack and ends with `./check-tailnet.sh`. Migrations run at startup and write `data/db/app.sqlite.pre-migrate-<time>.bak` first (README → Operations).
+
+**Roll back**: `git -C /opt/hausmeister checkout <old-sha>`, then `./host/update.sh --skip-pull`. Restore the pre-migrate DB copy (README → Roll back an upgrade) only if that release migrated the schema.
+
+If the directory was filled with rsync rather than cloned, convert it once. Ignored files (`.env`, `.env.backup`, `data/`, `ts-state/`) stay in place:
+
+```sh
+cd /opt/hausmeister
+git init -b phase1-mvp
+git remote add origin https://github.com/serkonda7/hausmeister.git
+git fetch --depth=1 origin phase1-mvp
+git reset --hard FETCH_HEAD
+git branch -u origin/phase1-mvp
+git clean -nd        # review; then `git clean -fd` drops files the copy left behind
+```
+
+---
+
 ## Moving from the old deSEC setup
 
 Only if an instance already ran on the custom domain (`sub.example.de`, DNS-01 via deSEC):

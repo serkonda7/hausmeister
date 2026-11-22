@@ -26,11 +26,27 @@ jq -e --arg n "$NAME" '(.CertDomains // []) | index($n)' <<<"$ST" >/dev/null && 
 echo "App:"
 if [[ "${DOMAIN:-}" == "$NAME" ]]; then pass "DOMAIN matches"
 else fail "DOMAIN is '${DOMAIN:-}', set DOMAIN=$NAME in .env and run: docker compose up -d"; fi
+# Caddy asks tailscaled for the certificate over the shared LocalAPI socket. If
+# that socket is not visible in the Caddy container, every handshake ends in
+# "tlsv1 alert internal error" and the curl output says nothing about why.
+if docker compose exec -T caddy test -S /var/run/tailscale/tailscaled.sock 2>/dev/null; then
+  pass "Caddy sees the tailscaled socket"
+else
+  fail "Caddy cannot see /var/run/tailscale/tailscaled.sock (shared ts_socket volume, TS_SOCKET)"
+fi
 # Ask Caddy inside the sidecar's network namespace; curl verifies the certificate.
 CID=$(docker compose ps -q tailscale)
 H=$(docker run --rm --network "container:$CID" curlimages/curl:8.11.1 -sS --max-time 60 \
       --resolve "$NAME:443:127.0.0.1" "https://$NAME/health" 2>&1) || true
-grep -q '"ok":true' <<<"$H" && pass "https://$NAME/health answers with a trusted certificate" \
-  || fail "https://$NAME/health: ${H:-no answer} (docker compose logs caddy tailscale)"
+if grep -q '"ok":true' <<<"$H"; then
+  pass "https://$NAME/health answers with a trusted certificate"
+else
+  fail "https://$NAME/health: ${H:-no answer}"
+  # Caddy answers "internal error" whenever it has no certificate; the actual
+  # reason (socket, tailscaled, Tailscale/Let's Encrypt) is only in its log.
+  echo "    Caddy's last certificate lines:"
+  docker compose logs --no-log-prefix --tail 500 caddy 2>&1 \
+    | grep -iE 'certificate|cert_|tls\.handshake|tailscale' | tail -n 6 | sed 's/^/      /' || true
+fi
 
 echo; echo "$ok ok, $bad problems"; [[ $bad -eq 0 ]]

@@ -482,7 +482,7 @@ Caddy rather than `tailscale serve` keeps HSTS and the other headers, the
 | `Dockerfile` | App image; installs `sharp` as a real package and smoke-tests it |
 | `deploy/litestream.yml` | SQLite replication to B2, intervals sized for the B2 free tier |
 | `deploy/.env.example`, `deploy/.env.backup.example` | Secrets and B2/restic settings |
-| `deploy/host/` | `bootstrap.sh` (hardening, Docker), `install-timers.sh`, `tailscale-policy.hujson` |
+| `deploy/host/` | `bootstrap.sh` (hardening, Docker), `install-timers.sh`, `update.sh` (one-command upgrade), `tailscale-policy.hujson` |
 | `deploy/check-tailnet.sh`, `backup-uploads.sh`, `restore-test.sh` | MagicDNS/HTTPS check, nightly restic run, restore test |
 
 SMTP and VAPID settings join `compose.yaml` with reminders (v1.2).
