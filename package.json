@@ -19,7 +19,7 @@
     "check": "bun run lint && bun run typecheck && bun run test",
     "db:generate": "bun --bun drizzle-kit generate",
     "restore-test": "bash deploy/restore-test.sh",
-    "check-dns": "bash deploy/check-dns.sh"
+    "check-tailnet": "bash deploy/check-tailnet.sh"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

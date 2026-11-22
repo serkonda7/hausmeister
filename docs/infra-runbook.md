@@ -1,45 +1,21 @@
-# Phase 0 runbook: infrastructure
+# Infrastructure runbook
 
-Result: `https://sub.example.de` with a trusted certificate, reachable only over Tailscale, with tested backups (DESIGN §8).
+Result: `https://hausmeister.<tailnet>.ts.net` with a trusted certificate, reachable only over Tailscale, with tested backups (DESIGN §8).
 
-Only the subdomain `sub` moves to **deSEC** (NS delegation); `example.de`, its website and Strato mail stay as they are. 🧑 = manual step in a web UI. Steps 1–3 run on your laptop and need `curl`, `jq` and `dig`.
+There is no public domain and no public DNS record. The name comes from Tailscale's **MagicDNS** and resolves only on tailnet devices; the certificate is a Let's Encrypt certificate that Tailscale obtains for the `*.ts.net` name. 🧑 = manual step in a web UI.
 
 ---
 
-## 1. deSEC zone and restricted token (~5 min)
-
-1. 🧑 Create a deSEC account at <https://desec.io> (no dedyn.io name needed).
-2. Create the zone (SPF `-all`, DMARC `reject`, null MX) and the Caddy token, which may **only** write `_acme-challenge.sub.example.de` TXT:
-   ```sh
-   deploy/host/desec-setup.sh sub.example.de --token
-   ```
-   Store the token in your password manager. Optional, once the VPS exists: `--token <VPS public IP>` creates an IP-locked token; then delete the old one in the deSEC UI.
-
-## 2. Delegate the subdomain at Strato 🧑
-
-_Domainverwaltung → example.de → Subdomains → `sub`_ (create it if missing) _→ DNS → NS records_: `ns1.desec.io`, `ns2.desec.org`.
-
-- Delete `sub`'s old A record (`203.0.113.10`) if Strato keeps it.
-- Leave everything on `example.de` itself (MX, DKIM, DMARC, website) untouched.
-- Optional (DNSSEC): add the DS records printed in step 1, if Strato offers it.
-
-## 3. Verify DNS
-
-```sh
-cd deploy
-printf 'DOMAIN=sub.example.de\nDESEC_TOKEN=%s\n' '<the token>' > .env
-./check-dns.sh --write-test
-```
-
-Everything must be green except "A" (step 7). Delegation can take up to an hour.
-
-## 4. Tailscale 🧑
+## 1. Tailscale 🧑
 
 1. Use the family tailnet (or create one at <https://login.tailscale.com>).
-2. _Access controls_: paste `deploy/host/tailscale-policy.hujson`, replace the example logins, save. The built-in `tests` must pass.
-3. _Settings → Keys → Generate auth key_: **not** reusable, **pre-approved**, tag `tag:hausmeister`, expiry 1 day. Needed in step 6.
+2. _DNS_: check the **tailnet DNS name** (e.g. `tail1234.ts.net`). It is part of the app's URL, of every QR label and of every passkey. If you want a readable one, use _Rename tailnet…_ now: changing it later changes the URL and means new labels and new passkeys.
+3. _DNS_: **Enable MagicDNS**, then under _HTTPS Certificates_ **Enable HTTPS**. Certificate names are published in the public Certificate Transparency logs, so `hausmeister.<tailnet>.ts.net` becomes publicly known (not reachable).
+4. _Access controls_: paste `deploy/host/tailscale-policy.hujson`, replace the example logins, save. The built-in `tests` must pass.
+5. _Settings → Keys → Generate auth key_: **not** reusable, **pre-approved**, tag `tag:hausmeister`, expiry 1 day. Needed in step 3.
+6. _Machines_: if an old node already holds the name `hausmeister`, delete it, or the sidecar becomes `hausmeister-1`.
 
-## 5. VPS
+## 2. VPS
 
 1. 🧑 Order a **Strato VPS Linux** (2 vCPU / 2–4 GB) with **Debian 13**. Set the root password under _Server-Login_ (or take it from the setup email) and note the public IPv4.
 2. Laptop: create an SSH key (skip if you have one) and install it for root:
@@ -73,7 +49,7 @@ Everything must be green except "A" (step 7). Delegation can take up to an hour.
    rsync -a -e "ssh -i ~/.ssh/strato_vps" --exclude node_modules --exclude .output ./ admin@$VPS:/opt/hausmeister/
    ```
 
-## 6. Object storage and stack
+## 3. Object storage and stack
 
 1. 🧑 Backblaze B2: create a **private** bucket (e.g. `example-backup`, encryption on) and note its endpoint `s3.<region>.backblazeb2.com`. Lifecycle: "Keep prior versions for this number of days" → **30** (B2 only hides what Litestream and `restic prune` delete; this purges it after 30 days and still allows recovery from a bad delete).
 2. 🧑 _Application Keys_: create a read/write key for **this bucket only**. keyID → `S3_ACCESS_KEY_ID`, applicationKey → `S3_SECRET_ACCESS_KEY` (shown once).
@@ -83,11 +59,10 @@ Everything must be green except "A" (step 7). Delegation can take up to an hour.
    cp .env.example .env && cp .env.backup.example .env.backup && chmod 600 .env .env.backup
    sed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 48)|" .env
    sed -i "s|^RESTIC_PASSWORD=.*|RESTIC_PASSWORD=$(openssl rand -base64 32)|" .env.backup
-   nano .env          # DESEC_TOKEN, TS_AUTHKEY
+   nano .env          # DOMAIN=hausmeister.<tailnet DNS name from step 1>, TS_AUTHKEY
    nano .env.backup   # S3_* (leave RESTIC_REPOSITORY and AWS_* as they are)
    mkdir -p data/db data/uploads ts-state && sudo chown -R 1000:1000 data
    docker compose up -d --build
-   docker compose exec tailscale tailscale ip -4      # → 100.x.y.z
    ```
    Store `AUTH_SECRET` and `RESTIC_PASSWORD` in your password manager.
 4. Remove `TS_AUTHKEY` from `.env` (the identity now lives in `ts-state/`):
@@ -95,36 +70,21 @@ Everything must be green except "A" (step 7). Delegation can take up to an hour.
    sed -i 's|^TS_AUTHKEY=.*|TS_AUTHKEY=|' .env
    ```
 
-## 7. Point the domain at the tailnet IP
-
-Laptop:
-
-```sh
-deploy/host/desec-setup.sh sub.example.de --a 100.x.y.z     # IP from step 6
-```
-
-VPS: `./check-dns.sh` must be all green.
-
-## 8. TLS: staging → production
+## 4. Check name and certificate
 
 VPS, in `/opt/hausmeister/deploy`:
 
-1. Check that Caddy got a (staging) certificate:
-   ```sh
-   docker compose logs -f --tail=100 caddy | grep --line-buffered -iE "certificate|error|failed"
-   ```
-2. From a tailnet device (`-k`: staging certificates aren't trusted):
-   ```sh
-   curl -k https://sub.example.de/health    # → {"ok":true,…}
-   ```
-3. Switch to production:
-   ```sh
-   echo 'ACME_CA=https://acme-v02.api.letsencrypt.org/directory' >> .env
-   docker compose up -d caddy
-   ```
-4. On a phone with Tailscale on, `https://sub.example.de` shows "Hallo 👋" with a valid lock. With Tailscale off it must not load.
+```sh
+./check-tailnet.sh
+```
 
-## 9. Backups and restore test
+It must be all green. It reads the node's MagicDNS name from the sidecar, checks that MagicDNS and HTTPS certificates are on and that `DOMAIN` matches, then fetches `/health` through Caddy with certificate verification. The first request can take up to a minute while Tailscale obtains the certificate; renewal is automatic. If `DOMAIN` was wrong, fix it in `.env` and run `docker compose up -d`.
+
+On a phone with Tailscale on, `https://hausmeister.<tailnet>.ts.net` shows "Hallo 👋" with a valid lock. With Tailscale off it must not load (the name doesn't even resolve).
+
+Devices only resolve the name while they use Tailscale's DNS (Android: _Tailscale → Settings → Use Tailscale DNS_ on). Users who get the node shared into their own tailnet need MagicDNS on in their tailnet; the name stays `hausmeister.<your tailnet>.ts.net`.
+
+## 5. Backups and restore test
 
 VPS, in `/opt/hausmeister/deploy`:
 
@@ -134,21 +94,20 @@ sudo systemctl start hausmeister-backup   # first run creates the restic repo
 ./restore-test.sh                         # must end with "RESTORE TEST OK"
 ```
 
-Store `.env`, `.env.backup` and a copy of `ts-state/` in your password manager or an encrypted backup.
+Store `.env`, `.env.backup` and a copy of `ts-state/` in your password manager or an encrypted backup. `ts-state/` holds the node identity and with it the name: if it is lost, the sidecar must be re-added with a new auth key and the old node deleted first (step 1.6), or the URL changes.
 
 **B2 free tier**: 2,500 Class C transactions/day (mostly `ListObjectsV2`). Litestream's defaults far exceed that, and once capped B2 answers 403 while Litestream retries in a tight loop. `deploy/litestream.yml` therefore widens the intervals (sync 15m, compaction 5m/1h/24h, L0 checks hourly). Keep Litestream retention on so old files get deleted and the 30-day lifecycle rule purges them. After a day, check _Caps & Alerts → Class C → Today_; if it is still near 2,500, raise `sync-interval` (e.g. `30m`).
 
-## 10. Tailscale SSH on the host, then close port 22
+## 6. Tailscale SSH on the host, then close port 22
 
-1. VPS:
+1. VPS (the host gets its own node name, so it never takes `hausmeister` from the sidecar):
    ```sh
    curl -fsSL https://tailscale.com/install.sh | sh
-   sudo tailscale up --ssh
-   tailscale ip -4
+   sudo tailscale up --ssh --hostname hausmeister-host
    ```
 2. From a tailnet device (no key needed):
    ```sh
-   ssh admin@<host tailnet IP> 'id; hostname'
+   ssh admin@hausmeister-host 'id; hostname'
    ```
 3. Once that works, close public SSH (`bootstrap.sh` allowed it). Over Tailscale SSH:
    ```sh
@@ -157,11 +116,22 @@ Store `.env`, `.env.backup` and a copy of `ts-state/` in your password manager o
 
 ---
 
+## Moving from the old deSEC setup
+
+Only if an instance already ran on the custom domain (`sub.example.de`, DNS-01 via deSEC):
+
+1. Do steps 1.2, 1.3 and 1.6, then on the VPS set `DOMAIN` in `.env` to the MagicDNS name, delete the `DESEC_TOKEN` and `ACME_CA` lines and run `docker compose up -d` (Caddy now runs the stock image). Then step 4.
+2. The origin changed, so everyone signs in again and re-adds passkeys (the passkey RP ID is the host name; old passkeys stop working). Reinstall the PWA from the new URL.
+3. Printed QR labels encode the old URL. The in-app scanner still reads them (it only takes the short code), but the phone's camera app opens the dead old address: reprint them over time from `/labels`.
+4. Clean up: delete the zone and both tokens at deSEC, remove the NS records for `sub` at Strato, and `docker image rm hausmeister-caddy:2.11.9`.
+
+---
+
 ## Done when
 
-- [ ] `./check-dns.sh --write-test` is all green
-- [ ] `https://sub.example.de` shows "Hallo" with a trusted Let's Encrypt certificate, from tailnet devices only
-- [ ] `ssh admin@<host tailnet IP>` works from an admin's tailnet device without a key and is denied for non-admins
+- [ ] `./check-tailnet.sh` is all green
+- [ ] `https://hausmeister.<tailnet>.ts.net` shows "Hallo" with a trusted Let's Encrypt certificate, from tailnet devices only
+- [ ] `ssh admin@hausmeister-host` works from an admin's tailnet device without a key and is denied for non-admins
 - [ ] Nothing answers on the VPS's public IP, including port 22: `nmap -Pn <VPS public IP>` from outside
 - [ ] `docker compose logs litestream` shows replication without errors
 - [ ] `./restore-test.sh` passes and `systemctl list-timers 'hausmeister-*'` lists both timers

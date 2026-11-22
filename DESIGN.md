@@ -14,8 +14,8 @@ Status: design v3.3, 2026-11-18. Phase 0, the MVP and v1.1 are done (§10).
 | --- | --- |
 | Tenancy | **One household** per instance. No multi-tenancy. |
 | Roles | `admin`, `member`, `guest`. No separate child/adult roles. |
-| Network | **VPN-only** through hosted **Tailscale** (free Personal plan), on our own domain with a trusted TLS certificate (§8). |
-| Domain | `sub.example.de`, delegated by NS records from Strato to **deSEC** for the DNS-01 challenge. `example.de` (website, mail) stays untouched at Strato (§8.1). |
+| Network | **VPN-only** through hosted **Tailscale** (free Personal plan), at the node's MagicDNS name with a trusted TLS certificate (§8). |
+| Domain | None of our own: `hausmeister.<tailnet>.ts.net` via **MagicDNS**, certificate from Tailscale's HTTPS feature. No public DNS records (§8.1). |
 | Email | Optional. Reminders go out as Web Push. |
 | Private items | Admins **can** see members' private items. |
 | Money | Prices and receipts are **hidden** below `edit` on the item, so from every guest. |
@@ -254,7 +254,7 @@ but are hidden from default views.
      becomes a **code entry field** for the short code or ISBN, with a hint to
      use the system camera. Android Chrome, Edge and Samsung Internet have it.
    - Typed ISBNs are checksum-validated (ISBN-13/-10) before lookup.
-   - QR labels encode a full URL (`https://sub.example.de/q/K7M2QX`), so the
+   - QR labels encode a full URL (`https://hausmeister.<tailnet>.ts.net/q/K7M2QX`), so the
      phone's camera app opens them too. Every item and location has a short
      code. Label sheets: A4 Avery-style (Avery Zweckform L4732) and thermal
      labels, generated with `qrcode`.
@@ -409,7 +409,7 @@ Notes
  ┌──────────────────────────── VPS ───────────────────────────────┐
  │  ┌─────────────── shared network namespace ───────────────┐    │
  │  │  tailscale (node "hausmeister", 100.x.y.z)             │    │
- │  │  caddy :443  TLS for sub.example.de (DNS-01)           │    │
+ │  │  caddy :443  TLS for hausmeister.<tailnet>.ts.net      │    │
  │  └───────────────────────────┬────────────────────────────┘    │
  │                              │ http://app:3000 (docker network) │
  │  ┌───────────────────────────▼────────────────────────────┐    │
@@ -444,65 +444,59 @@ reachable only over the VPN.
 
 ---
 
-## 8. Deployment: VPN-only with our own domain
+## 8. Deployment: VPN-only on MagicDNS
 
-Setup steps: [docs/PHASE0.md](docs/PHASE0.md). Operations: [README.md](README.md).
+Setup steps: [docs/infra-runbook.md](docs/infra-runbook.md). Operations: [README.md](README.md).
 
 ### 8.1 How it works
 
 1. **Tailscale** runs as a sidecar container and joins the tailnet as node
    `hausmeister` with a fixed IP (`100.x.y.z`).
-2. **DNS**: `example.de` stays at Strato (nameservers, website, mail). Strato's
-   DNS has no API, so the subdomain `sub` is delegated to `ns1.desec.io` /
-   `ns2.desec.org`; the zone `sub.example.de` lives at **deSEC** and is set up
-   by `deploy/host/desec-setup.sh`.
-   - `sub.example.de A <tailnet IP>`, **no AAAA**. The name resolves publicly,
-     but the address is reachable only inside the tailnet. No split DNS needed.
-3. **TLS**: Let's Encrypt can't reach the server over HTTP, so Caddy uses
-   **DNS-01** (`caddy-dns/desec`) and gets a trusted certificate, which
-   passkeys, PWA install and Web Push need. Renewal is automatic.
-   - The Caddy token is restricted by deSEC token policy to writing
-     `_acme-challenge.sub.example.de` TXT only, optionally locked to the VPS IP.
-     A leaked token can't change the A record and never had access to `example.de`.
-   - Caddy uses the Let's Encrypt staging CA until `ACME_CA` is set.
-4. **Mail lock-down**: the subdomain sends and receives no mail and says so:
-   ```
-   sub.example.de          TXT  "v=spf1 -all"
-   _dmarc.sub.example.de   TXT  "v=DMARC1; p=reject"
-   sub.example.de          MX   0 .          (null MX, RFC 7505)
-   ```
-   Reminder email, if enabled, goes through an existing mailbox (§8.6).
-5. **Caddy shares the Tailscale container's network namespace**, so it listens
+2. **DNS**: no public domain. With **MagicDNS** on, tailnet devices resolve
+   `hausmeister.<tailnet>.ts.net` through Tailscale's resolver; outside the
+   tailnet the name doesn't resolve at all. There is nothing to register,
+   delegate or lock down (no zone means no mail records to forge).
+   - The tailnet DNS name is part of the origin, so it is chosen once before
+     the first deployment. Renaming the tailnet or the node changes the URL,
+     QR labels and passkey RP ID.
+3. **TLS**: with _HTTPS Certificates_ enabled, the sidecar's `tailscaled`
+   gets a Let's Encrypt certificate for the node's name and renews it. Caddy
+   asks for it over the shared LocalAPI socket (`get_certificate tailscale`),
+   so the stock Caddy image works and no DNS token exists. A trusted
+   certificate is what passkeys, PWA install and Web Push need.
+   - The name appears in public Certificate Transparency logs: it is known,
+     not reachable.
+4. **Caddy shares the Tailscale container's network namespace**, so it listens
    only on the tailnet. No host ports are published, which also avoids Docker
    bypassing `ufw`.
 
-Tailscale's own certificates and `tailscale serve` only cover `*.ts.net`,
-hence Caddy + DNS-01 for the custom domain.
+Caddy rather than `tailscale serve` keeps HSTS and the other headers, the
+25 MB body limit, compression and HTTP/3 in one place.
 
 ### 8.2 Files
 
 | File | Contents |
 | --- | --- |
-| `deploy/compose.yaml` | `tailscale`, `caddy` (in tailscale's netns), `app`, `litestream`, one-shot `restic` (profile `tools`) |
-| `deploy/caddy/Dockerfile` | Caddy built with `caddy-dns/desec` |
-| `deploy/Caddyfile` | DNS-01 via deSEC, `ACME_CA` (staging default), HSTS and security headers, 25 MB body limit |
+| `deploy/compose.yaml` | `tailscale`, `caddy` (stock image, in tailscale's netns, shares its socket), `app`, `litestream`, one-shot `restic` (profile `tools`) |
+| `deploy/Caddyfile` | Certificate from Tailscale (`get_certificate tailscale`), HSTS and security headers, 25 MB body limit |
 | `Dockerfile` | App image; installs `sharp` as a real package and smoke-tests it |
 | `deploy/litestream.yml` | SQLite replication to B2, intervals sized for the B2 free tier |
 | `deploy/.env.example`, `deploy/.env.backup.example` | Secrets and B2/restic settings |
-| `deploy/host/` | `bootstrap.sh` (hardening, Docker), `desec-setup.sh`, `install-timers.sh`, `tailscale-policy.hujson` |
-| `deploy/check-dns.sh`, `backup-uploads.sh`, `restore-test.sh` | DNS check, nightly restic run, restore test |
+| `deploy/host/` | `bootstrap.sh` (hardening, Docker), `install-timers.sh`, `tailscale-policy.hujson` |
+| `deploy/check-tailnet.sh`, `backup-uploads.sh`, `restore-test.sh` | MagicDNS/HTTPS check, nightly restic run, restore test |
 
 SMTP and VAPID settings join `compose.yaml` with reminders (v1.2).
 
 ### 8.3 Tailscale
 
 - Family members install Tailscale on phone and laptop and join the family
-  tailnet; others get the node **shared** to their own account.
+  tailnet; others get the node **shared** to their own account (their tailnet
+  needs MagicDNS on; the name stays ours).
 - Policy: `deploy/host/tailscale-policy.hujson`. `group:family` and shared
   users get `tcp/udp:443` on `tag:hausmeister`. Admins get `tcp:22` and
   Tailscale SSH (`check`, 12 h) to their **own** host node (`autogroup:self`);
-  the tagged sidecar stays 443-only. SSH therefore uses the host's tailnet IP,
-  not `sub.example.de`.
+  the tagged sidecar stays 443-only. SSH therefore goes to the host node
+  `hausmeister-host`, not to `hausmeister`.
 - Guests have the app role `guest`.
 - **Free Personal plan**: up to 6 users (since April 2026), unlimited devices,
   3 ACL groups (we use one), non-commercial. Guests count as users, so 5 family
@@ -515,14 +509,14 @@ SMTP and VAPID settings join `compose.yaml` with reminders (v1.2).
 - Debian 13 with `unattended-upgrades`. Admin access via **Tailscale SSH**
   (identity-based, no key, no public port); the key-only sshd from
   `bootstrap.sh` (no root login) is the fallback.
-- `ufw` denies all inbound, including 22 once Tailscale SSH works (PHASE0
-  step 10). Tailscale SSH runs inside the Tailscale daemon and needs no rule.
+- `ufw` denies all inbound, including 22 once Tailscale SSH works (runbook
+  step 6). Tailscale SSH runs inside the Tailscale daemon and needs no rule.
   The provider console is the emergency way in. Optional: allow UDP 41641 for
   direct (non-relayed) connections.
 - App: rate-limited login with lockout, CSRF checks, strict CSP, uploads
   checked by magic bytes, never by extension.
 - Session cookies are host-only `__Host-` (`Secure`, `Path=/`, `SameSite=Lax`,
-  no `Domain`). Passkey RP ID is `sub.example.de`. HSTS without
+  no `Domain`). Passkey RP ID is the MagicDNS name. HSTS without
   `includeSubDomains`/`preload`.
 - The VPN is only the outer wall: guests share the tailnet, so login and
   authorization apply in full.
@@ -549,7 +543,7 @@ SMTP and VAPID settings join `compose.yaml` with reminders (v1.2).
 - **Email is optional.** Invites are links sent by messenger; admins reset
   passwords. Without email only external borrowers miss reminders. To enable
   it, use an existing mailbox's SMTP (e.g. a GMX or Gmail account with an app
-  password), not `sub.example.de`, so §8.1's lock-down stays.
+  password); the `ts.net` name has no mail of its own.
 
 ---
 
@@ -574,7 +568,7 @@ SMTP and VAPID settings join `compose.yaml` with reminders (v1.2).
 
 | Phase | Scope |
 | --- | --- |
-| **0: Infra** ✓ | deSEC zone + restricted token · Strato NS delegation · VPS + Tailscale sidecar · DNS records (A, no AAAA, mail lock-down) · Caddy DNS-01 · Litestream + restic + restore test · "Hallo" page |
+| **0: Infra** ✓ | VPS + Tailscale sidecar · MagicDNS name + Tailscale HTTPS certificate via Caddy (replaced the first deSEC/DNS-01 setup) · Litestream + restic + restore test · "Hallo" page |
 | **MVP** ✓ | Invites and login (password + passkey), roles, groups · item types with custom fields and templates · items, locations, containers, photos · visibility, grants, money hiding · search and filters · event log · export |
 | **v1.1** ✓ | QR labels and scan mode · ISBN lookup (DNB → Open Library) and shelf mode · loans (internal and external) · stock with low-stock alerts · ownership transfers |
 | **v1.2** | PWA + Web Push reminders · optional email (external borrowers) · CSV import · hand-me-downs · warranty expiry · item relations ("fits") |

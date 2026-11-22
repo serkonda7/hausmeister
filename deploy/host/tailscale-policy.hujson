@@ -1,5 +1,7 @@
 // Tailnet policy for Hausmeister. Paste into https://login.tailscale.com/admin/acls
 // and replace the email addresses with your family's Tailscale logins.
+// The app is served at https://hausmeister.<tailnet>.ts.net: MagicDNS and HTTPS
+// certificates must be on (admin console → DNS). Nothing here is needed for them.
 {
   "groups": {
     "group:family": [
@@ -30,7 +32,7 @@
       "action": "check", // re-authenticate every 12h
       "src": ["autogroup:admin"],
       "dst": ["autogroup:self"], // only the admin's own node (the host), never the tagged sidecar
-      "users": ["admin"], // the local account created in PHASE0 step 5; no root
+      "users": ["admin"], // the local account from docs/infra-runbook.md step 2; no root
       "checkPeriod": "12h",
     },
   ],

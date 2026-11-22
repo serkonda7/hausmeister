@@ -1,6 +1,6 @@
 # Hausmeister
 
-Self-hosted family asset manager. Design: [DESIGN.md](DESIGN.md). Conventions and commands: [AGENTS.md](AGENTS.md). Server setup: [docs/PHASE0.md](docs/PHASE0.md). Phase 0 and the MVP are done.
+Self-hosted family asset manager. Design: [DESIGN.md](DESIGN.md). Conventions and commands: [AGENTS.md](AGENTS.md). Server setup: [docs/infra-runbook.md](docs/infra-runbook.md). Phase 0 and the MVP are done.
 
 ```sh
 bun install
@@ -8,7 +8,7 @@ bun run dev                     # http://localhost:3000 (health: /health)
 bun run build && bun run start  # production build
 ```
 
-`deploy/` holds the production stack: Tailscale sidecar, Caddy (DNS-01 via deSEC), Litestream and restic (both to Backblaze B2), and the host scripts.
+`deploy/` holds the production stack: Tailscale sidecar, Caddy (certificate from Tailscale for the MagicDNS name), Litestream and restic (both to Backblaze B2), and the host scripts.
 
 ## First admin
 
@@ -21,7 +21,7 @@ There is no sign-up and no setup page; accounts come only from invite links.
 2. Start the app (`bun run dev`, or `docker compose up -d` in `deploy/` on the server). While no users exist, it logs a one-time admin invite link (valid 24 h, replaced on every restart):
    ```sh
    docker compose logs app | grep bootstrap
-   # [bootstrap] https://sub.example.de/invite/…
+   # [bootstrap] https://hausmeister.<tailnet>.ts.net/invite/…
    ```
    Or create one by hand:
    ```sh

@@ -13,7 +13,7 @@ H=$(getent passwd "$U" | cut -d: -f6)
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -y upgrade
-apt-get -y install unattended-upgrades apt-listchanges ufw ca-certificates curl git jq dnsutils sudo
+apt-get -y install unattended-upgrades apt-listchanges ufw ca-certificates curl git jq sudo
 dpkg-reconfigure -f noninteractive unattended-upgrades
 usermod -aG sudo "$U"
 
@@ -39,7 +39,7 @@ CONF
 systemctl restart docker
 
 # Firewall: nothing inbound except SSH (no app port is ever published).
-# Close 22 once Tailscale SSH works: docs/PHASE0.md step 10.
+# Close 22 once Tailscale SSH works: docs/infra-runbook.md step 6.
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow OpenSSH
