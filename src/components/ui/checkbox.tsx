@@ -16,7 +16,7 @@ export function Checkbox<T extends ValidComponent = "div">(
   return (
     <CheckboxPrimitive.Root class={cn("flex items-center gap-2", local.class)} {...others}>
       <CheckboxPrimitive.Input class="peer" />
-      <CheckboxPrimitive.Control class="flex size-5 shrink-0 items-center justify-center rounded-sm border border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 data-[checked]:bg-primary data-[checked]:text-primary-foreground data-[disabled]:opacity-50">
+      <CheckboxPrimitive.Control class="flex size-5 shrink-0 items-center justify-center rounded-sm border border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 data-[checked]:border-primary-solid data-[checked]:bg-primary-solid data-[checked]:text-primary-solid-foreground data-[disabled]:opacity-50">
         <CheckboxPrimitive.Indicator>
           <svg
             viewBox="0 0 24 24"

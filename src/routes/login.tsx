@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { authClient } from "~/lib/auth-client";
-import { useHydrated } from "~/lib/hydrated";
 import { m } from "~/paraglide/messages";
 
 /** Only same-site paths, never protocol-relative URLs or the login page itself. */
@@ -26,7 +25,6 @@ function LoginPage() {
   const search = Route.useSearch();
   const [error, setError] = createSignal<string | null>(null);
   const [pending, setPending] = createSignal(false);
-  const hydrated = useHydrated();
 
   // Full navigation so every query and the root context start fresh.
   const done = () => window.location.assign(safeRedirect(search().redirect));
@@ -68,7 +66,7 @@ function LoginPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form class="grid gap-4" onSubmit={onSubmit} method="post">
+          <form class="grid gap-4" onSubmit={onSubmit}>
             <div class="grid gap-2">
               <Label for="username">{m.login_username()}</Label>
               <Input
@@ -94,9 +92,8 @@ function LoginPage() {
                 {error()}
               </p>
             </Show>
-            {/* Disabled until hydrated: an early tap or Enter would submit natively. */}
-            <Button type="submit" disabled={pending() || !hydrated()} aria-busy={!hydrated()}>
-              {hydrated() ? m.login_submit() : m.common_loading()}
+            <Button type="submit" disabled={pending()}>
+              {m.login_submit()}
             </Button>
           </form>
           <div class="my-4 flex items-center gap-3 text-sm text-muted-foreground">
@@ -104,7 +101,7 @@ function LoginPage() {
             {m.login_or()}
             <span class="h-px flex-1 bg-border" />
           </div>
-          <Button variant="outline" class="w-full" onClick={onPasskey} disabled={!hydrated()}>
+          <Button variant="outline" class="w-full" onClick={onPasskey}>
             {m.login_passkey()}
           </Button>
         </CardContent>

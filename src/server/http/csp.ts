@@ -1,5 +1,5 @@
 // Content Security Policy for the app's HTML pages (DESIGN §8.4 "strict CSP").
-// Scripts need the per-request nonce (SSR, hydration and dehydration scripts all
+// Scripts need the per-request nonce (the server-rendered shell's scripts all
 // carry it, see src/lib/csp-nonce.ts) or must come from the app's own origin;
 // there is no 'unsafe-inline' and no 'unsafe-eval'. /files/:id sends its own,
 // stricter policy (attachments/serve.ts), which is kept.
@@ -20,7 +20,7 @@ export function buildCsp(nonce: string): string {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'`,
     `style-src 'self' 'nonce-${nonce}'`,
-    // `style` attributes: SSR markup (tag colours, the nav grid, upload
+    // `style` attributes: rendered markup (tag colours, the nav grid, upload
     // progress) and Kobalte/Solid at runtime (popover position, scroll lock).
     // Attributes cannot load or run anything; <style> and scripts stay strict.
     "style-src-attr 'unsafe-inline'",

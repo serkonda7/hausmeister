@@ -20,7 +20,7 @@ export function migrationsDir(): string {
   if (process.env.MIGRATIONS_DIR) return resolve(process.env.MIGRATIONS_DIR);
   const fromCwd = resolve(process.cwd(), "drizzle");
   if (existsSync(join(fromCwd, "meta", "_journal.json"))) return fromCwd;
-  // Fallback for tests run from another cwd: the repo root next to src/.
+  // Fallback when run from another cwd: the repo root next to src/.
   return resolve(import.meta.dir, "../../../drizzle");
 }
 
@@ -99,8 +99,7 @@ const G = globalThis as unknown as { __hausmeisterDb?: AppDb };
 
 /**
  * The process-wide database (DATABASE_PATH). The first call opens it, runs
- * migrations and records a row in `boots`. Server code imports this; tests use
- * `createTestDb()` from ./test-db instead.
+ * migrations and records a row in `boots`.
  */
 export function getDb(): AppDb {
   if (G.__hausmeisterDb) return G.__hausmeisterDb;

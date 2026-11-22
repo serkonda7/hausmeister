@@ -129,8 +129,7 @@ export const canSeeMoney = (lvl: number) => lvl >= L.edit;
 
 - Never load all items and filter in code. One SQL predicate builder,
   `visibleItemsWhere(ctx)`, holds the `view` rules and is used by every list,
-  search and export query. A property test checks it against
-  `itemLevel(...) >= view` on random data.
+  search and export query. It must agree with `itemLevel(...) >= view`.
 - Money is enforced when the server **serializes** an item: below `edit`,
   `price_cents`, `currency` and `receipt` attachments are dropped. Price
   filters and sorting exist only from `edit`.
@@ -379,7 +378,7 @@ Notes
 | Concern | Choice | Notes |
 | --- | --- | --- |
 | Runtime | **Bun 1.4** | Also package manager, test runner, script runner |
-| Framework | **TanStack Start** (Solid, SSR) | File routes; `createServerFn` for UI data; server routes for `/api/v1/*`, `/q/:code`, `/files/:id` |
+| Framework | **TanStack Start** (Solid, SPA: only the HTML shell is server-rendered) | File routes; `createServerFn` for UI data; server routes for `/api/v1/*`, `/q/:code`, `/files/:id` |
 | Data fetching | TanStack Query | Router loaders; optimistic updates for check-out and stock ± |
 | Forms | TanStack Form + Zod | Dynamic forms from field definitions |
 | Lists | TanStack Table + Virtual | Grid or list, column picker per type |
@@ -393,7 +392,7 @@ Notes
 | Language | Paraglide JS, one German catalog | English could be added without touching components; `Intl` de-DE for dates, numbers, € |
 | Email / push | `nodemailer` (SMTP) + `web-push` | Outbound only |
 | Jobs | `jobs` table + in-process worker | Reminders, thumbnails, low stock; no Redis |
-| Quality | `bun test`, Playwright, Biome | Permission matrix tests on every commit |
+| Quality | Biome, TypeScript | `bun run check` (lint + typecheck) |
 
 **Watch-outs**
 
@@ -578,18 +577,15 @@ Phase 0 came first because VPN, DNS and TLS were the likeliest surprises.
 
 ---
 
-## 11. Testing focus
+## 11. Risk focus
 
-- **Authorization is the riskiest part.** Table-driven tests cover every
-  role × ownership × visibility × grant combination; a property test checks
-  `visibleItemsWhere` against `itemLevel`; serialization tests check that money
+- **Authorization is the riskiest part.** Every role × ownership × visibility
+  × grant combination goes through `visibleItemsWhere` / `itemLevel`; money
   fields and receipts never leave the server below `edit`. Items the caller
   can't see answer **404, never 403**, so their existence isn't revealed.
-- Schema tests: the Zod schema from field definitions accepts and rejects the
-  right values; legacy fields keep working.
-- E2E (Playwright, phone viewport): add an item with a photo, scan → check
-  out, loan request → approve.
-- The backup restore test runs in CI against a sample dataset.
+- The Zod schema from field definitions accepts and rejects the right values;
+  legacy fields keep working.
+- The backup restore test (`bun run restore-test`) runs against a sample dataset.
 
 ---
 

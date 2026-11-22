@@ -9,6 +9,9 @@ import { m } from "~/paraglide/messages";
 import type { RouterContext } from "~/router";
 import appCss from "~/styles/app.css?url";
 
+// SPA: the server renders only this shell (per request, so its scripts carry
+// the CSP nonce); every route, including this one's beforeLoad, runs in the
+// browser (`defaultSsr: false` in src/router.tsx).
 export const Route = createRootRouteWithContext<RouterContext>()({
   // Every route can read `context.user` (SessionUser | null).
   beforeLoad: async ({ context }) => ({
@@ -18,7 +21,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#15181d" },
+      { name: "theme-color", content: "#232528" },
       { title: m.app_name() },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
@@ -26,21 +29,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   notFoundComponent: () => (
     <main class="mx-auto grid max-w-3xl justify-items-start gap-3 p-4">
       <p>{m.error_not_found()}</p>
-      {/* A plain link: works even when the page failed before hydration. */}
       <a href="/" class="text-primary underline underline-offset-4">
         {m.error_back_home()}
       </a>
     </main>
   ),
-  component: () => (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
-  ),
+  shellComponent: RootDocument,
+  component: Outlet,
 });
 
 function RootDocument(props: { children: JSX.Element }) {
-  // Every page, including login and invite (outside the app shell).
   onMount(markHydrated);
   return (
     <html lang="de">
@@ -49,6 +47,10 @@ function RootDocument(props: { children: JSX.Element }) {
         <HeadContent />
       </head>
       <body class="min-h-dvh antialiased">
+        {/* Shown until the app has started (styles hide it via html[data-hydrated]). */}
+        <div class="boot-splash" aria-hidden="true">
+          {m.common_loading()}
+        </div>
         {props.children}
         <Toaster />
         <Scripts />

@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/solid-router";
 import { AppShell } from "~/components/app-shell";
 
 // Every page under src/routes/_authed/ requires a signed-in, active user.
-// Signed-out requests (SSR or client navigation) are redirected to /login.
+// Signed-out visitors are redirected to /login.
 // This guards pages only; server functions must still use authMiddleware.
 export const Route = createFileRoute("/_authed")({
   beforeLoad: ({ context, location }) => {

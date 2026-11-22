@@ -1,4 +1,4 @@
-// Item-type logic, independent of the request (testable with createTestDb()).
+// Item-type logic, independent of the request (takes `db`).
 // Server functions in ./functions.ts wrap these with authMiddleware.
 //
 // Permissions (DESIGN §3.5):

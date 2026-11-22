@@ -13,7 +13,6 @@ import { CameraScanner, useScanSupport } from "~/components/scan/camera-scanner"
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
-import { useHydrated } from "~/lib/hydrated";
 import { toIsbn13 } from "~/lib/isbn";
 import { activeFields, type FieldDefinition, normalizeIsbn } from "~/lib/item-types/fields";
 import { itemTypeQuery, itemTypesQuery } from "~/lib/item-types/queries";
@@ -60,7 +59,6 @@ function ShelfPage() {
   const ctx = Route.useRouteContext();
   const search = Route.useSearch();
   const qc = useQueryClient();
-  const hydrated = useHydrated();
   const support = useScanSupport();
   const types = useQuery(() => itemTypesQuery(false));
   const flat = createMemo(() => flattenTree(types.data ?? []));
@@ -152,7 +150,7 @@ function ShelfPage() {
     }
   }
 
-  const ready = () => hydrated() && !!typeId() && hasIsbn();
+  const ready = () => !!typeId() && hasIsbn();
 
   return (
     <div class="grid gap-4">
@@ -171,7 +169,6 @@ function ShelfPage() {
               id="shelf-type"
               class={inputClass}
               value={typeId()}
-              disabled={!hydrated()}
               onChange={(e) => setTypeId(e.currentTarget.value)}
             >
               <For each={flat()}>
@@ -191,13 +188,7 @@ function ShelfPage() {
             <label for="shelf-owner" class="text-sm font-medium">
               {m.item_field_owner()}
             </label>
-            <OwnerSelect
-              id="shelf-owner"
-              user={ctx().user}
-              value={owner()}
-              onChange={setOwner}
-              disabled={!hydrated()}
-            />
+            <OwnerSelect id="shelf-owner" user={ctx().user} value={owner()} onChange={setOwner} />
           </div>
         </div>
         <LocationPicker id="shelf-place" value={place()} onChange={setPlace} />

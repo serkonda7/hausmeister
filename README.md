@@ -74,10 +74,8 @@ git checkout <old-sha>
 
 **Content Security Policy**: production pages send a strict CSP with a per-request nonce (`src/server/http/csp.ts`): no inline scripts without the nonce, no eval, no framing, images from the app and `blob:`. `bun run dev` sends none. A CSP error in the browser console is a bug.
 
-## Tests
+## Checks
 
 ```sh
-bun run check                    # lint + typecheck + unit tests
-bunx playwright install chromium # once per machine
-bun run e2e                      # Playwright, phone viewport, own build on port 3211, throwaway DB
+bun run check                    # lint + typecheck
 ```

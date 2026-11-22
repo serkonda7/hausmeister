@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { errorCode, errorText } from "~/lib/error-text";
-import { useHydrated } from "~/lib/hydrated";
 import { roleLabel } from "~/lib/labels";
 import { m } from "~/paraglide/messages";
 import { acceptInviteFn, getInvite } from "~/server/auth/invite-functions";
@@ -41,7 +40,6 @@ function InvitePage() {
   const invite = useQuery(() => inviteQuery(params().token));
   const [error, setError] = createSignal<string | null>(null);
   const [pending, setPending] = createSignal(false);
-  const hydrated = useHydrated();
   const [usedUp, setUsedUp] = createSignal(false);
 
   async function onSubmit(e: SubmitEvent) {
@@ -93,7 +91,7 @@ function InvitePage() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <form class="grid gap-4" onSubmit={onSubmit} method="post">
+                  <form class="grid gap-4" onSubmit={onSubmit}>
                     <div class="grid gap-2">
                       <Label for="displayName">{m.auth_display_name()}</Label>
                       <Input
@@ -144,13 +142,8 @@ function InvitePage() {
                         {error()}
                       </p>
                     </Show>
-                    {/* Disabled until hydrated: an early tap would submit natively. */}
-                    <Button
-                      type="submit"
-                      disabled={pending() || !hydrated()}
-                      aria-busy={!hydrated()}
-                    >
-                      {hydrated() ? m.invite_submit() : m.common_loading()}
+                    <Button type="submit" disabled={pending()}>
+                      {m.invite_submit()}
                     </Button>
                   </form>
                 </CardContent>

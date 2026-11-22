@@ -1,5 +1,5 @@
 // Auth helpers that do not depend on the TanStack Start request context
-// (safe to import from bun tests). Request-bound helpers live in ./session.ts.
+// (safe to import from scripts). Request-bound helpers live in ./session.ts.
 import type { AuthCtx, Role } from "../authz/ctx";
 import { type AppDb, getDb } from "../db/client";
 import { getEnv } from "../env";

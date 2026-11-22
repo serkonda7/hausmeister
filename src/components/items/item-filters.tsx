@@ -280,7 +280,7 @@ export function ItemFilterControls(props: Props) {
                     class={cn(
                       "inline-flex min-h-9 items-center gap-1 rounded-full border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       on()
-                        ? "border-primary bg-primary text-primary-foreground"
+                        ? "border-primary-solid bg-primary-solid text-primary-solid-foreground"
                         : "hover:bg-accent",
                     )}
                     onClick={() => set({ tag: toggle(s().tag, t.id, !on()) })}

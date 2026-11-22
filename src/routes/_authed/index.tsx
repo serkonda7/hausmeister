@@ -8,7 +8,6 @@ import { TransferCard } from "~/components/transfers/transfer";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
-import { adoptTypedValue } from "~/lib/hydrated";
 import type { SearchItemsInput } from "~/lib/items/inputs";
 import { itemListQuery } from "~/lib/items/queries";
 import { roleLabel } from "~/lib/labels";
@@ -24,7 +23,7 @@ const LOW: SearchItemsInput = { lowStock: true, sort: "name_asc", limit: 6 };
 const WARRANTY: SearchItemsInput = { warrantyEnding: true, sort: "name_asc", limit: 6 };
 
 export const Route = createFileRoute("/_authed/")({
-  // Loader warms the Query cache (SSR-dehydrated); the component reads via useQuery.
+  // Loader warms the Query cache; the component reads via useQuery.
   loader: ({ context }) => {
     const qc = context.queryClient;
     const lists = context.user?.role === "guest" ? [RECENT, LOW] : [MINE, RECENT, LOW, WARRANTY];
@@ -132,11 +131,8 @@ function Home() {
         </Show>
       </div>
 
-      {/* A real GET form: before hydration (slow link) it still opens /items?q=…. */}
       <form
         class="grid gap-2"
-        action="/items"
-        method="get"
         onSubmit={(e) => {
           e.preventDefault();
           const text = q().trim();
@@ -155,7 +151,6 @@ function Home() {
             placeholder={m.items_search_placeholder()}
             enterkeyhint="search"
             autocomplete="off"
-            ref={adoptTypedValue(q, setQ)}
             value={q()}
             onInput={(e) => setQ(e.currentTarget.value)}
           />

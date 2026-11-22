@@ -1,26 +1,25 @@
 # Agent briefing
 
-Hausmeister: self-hosted family asset manager. Read DESIGN.md first. Bun 1.4, TanStack Start (Solid, SSR, Nitro bun preset), SQLite via `bun:sqlite` + Drizzle, Better Auth, Tailwind 4 + Kobalte, Paraglide (German only). Dependencies are pinned exactly: add one with `bun add --exact`, and only on purpose.
+Hausmeister: self-hosted family asset manager. Read DESIGN.md first. Bun 1.4, TanStack Start (Solid, SPA: the server renders only the HTML shell, Nitro bun preset), SQLite via `bun:sqlite` + Drizzle, Better Auth, Tailwind 4 + Kobalte, Paraglide (German only). Dependencies are pinned exactly: add one with `bun add --exact`, and only on purpose.
 
 ## Layout
 - `src/routes/` file routes. Pages that need login go under `_authed/` (the layout redirects to `/login`). Server routes (`server.handlers`) live here too: `health.ts`, `api/auth/$.ts` (Better Auth), `api/v1/*`.
-- `src/server/` server-only code. `env.ts` holds the Zod-validated config (`getEnv()`). `db/` has the `schema.ts`, `client.ts` (`getDb()`) and `test-db.ts` modules. `auth/` holds `auth.ts` (Better Auth config), `handler.ts` + `lockout.ts` (/api/auth entry with per-username sign-in lockout), `invites.ts` (+ `invite-functions.ts`, public), `users.ts` (create/disable users, `loadAuthCtx`), `context.ts` (`getAuth`, `withAuth`, `requireRole`, `HttpError`; safe in tests), `session.ts` (`getAuthCtx`/`requireAuthCtx`, which need a live request), `middleware.ts` (`authMiddleware`, `roleMiddleware`) and `functions.ts`. `authz/ctx.ts` has `AuthCtx`/`Role`, and `http/csrf.ts` the CSRF guard, `http/rate-limit.ts` a small in-memory limiter. `admin/` has users, groups and their admin-only server functions. `audit.ts` has `recordEvent` for app-level events (`invite.*`, `user.*`, `group.*`; it refuses secret-looking diff keys).
-- `src/components/ui/` UI primitives (button, input, label, select, checkbox, textarea, dialog, card, badge, tabs, toast, dropdown-menu). `app-shell.tsx` is the header and nav; `confirm-dialog.tsx` a confirm-before-acting button.
+- `src/server/` server-only code. `env.ts` holds the Zod-validated config (`getEnv()`). `db/` has the `schema.ts`, `client.ts` (`getDb()`) modules. `auth/` holds `auth.ts` (Better Auth config), `handler.ts` + `lockout.ts` (/api/auth entry with per-username sign-in lockout), `invites.ts` (+ `invite-functions.ts`, public), `users.ts` (create/disable users, `loadAuthCtx`), `context.ts` (`getAuth`, `withAuth`, `requireRole`, `HttpError`; no request context needed), `session.ts` (`getAuthCtx`/`requireAuthCtx`, which need a live request), `middleware.ts` (`authMiddleware`, `roleMiddleware`) and `functions.ts`. `authz/ctx.ts` has `AuthCtx`/`Role`, and `http/csrf.ts` the CSRF guard, `http/rate-limit.ts` a small in-memory limiter. `admin/` has users, groups and their admin-only server functions. `audit.ts` has `recordEvent` for app-level events (`invite.*`, `user.*`, `group.*`; it refuses secret-looking diff keys).
+- `src/components/ui/` UI primitives (button, input, label, select, checkbox, textarea, dialog, card, badge, tabs, toast, dropdown-menu). `app-shell.tsx` is the top bar, the collapsible sidebar (icon rail, remembered in localStorage) and on phones the bottom tab bar plus menu drawer; its entries and groups live in `src/lib/nav.ts`. Icons: `<Icon name />` in `ui/icons.tsx` (Tabler path data; copy new ones in, no icon package); `confirm-dialog.tsx` a confirm-before-acting button.
 - `src/lib/` shared code for client and server (`cn`, `auth-client`, query options, labels…). `messages/de.json` is the string catalog. `drizzle/` holds the SQL migrations; commit them.
-- Admin area: `src/routes/_authed/admin.tsx` is the layout with section nav; sections are listed in `src/lib/admin-sections.ts` (label, path, roles). A section route calls `guardSection(context.user.role, "/admin/x")` in `beforeLoad`; its server functions still need `roleMiddleware`. In the UI, wrap server-function calls in `runAction` (`src/lib/run-action.ts`) and throw error codes (`HttpError(409, "SOME_CODE")`); map codes to German in `src/lib/error-text.ts`.
+- Admin area: `src/routes/_authed/admin.tsx` is the layout (section tabs on phones; wide screens use the sidebar's "Verwaltung" group); sections are listed in `src/lib/admin-sections.ts` (label, path, icon, roles). A section route calls `guardSection(context.user.role, "/admin/x")` in `beforeLoad`; its server functions still need `roleMiddleware`. In the UI, wrap server-function calls in `runAction` (`src/lib/run-action.ts`) and throw error codes (`HttpError(409, "SOME_CODE")`); map codes to German in `src/lib/error-text.ts`.
 - `src/server.ts` is the server entry (CSRF check, security headers). `src/nitro/startup.ts` validates env and migrates at process start.
 
 ## Commands
-`bun run dev` · `build` · `start` · `check` (= `lint` + `typecheck` + `test`) · `format` (Biome, writes) · `db:generate` (after schema edits) · `gen` (route tree + Paraglide; `typecheck` and `test` run it first) · `e2e` (Playwright, not part of `check`) · `create-admin-invite`. For a quick run, `bun test path/to/file.test.ts` works once `bun run gen` has run.
+`bun run dev` · `build` · `start` · `check` (= `lint` + `typecheck`) · `format` (Biome, writes) · `db:generate` (after schema edits) · `gen` (route tree + Paraglide; `typecheck` runs it first) · `create-admin-invite`. The project has no automated tests.
 
 ## Conventions
 - English code, identifiers and comments. Every user-facing string goes in `messages/de.json`, never inline.
 - Every server function that touches data uses `authMiddleware` (or `roleMiddleware(...)`). Server routes use `withAuth`. Items the caller can't see answer **404, never 403** (DESIGN §11).
 - Never filter items in JS: item visibility goes through the SQL predicate builder. Money fields are dropped while serializing (§3.4).
 - Schema: edit `schema.ts`, run `bun run db:generate`, commit `drizzle/*`. Hand-written SQL: `bun --bun drizzle-kit generate --custom --name x`. Ids come from `$defaultFn(Bun.randomUUIDv7)`, timestamps are `timestamp_ms`. `items_fts` (in `0001_*.sql`) is filled by app code.
-- Users are created only through invites (`acceptInvite` in `auth/invites.ts`) or, in tests, `createUserWithPassword(db, {...})`; public sign-up is off. Admin changes go through `server/admin/users.ts` (guards: last active admin, self-disable).
+- Users are created only through invites (`acceptInvite` in `auth/invites.ts`; the first admin via `create-admin-invite`); public sign-up is off. Admin changes go through `server/admin/users.ts` (guards: last active admin, self-disable).
 - `bun:sqlite` is synchronous: `db.select()...all()/get()/run()`, and `db.transaction((tx) => …)` takes a sync callback.
-- Tests are `*.test.ts` next to the code, run by `bun test`. Use `createTestDb()`, never `getDb()`. Import from `auth/context`, not `auth/session`, in tests.
 
 ## Examples
 Server function (simplified from `getMyProfile` in `src/server/auth/functions.ts`):
@@ -39,14 +38,6 @@ DB query (`import { and, eq } from "drizzle-orm"; import { items } from "~/serve
 ```ts
 const rows = getDb().select().from(items).where(and(eq(items.ownerKind, "user"), eq(items.ownerId, ctx.userId))).all();
 ```
-Test with the in-memory DB (see `src/server/auth/auth.test.ts`):
-```ts
-const db = createTestDb();
-const u = await createUserWithPassword(db, { username: "anna", password: "correct-horse", displayName: "Anna", role: "member" });
-expect(loadAuthCtx(db, u.id)?.role).toBe("member");
-```
-`createTestAuth()` / `signInRequest()` / `cookieHeader()` in `src/server/auth/test-helpers.ts` drive real sign-ins.
-
 German string: add `"items_empty": "Noch keine Gegenstände"` (or with params, `"x": "Hallo {name}"`) to `messages/de.json`, then `import { m } from "~/paraglide/messages"` and call `m.items_empty()` or `m.x({ name })`. Dev and build recompile it; otherwise run `bun run gen`.
 
 ## Authorization
@@ -79,9 +70,9 @@ Services (`service.ts`, take `db, ctx`) + `functions.ts` in `src/server/{items,l
 
 ## Item and location pages
 - Routes: `_authed/index.tsx` (home), `items.index.tsx` (list), `items.new.tsx` (quick add), `items.$itemId.index.tsx` (detail + actions), `items.$itemId.edit.tsx` (edit, conflict + leave guard), `locations.index.tsx`, `locations.$locationId.tsx`. Loaders turn `ITEM_NOT_FOUND`/`LOCATION_NOT_FOUND` into `notFound()` (`isMissing`, `NotFoundCard` in `components/items/not-found.tsx`).
-- List state lives in the URL: `src/lib/items/list-search.ts` (`parseItemsSearch` = `validateSearch`, `toSearchInput`, `patchSearch`; tested). Link to a filtered list with `<Link to="/items" search={{ tag: [id] }}>`.
+- List state lives in the URL: `src/lib/items/list-search.ts` (`parseItemsSearch` = `validateSearch`, `toSearchInput`, `patchSearch`). Link to a filtered list with `<Link to="/items" search={{ tag: [id] }}>`.
 - `components/items/`: `item-card.tsx` (`ItemResults input={SearchItemsInput}` pages with the cursor; `ItemCard`/`ItemRowView`), `item-filters.tsx`, `location-picker.tsx` (`LocationPicker` location-or-container, `LocationSelect`, `placementInput`), `owner-picker.tsx`, `tag-input.tsx`, `visibility-choice.tsx`, `type-choice.tsx`, `item-form.tsx` (base fields, `applyAttributeErrors` for server field errors), `item-actions.tsx` (`useItemWrite`: write + reload on conflict), `item-sharing.tsx`, `item-history.tsx`, `breadcrumbs.tsx`. Locations: `components/locations/`.
-- Native `<select>`: set `selected` on each `<option>` too; Solid's `value` alone does not survive SSR/hydration.
+- Native `<select>`: set `selected` on each `<option>` too; Solid's `value` alone can be applied before the options exist.
 
 ## Stock, loans, transfers, inbox
 - Stock (`server/stock/service.ts`): `adjustStockFn({id, delta | quantity, reason, note?})` at use, no version (changes add up) → `{quantity, version, lowStock}`. Any other write path that changes `quantity`/`minQuantity` calls `recordStockChange(tx, ctx, item, before, after, reason)`: ledger row in `stock_moves` + low-stock notice (once when it falls below, withdrawn when restocked). UI: `<StockControl item canUse />` (`components/items/stock-control.tsx`).
@@ -93,8 +84,8 @@ Services (`service.ts`, take `db, ctx`) + `functions.ts` in `src/server/{items,l
 
 ## Labels, scan, ISBN
 - QR: `qrMatrix` / `qrPath` / `labelUrl` / `shortCodeFromScan` (`src/lib/qr.ts`), `<QrCode value label />` renders inline SVG. Labels encode `${ORIGIN}/q/<code>`; `/q/$code` (`_authed/q.$code.tsx`) redirects to the item or location. Sheets: `/labels?item=…&location=…&format=a4|thermal&skip=n` (`getLabelsFn`, visible entries only); page sizes are named `@page`s in `src/styles/app.css`; the app shell is `print:hidden`.
-- Scan: `/scan` with `<CameraScanner onCode paused />` and `useScanSupport()` (`components/scan/camera-scanner.tsx`); without `BarcodeDetector` the code field is the fallback (headless Chromium in e2e has none). `lookupCodeFn({code})` → `CodeLookup` (`item` | `location` | `matches` by barcode/attribute value, ISBN-10 and -13 alike; `src/server/scan/service.ts`).
-- ISBN: `lookupBookFn({isbn, typeId?})` → `BookLookupResult` (`found` with `name` + `attributes` for the type, `not_found`, `unavailable`). Sources and parsers in `src/server/isbn/lookup.ts` (DNB MARC21, Open Library, Google Books; fixtures in `isbn/fixtures/`), field mapping in `isbn/map.ts`. Tests inject `fetch`; never call the real services from tests. `ISBN_LOOKUP=off` (e2e sets it) answers `unavailable` without network. Helpers `toIsbn13` / `toIsbn10` / `isbnVariants` in `src/lib/isbn.ts`.
+- Scan: `/scan` with `<CameraScanner onCode paused />` and `useScanSupport()` (`components/scan/camera-scanner.tsx`); without `BarcodeDetector` the code field is the fallback. `lookupCodeFn({code})` → `CodeLookup` (`item` | `location` | `matches` by barcode/attribute value, ISBN-10 and -13 alike; `src/server/scan/service.ts`).
+- ISBN: `lookupBookFn({isbn, typeId?})` → `BookLookupResult` (`found` with `name` + `attributes` for the type, `not_found`, `unavailable`). Sources and parsers in `src/server/isbn/lookup.ts` (DNB MARC21, Open Library, Google Books; `fetch` can be injected), field mapping in `isbn/map.ts`. `ISBN_LOOKUP=off` answers `unavailable` without network. Helpers `toIsbn13` / `toIsbn10` / `isbnVariants` in `src/lib/isbn.ts`.
 - Quick add takes `?isbn=` (book type, lookup runs) and `?barcode=`; `<IsbnFill typeId onFound onIsbn />` appears for types whose ISBN field has `lookup` sources. Shelf mode: `/items/shelf?type=&loc=`.
 
 ## Relations, warranty
@@ -112,25 +103,18 @@ Server: `src/server/attachments/` (`service.ts` logic, `functions.ts` server fns
 ## Export
 `GET /api/v1/export` streams a ZIP (JSON + CSV + files); the archive layout is the contract in `docs/export-format.md` (bump `EXPORT_FORMAT_VERSION` in `src/lib/export/types.ts` when it changes). Code in `src/server/export/`: `build.ts` (`writeExport`, `PATHS`, what each scope contains), `zip.ts` (streaming ZIP64 writer), `stream.ts` (backpressured body, `ExportAborted` on disconnect/idle), `snapshot.ts` (read-only connection in one read transaction), `registry.ts` (one export per user, two overall, page tickets), `handler.ts` (route logic + `export.created` audit).
 - Contents follow `exportScope(ctx)` / `exportItemsWhere(ctx)`; member exports drop references to items outside the set and list them in `omittedReferences`. Loans, contacts, transfers and stock moves follow the exported items (format version 2); notifications are never exported. Guests get the router's own not-found page (`src/routes/api/v1/export.ts`).
-- New table or column: decide whether it is exported (admin and member), add it to `build.ts`, the doc and the secret-sentinel test in `export.test.ts`. Secrets (auth tables, invite hashes) never go in.
-- Page: `/admin/export` reserves a slot with `reserveExportFn`, then opens `?ticket=…`; `getExportInfoFn` gives the estimate and progress. Tests: `exportToMemory()` in `src/server/export/test-helpers.ts`.
-
-## E2E tests (Playwright)
-`bun run e2e` builds into `node_modules/.cache/hausmeister-e2e/` (never `.output`), starts it on port 3211 against a fresh temp DB (`e2e/server.ts`), runs `e2e/bootstrap.setup.ts` (first admin via the startup link), then every `e2e/*.e2e.ts` (not `.spec.ts`: `bun test` would pick those up) on a Pixel 7 viewport. `E2E_SKIP_BUILD=1 bunx playwright test` reuses the last build. Import `test`/`expect` from `e2e/fixtures.ts`:
-- `adminPage`: signed in as the first admin (don't sign it out or change it). `page`: signed out.
-- `newUser("member" | "guest" | "admin")` → `{ username, password, displayName, page }`, created through a real invite, signed in in its own context.
-- Helpers: `cliInvite(role)` (link from the CLI), `acceptInvite`, `signIn`, `submitLogin`, `userMenu(page, "Mein Konto" | "Abmelden")`, `uniqueName(prefix)`. Each test has its own `X-Forwarded-For`, so per-IP limits don't leak; use unique names, the DB is shared by all tests of a run.
-- Item helpers (`e2e/item-helpers.ts`): `addItem(page, {type, name, photo?, more?})` → id, `ownMore({private?, price?})`, `searchItems`, `results(page)`, `selectByText(select, /re/)`, `token()`, `photoFile()`. Visually hidden radios/checkboxes: click their label. Accessibility: `@axe-core/playwright` (`e2e/a11y.e2e.ts`).
+- New table or column: decide whether it is exported (admin and member), add it to `build.ts` and the doc. Secrets (auth tables, invite hashes) never go in.
+- Page: `/admin/export` reserves a slot with `reserveExportFn`, then opens `?ticket=…`; `getExportInfoFn` gives the estimate and progress.
 
 ## Hardening
-- CSP (production only): every inline script needs the request nonce. Zod and `zod-config.ts` share one client chunk (`vite.config.ts` `codeSplitting`), so jitless is set before any schema is created. Router scripts get it via `ssr.nonce` (`src/lib/csp-nonce.ts`); never add `<script>` or `<style>` elements by hand, never `eval`/`new Function` (Zod runs `jitless`, `src/lib/zod-config.ts` must stay the first import of `router.tsx`). `style` attributes are allowed. Every e2e test fails on a CSP violation (`cspViolations` fixture).
-- Slow links: use `useHydrated()` / `adoptTypedValue()` from `src/lib/hydrated.ts` for forms (submit disabled with "Lädt …" until hydrated; `<html data-hydrated>` is set in `__root.tsx`). Test with `slowLink()` in `e2e/hydration.e2e.ts`.
+- CSP (production only): every inline script needs the request nonce. Zod and `zod-config.ts` share one client chunk (`vite.config.ts` `codeSplitting`), so jitless is set before any schema is created. Router scripts get it via `ssr.nonce` (`src/lib/csp-nonce.ts`); never add `<script>` or `<style>` elements by hand, never `eval`/`new Function` (Zod runs `jitless`, `src/lib/zod-config.ts` must stay the first import of `router.tsx`). `style` attributes are allowed.
+- SPA: `src/start.ts` sets `defaultSsr: false`, so the server renders only the root `shellComponent` (`__root.tsx`, per request so its scripts carry the CSP nonce); beforeLoad, loaders and components run in the browser. The shell shows "Lädt …" until the app starts and sets `<html data-hydrated>`. Never read `window`/`localStorage` at module load without a `typeof window` guard: route modules are still imported on the server.
 - Shutdown: `src/server/shutdown.ts` (wired in the startup plugin). The DB connection is one per process (`getDb()`, on globalThis); close with `closeDb()`/`closeDatabase()`, never `$client.close()` alone. Long-running work must watch the job `signal`.
 - Quick add shows a type's required fields next to the name; keep it that way when adding field kinds.
 - List filters: `unplaced` (no location, no container) and `pmin`/`pmax` (euros) in `list-search.ts`; `SearchFacets.unplacedCount`.
 
 ## Gotchas
-- In page loaders, read data with `context.queryClient.ensureQueryData(opts)` and in the component with `useQuery(() => opts)`. The router dehydrates the cache for SSR.
+- In page loaders, read data with `context.queryClient.ensureQueryData(opts)` and in the component with `useQuery(() => opts)`. Both run in the browser.
 - Links to routes that don't exist yet fail typecheck. Cast them (`to={"/x" as "/"}`) until the route exists.
 - Non-GET requests with a foreign `Origin` get 403. Send `Origin: <ORIGIN>` from curl when testing.
 - Don't edit `src/routeTree.gen.ts` or `src/paraglide/`. Both are generated and gitignored.

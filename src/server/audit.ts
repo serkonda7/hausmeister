@@ -1,7 +1,7 @@
 // Event log writer for app-level (non-item) actions: invites, users, groups.
 // Rows go to `events` with item_id NULL. A diff must never carry secrets
 // (passwords, tokens, hashes); recordEvent refuses such keys so a mistake
-// fails loudly in tests instead of leaking into the log.
+// fails loudly instead of leaking into the log.
 import type { DbOrTx } from "./db/client";
 import { events } from "./db/schema";
 

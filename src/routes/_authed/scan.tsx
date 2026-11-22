@@ -7,7 +7,6 @@ import { CameraScanner, useScanSupport } from "~/components/scan/camera-scanner"
 import { ScanResult } from "~/components/scan/scan-result";
 import { Button } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
-import { useHydrated } from "~/lib/hydrated";
 import { isValidIsbn, normalizeIsbn } from "~/lib/item-types/fields";
 import { actionErrorText } from "~/lib/run-action";
 import type { CodeLookup } from "~/lib/scan/types";
@@ -25,7 +24,6 @@ const looksLikeIsbn = (s: string) => /^(97[89]\d{10}|\d{9}[\dX])$/.test(s);
 function ScanPage() {
   const ctx = Route.useRouteContext();
   const support = useScanSupport();
-  const hydrated = useHydrated();
   const [code, setCode] = createSignal("");
   const [error, setError] = createSignal<string>();
   const [result, setResult] = createSignal<CodeLookup>();
@@ -118,8 +116,8 @@ function ScanPage() {
             onInput={(e) => setCode(e.currentTarget.value)}
             aria-describedby="scan-code-hint"
           />
-          <Button type="submit" size="lg" disabled={busy() || !hydrated()}>
-            {hydrated() ? m.scan_code_submit() : m.common_loading()}
+          <Button type="submit" size="lg" disabled={busy()}>
+            {m.scan_code_submit()}
           </Button>
         </div>
         <p id="scan-code-hint" class="text-sm text-muted-foreground">

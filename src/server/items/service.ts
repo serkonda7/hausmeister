@@ -1,6 +1,6 @@
 // Items: create, read, update, move, status, type change, owner, visibility,
-// grants, delete, bulk reassignment. Independent of the request (testable with
-// createTestDb()); ./functions.ts wraps these as server functions.
+// grants, delete, bulk reassignment. Independent of the request (take `db`,
+// `ctx`); ./functions.ts wraps these as server functions.
 //
 // Levels needed (DESIGN §3.2):
 //   view    getItem, history

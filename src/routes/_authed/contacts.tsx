@@ -14,7 +14,6 @@ import {
 } from "~/components/ui/dialog";
 import { inputClass } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { useHydrated } from "~/lib/hydrated";
 import type { ContactInput } from "~/lib/loans/inputs";
 import { contactsQuery } from "~/lib/loans/queries";
 import type { ContactRow } from "~/lib/loans/types";
@@ -93,7 +92,6 @@ function ContactFields(props: {
 function ContactsPage() {
   const qc = useQueryClient();
   const q = useQuery(() => contactsQuery());
-  const hydrated = useHydrated();
   const [values, setValues] = createSignal(empty());
   const [error, setError] = createSignal<string>();
   const refresh = () => qc.invalidateQueries({ queryKey: ["contacts"] });
@@ -129,9 +127,7 @@ function ContactsPage() {
           error={error()}
         />
         <div>
-          <Button type="submit" disabled={!hydrated()}>
-            {hydrated() ? m.contacts_add() : m.common_loading()}
-          </Button>
+          <Button type="submit">{m.contacts_add()}</Button>
         </div>
       </form>
       <Show

@@ -11,7 +11,6 @@ import { LocationSelect } from "~/components/items/location-picker";
 import { QrCode } from "~/components/labels/qr-code";
 import { Button } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
-import { useHydrated } from "~/lib/hydrated";
 import { labelUrl } from "~/lib/qr";
 import { actionErrorText } from "~/lib/run-action";
 import type { LabelEntry } from "~/lib/scan/types";
@@ -98,7 +97,6 @@ function Label(props: { entry: LabelEntry; origin: string; thermal: boolean }) {
 function LabelsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/labels" });
-  const hydrated = useHydrated();
   const q = useQuery(() => labelsQuery(search().item, search().location));
   const format = () => search().format ?? "a4";
   const skip = () => (format() === "a4" ? (search().skip ?? 0) : 0);
@@ -132,7 +130,6 @@ function LabelsPage() {
               name="label-format"
               class="size-4 accent-primary"
               checked={format() === "a4"}
-              disabled={!hydrated()}
               onChange={() => patch({ format: "a4" })}
             />
             {m.labels_format_a4()}
@@ -143,7 +140,6 @@ function LabelsPage() {
               name="label-format"
               class="size-4 accent-primary"
               checked={format() === "thermal"}
-              disabled={!hydrated()}
               onChange={() => patch({ format: "thermal" })}
             />
             {m.labels_format_thermal()}
@@ -161,7 +157,6 @@ function LabelsPage() {
               max={PER_SHEET - 1}
               class={inputClass}
               value={skip()}
-              disabled={!hydrated()}
               onChange={(e) => {
                 const n = Number(e.currentTarget.value);
                 patch({ skip: Number.isInteger(n) && n > 0 && n < PER_SHEET ? n : undefined });
@@ -188,7 +183,6 @@ function LabelsPage() {
               }
               search={searchVisibleItems}
               itemName={(id) => names().get(id)}
-              disabled={!hydrated()}
             />
           </div>
           <div class="grid content-start gap-2">
@@ -201,11 +195,10 @@ function LabelsPage() {
                 value={loc()}
                 onChange={setLoc}
                 noneLabel={m.labels_pick_location()}
-                disabled={!hydrated()}
               />
               <Button
                 variant="outline"
-                disabled={!loc() || !hydrated()}
+                disabled={!loc()}
                 onClick={() => {
                   const id = loc();
                   if (id && !search().location.includes(id))
@@ -240,11 +233,7 @@ function LabelsPage() {
           </div>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-          <Button
-            size="lg"
-            disabled={!hydrated() || !(q.data?.labels.length ?? 0)}
-            onClick={() => window.print()}
-          >
+          <Button size="lg" disabled={!(q.data?.labels.length ?? 0)} onClick={() => window.print()}>
             {m.labels_print({ count: q.data?.labels.length ?? 0 })}
           </Button>
           <p class="text-sm text-muted-foreground">{m.labels_print_hint()}</p>
