@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/* Design tokens (shadcn-style). Dark only; WCAG AA contrast. */
+:root {
+  color-scheme: dark;
+  --background: oklch(0.17 0.01 260);
+  --foreground: oklch(0.88 0.005 260);
+  --muted: oklch(0.24 0.012 260);
+  --muted-foreground: oklch(0.72 0.015 260);
+  --card: oklch(0.21 0.012 260);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.23 0.012 260);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.72 0.12 250);
+  --primary-foreground: oklch(0.17 0.02 260);
+  --secondary: oklch(0.28 0.012 260);
+  --secondary-foreground: var(--foreground);
+  --accent: oklch(0.3 0.03 250);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.7 0.14 25);
+  --destructive-foreground: oklch(0.17 0.02 25);
+  --success: oklch(0.74 0.14 150);
+  --border: oklch(0.31 0.012 260);
+  --input: oklch(0.5 0.012 260);
+  --ring: oklch(0.72 0.13 250);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    /* Tailwind's ring offset defaults to white; match the dark page instead. */
+    --tw-ring-offset-color: var(--color-background);
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Kobalte exposes open/closed state via data attributes; keep transitions subtle. */
+@keyframes hm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes hm-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes hm-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hm-animate-fade[data-expanded] {
+  animation: hm-fade-in 150ms ease-out;
+}
+.hm-animate-zoom[data-expanded] {
+  animation: hm-zoom-in 150ms ease-out;
+}
+.hm-animate-slide[data-opened] {
+  animation: hm-slide-in 150ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-animate-fade,
+  .hm-animate-zoom,
+  .hm-animate-slide {
+    animation: none;
+  }
+}
+
+/* Label sheets (src/routes/_authed/labels.tsx). Named pages give each format
+   its paper size: Avery Zweckform L4732 on A4 (5 × 16 labels of
+   35.6 × 16.9 mm, 13.3 mm top and 11 mm side margins) and 62 × 29 mm
+   thermal labels (one label per page). */
+@page labels-a4 {
+  size: A4 portrait;
+  margin: 0;
+}
+@page labels-thermal {
+  size: 62mm 29mm;
+  margin: 0;
+}
+.label-sheet-a4 {
+  page: labels-a4;
+  width: 210mm;
+  height: 297mm;
+  padding: 13.3mm 11mm 0;
+  display: grid;
+  grid-template-columns: repeat(5, 35.6mm);
+  grid-auto-rows: 16.9mm;
+  column-gap: 2.5mm;
+  align-content: start;
+  break-after: page;
+}
+.label-sheet-thermal {
+  page: labels-thermal;
+  width: 62mm;
+  height: 29mm;
+  break-after: page;
+}
+@media print {
+  /* Paper is white: the dark tokens flip for printing. */
+  :root {
+    --background: #fff;
+    --foreground: #000;
+    --card: #fff;
+  }
+}

@@ -10,7 +10,9 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["bun"],
-    "paths": { "~/*": ["./src/*"] }
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
-  "include": ["src", "scripts", "vite.config.ts"]
+  "include": ["src", "scripts", "vite.config.ts", "drizzle.config.ts"]
 }

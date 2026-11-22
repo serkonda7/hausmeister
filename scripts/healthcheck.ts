@@ -1,5 +1,6 @@
 // Used by the Docker healthcheck: exits 0 when the app answers /health.
 export {};
+
 const port = process.env.PORT ?? "3000";
 try {
   const res = await fetch(`http://127.0.0.1:${port}/health`, {

@@ -1,17 +1,9 @@
-{
-	# Staging by default. After the staging cert works, set in .env:
-	#   ACME_CA=https://acme-v02.api.letsencrypt.org/directory
-	acme_ca {$ACME_CA}
-}
-
+# DOMAIN is the node's MagicDNS name (hausmeister.<tailnet>.ts.net). The
+# certificate comes from the Tailscale sidecar, which gets it from Let's Encrypt
+# and renews it; Caddy asks over the shared tailscaled socket (compose.yaml).
 {$DOMAIN} {
 	tls {
-		# The domain is hosted at deSEC; the token may only write _acme-challenge TXT.
-		dns desec {
-			token {env.DESEC_TOKEN}
-		}
-		# Public resolvers; the VPS's own resolver may cache stale answers.
-		resolvers 1.1.1.1 9.9.9.9
+		get_certificate tailscale
 	}
 
 	header {

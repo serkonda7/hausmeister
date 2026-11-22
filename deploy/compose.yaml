@@ -1,5 +1,6 @@
-# Hausmeister – production stack (Phase 0). Run from /opt/hausmeister/deploy.
+# Hausmeister production stack. Run from /opt/hausmeister/deploy.
 # Nothing here publishes a host port: Caddy lives in the Tailscale netns.
+# No public domain: the app runs at the node's MagicDNS name (DOMAIN in .env).
 name: hausmeister
 
 services:
@@ -11,21 +12,22 @@ services:
       TS_STATE_DIR: /var/lib/tailscale
       TS_USERSPACE: "false" # kernel TUN (needs /dev/net/tun)
       TS_EXTRA_ARGS: --advertise-tags=tag:hausmeister
-    volumes: ["./ts-state:/var/lib/tailscale"]
+      TS_SOCKET: /var/run/tailscale/tailscaled.sock # shared with Caddy for the HTTPS certificate
+    volumes:
+      - ./ts-state:/var/lib/tailscale
+      - ts_socket:/var/run/tailscale
     devices: ["/dev/net/tun:/dev/net/tun"]
     cap_add: [NET_ADMIN, NET_RAW]
     restart: unless-stopped
 
   caddy:
-    build: ./caddy
-    image: hausmeister-caddy:2.11.9
+    image: caddy:2.11.9
     network_mode: service:tailscale # listens on the tailnet only
     environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
-      DESEC_TOKEN: ${DESEC_TOKEN:?set DESEC_TOKEN in .env}
-      ACME_CA: ${ACME_CA:-https://acme-staging-v02.api.letsencrypt.org/directory}
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env (hausmeister.<tailnet>.ts.net)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ts_socket:/var/run/tailscale # tailscaled's LocalAPI: certificates for *.ts.net
       - caddy_data:/data
       - caddy_config:/config
     depends_on: [tailscale, app]
@@ -38,6 +40,8 @@ services:
       ORIGIN: https://${DOMAIN}
       DATABASE_PATH: /data/db/app.sqlite
       UPLOAD_DIR: /data/uploads
+      BETTER_AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env (openssl rand -base64 48)}
+      ISBN_LOOKUP: ${ISBN_LOOKUP:-on}
     volumes: ["./data:/data"]
     restart: unless-stopped
 
@@ -62,6 +66,7 @@ services:
     hostname: hausmeister
 
 volumes:
+  ts_socket: {}
   caddy_data: {}
   caddy_config: {}
   restic_cache: {}
