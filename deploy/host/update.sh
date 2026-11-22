@@ -35,7 +35,8 @@ if [[ "${1:-}" != "--skip-pull" ]]; then
 fi
 
 cd deploy
-if ! swapon --show=NAME --noheadings | grep -q .; then
+# Read /proc/swaps directly: `swapon` is in /usr/sbin, not on a non-root user's PATH.
+if ! awk 'NR > 1 { found = 1 } END { exit !found }' /proc/swaps; then
   echo "warning: no active swap; builds can stall on a 1 GB VPS (see host/ensure-swap.sh)" >&2
 fi
 echo "== build $(git log -1 --format='%h %s')"
