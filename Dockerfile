@@ -1,14 +1,22 @@
 # App image, built on the VPS by compose (`build: ..`).
 FROM oven/bun:1.4.4 AS build
 WORKDIR /app
+# Small VPS / slow link: don't open a registry connection storm during install,
+# and keep downloaded tarballs across builds even when the lockfile changes.
+ENV BUN_CONFIG_MAX_HTTP_REQUESTS=8 \
+    BUN_INSTALL_CACHE_DIR=/root/.bun/install/cache
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache,id=hausmeister-bun-install \
+    bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 # sharp loads native binaries at runtime, so it is installed as a real package
-# (same pinned version as package.json) instead of being bundled.
-RUN mkdir /deps && cd /deps && echo '{"private":true}' > package.json \
- && bun add --exact "sharp@$(bun -p 'require("/app/package.json").dependencies.sharp')"
+# (same pinned version as package.json) instead of being bundled. Copy the
+# packages already resolved by the frozen lockfile: no registry lookup, no
+# version drift, and no extra network call that can stall a rebuild.
+RUN mkdir -p /deps/node_modules/@img \
+ && cp -a /app/node_modules/sharp /app/node_modules/detect-libc /app/node_modules/semver /deps/node_modules/ \
+ && cp -a /app/node_modules/@img/. /deps/node_modules/@img/
 
 FROM oven/bun:1.4.4-slim
 WORKDIR /app

@@ -17,6 +17,9 @@ apt-get -y install unattended-upgrades apt-listchanges ufw ca-certificates curl 
 dpkg-reconfigure -f noninteractive unattended-upgrades
 usermod -aG sudo "$U"
 
+# Build headroom on small VPSes (2 GB swap). Copy ensure-swap.sh next to this script.
+bash "$(dirname "$0")/ensure-swap.sh"
+
 # SSH: keys only, no root.
 cat > /etc/ssh/sshd_config.d/10-hausmeister.conf <<'CONF'
 PermitRootLogin no

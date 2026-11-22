@@ -35,8 +35,11 @@ if [[ "${1:-}" != "--skip-pull" ]]; then
 fi
 
 cd deploy
+if ! swapon --show=NAME --noheadings | grep -q .; then
+  echo "warning: no active swap; builds can stall on a 1 GB VPS (see host/ensure-swap.sh)" >&2
+fi
 echo "== build $(git log -1 --format='%h %s')"
-docker compose build app
+docker compose build --progress plain app
 echo "== up"
 docker compose up -d
 echo "== check"

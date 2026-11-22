@@ -41,7 +41,7 @@ There is no public domain and no public DNS record. The name comes from Tailscal
    ```
 5. Laptop: run the bootstrap (installs Docker, ufw, unattended-upgrades; disables password and root SSH):
    ```sh
-   scp -i ~/.ssh/strato_vps deploy/host/bootstrap.sh admin@$VPS:
+   scp -i ~/.ssh/strato_vps deploy/host/bootstrap.sh deploy/host/ensure-swap.sh admin@$VPS:
    ssh -t -i ~/.ssh/strato_vps admin@$VPS sudo ./bootstrap.sh admin
    ```
 6. Laptop: copy the code (no git remote yet):
@@ -125,6 +125,8 @@ Store `.env`, `.env.backup` and a copy of `ts-state/` in your password manager o
 ```
 
 It refuses a dirty tree, pulls the current branch fast-forward only, rebuilds the app image, recreates the stack and ends with `./check-tailnet.sh`. Migrations run at startup and write `data/db/app.sqlite.pre-migrate-<time>.bak` first (README → Operations).
+
+The build runs on the VPS. On a 1 GB host, make sure swap exists before the first build (`sudo ./host/ensure-swap.sh`, or the copy from §2) — otherwise `bun install` / `vite build` can be OOM-killed and `docker compose build` appears to hang. `update.sh` prints plain BuildKit progress and warns when no swap is active.
 
 **Roll back**: `git -C /opt/hausmeister checkout <old-sha>`, then `./host/update.sh --skip-pull`. Restore the pre-migrate DB copy (README → Roll back an upgrade) only if that release migrated the schema.
 

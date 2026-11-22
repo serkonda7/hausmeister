@@ -51,8 +51,10 @@ Run these in `/opt/hausmeister/deploy`.
 It pulls the current branch (fast-forward only, dirty tree refused), rebuilds the app image, recreates the stack and ends with `./check-tailnet.sh`. The manual equivalent:
 
 ```sh
-docker compose build app && docker compose up -d
+docker compose build --progress plain app && docker compose up -d
 ```
+
+The build runs on the VPS. On a 1 GB host, ensure a 2 GB swapfile exists (`sudo bash host/ensure-swap.sh`, also set up by `host/bootstrap.sh`); `bun install` and `vite build` otherwise get OOM-killed and the build looks like it hangs. The Bun install cache is a BuildKit cache mount, and sharp is copied from the locked build install instead of a fresh registry lookup, so repeat builds need little network.
 
 Before migrating an existing database the app writes `data/db/app.sqlite.pre-migrate-<time>.bak` (log: `[db] snapshot before migrations`) and keeps the newest three. They are local only: Litestream replicates just `app.sqlite`.
 
