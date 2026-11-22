@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/solid-query";
 import { Link } from "@tanstack/solid-router";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { ConfirmButton } from "~/components/confirm-dialog";
-import { useItemWrite } from "~/components/items/item-actions";
+import { useItemWrite } from "~/components/items/use-item-write";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,

@@ -29,25 +29,50 @@ import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { formatCents, formatDate, formatNumber } from "~/lib/format";
 import { typeIconGlyph } from "~/lib/item-types/icons";
+import { itemTypesQuery } from "~/lib/item-types/queries";
+import type { SearchItemsInput } from "~/lib/items/inputs";
 import { statusLabel } from "~/lib/items/labels";
-import { itemQuery } from "~/lib/items/queries";
+import {
+  itemHistoryPagesQuery,
+  itemListQuery,
+  itemQuery,
+  principalsQuery,
+} from "~/lib/items/queries";
 import type { ItemDetail } from "~/lib/items/types";
 import { itemLoansQuery } from "~/lib/loans/queries";
 import { itemRelationsQuery } from "~/lib/relations/queries";
 import { itemTransferQuery } from "~/lib/transfers/queries";
 import { m } from "~/paraglide/messages";
 
+const contentsInput = (containerId: string): SearchItemsInput => ({
+  containerId,
+  sort: "name_asc",
+});
+
 export const Route = createFileRoute("/_authed/items/$itemId/")({
   loader: async ({ context, params }) => {
     if (params.itemId.length > 64) throw notFound();
+    const qc = context.queryClient;
+    const id = params.itemId;
+    // All at once rather than item first: they only need the id. When the item
+    // is missing they fail too, and the item's own error decides below.
+    const sections = Promise.all([
+      qc.ensureQueryData(attachmentsQuery(id)),
+      qc.ensureQueryData(itemLoansQuery(id)),
+      qc.ensureQueryData(itemTransferQuery(id)),
+      qc.ensureQueryData(itemRelationsQuery(id)),
+    ]);
+    sections.catch(() => {});
+    // Read while the page renders (history, type change, owner/share pickers);
+    // fetched now, the page doesn't wait for them after its first render.
+    void qc.prefetchInfiniteQuery(itemHistoryPagesQuery(id));
+    void qc.prefetchQuery(itemTypesQuery());
+    void qc.prefetchQuery(itemTypesQuery(false));
+    if (context.user.role !== "guest") void qc.prefetchQuery(principalsQuery());
     try {
-      const d = await context.queryClient.ensureQueryData(itemQuery(params.itemId));
-      await Promise.all([
-        context.queryClient.ensureQueryData(attachmentsQuery(params.itemId)),
-        context.queryClient.ensureQueryData(itemLoansQuery(params.itemId)),
-        context.queryClient.ensureQueryData(itemTransferQuery(params.itemId)),
-        context.queryClient.ensureQueryData(itemRelationsQuery(params.itemId)),
-      ]);
+      const d = await qc.ensureQueryData(itemQuery(id));
+      if (d.contentsCount > 0) void qc.prefetchInfiniteQuery(itemListQuery(contentsInput(id)));
+      await sections;
       return { name: d.item.name };
     } catch (err) {
       if (isMissing(err, ["ITEM_NOT_FOUND", "NOT_FOUND"])) throw notFound();
@@ -313,7 +338,7 @@ function ItemView(props: { detail: ItemDetail }) {
           }
         >
           <ItemResults
-            input={{ containerId: it().id, sort: "name_asc" }}
+            input={contentsInput(it().id)}
             view="list"
             label={m.item_contents_label({ name: it().name })}
             empty={<p class="text-sm text-muted-foreground">{m.item_contents_empty()}</p>}

@@ -2,7 +2,7 @@
 // Reads itemLoansQuery; the loader warms it.
 import { useQuery } from "@tanstack/solid-query";
 import { createSignal, For, Show } from "solid-js";
-import { useItemWrite } from "~/components/items/item-actions";
+import { useItemWrite } from "~/components/items/use-item-write";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,

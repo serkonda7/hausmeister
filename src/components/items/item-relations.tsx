@@ -5,7 +5,7 @@ import { Link } from "@tanstack/solid-router";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { ConfirmButton } from "~/components/confirm-dialog";
 import { ItemPicker } from "~/components/item-types/pickers";
-import { useItemWrite } from "~/components/items/item-actions";
+import { useItemWrite } from "~/components/items/use-item-write";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {

@@ -1,5 +1,5 @@
 // An item's history (newest first, paged), already redacted by the server.
-import { infiniteQueryOptions, useInfiniteQuery, useQuery } from "@tanstack/solid-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/solid-query";
 import { createMemo, For, Show } from "solid-js";
 import { Button } from "~/components/ui/button";
 import { formatDateTime } from "~/lib/format";
@@ -8,21 +8,10 @@ import { itemTypesQuery } from "~/lib/item-types/queries";
 import { flattenTree } from "~/lib/item-types/tree";
 import { formatHistoryEntry, groupFileRuns, type HistoryLine } from "~/lib/items/history-format";
 import { historyActionLabel } from "~/lib/items/labels";
+import { itemHistoryPagesQuery } from "~/lib/items/queries";
 import type { HistoryEntry, HistoryPage } from "~/lib/items/types";
 import { actionErrorText } from "~/lib/run-action";
 import { m } from "~/paraglide/messages";
-import { getItemHistoryFn } from "~/server/history/functions";
-
-export const itemHistoryPagesQuery = (itemId: string) =>
-  infiniteQueryOptions({
-    queryKey: ["items", "history-pages", itemId],
-    queryFn: ({ pageParam }) =>
-      getItemHistoryFn({
-        data: { itemId, limit: 20, ...(pageParam ? { cursor: pageParam } : {}) },
-      }),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last: HistoryPage) => last.nextCursor,
-  });
 
 function HistoryLines(props: { e: HistoryEntry; lines: HistoryLine[] }) {
   return (

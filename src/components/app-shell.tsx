@@ -18,7 +18,6 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Icon } from "~/components/ui/icons";
 import { inputClass } from "~/components/ui/input";
-import { authClient } from "~/lib/auth-client";
 import { cn } from "~/lib/cn";
 import { roleLabel } from "~/lib/labels";
 import {
@@ -35,6 +34,8 @@ import { m } from "~/paraglide/messages";
 import type { SessionUser } from "~/server/auth/functions";
 
 export async function logout() {
+  // Loaded on demand: the auth client (with WebAuthn) is large and only needed here.
+  const { authClient } = await import("~/lib/auth-client");
   await authClient.signOut();
   window.location.assign("/login");
 }

@@ -4,9 +4,18 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@ta
 import { createRouter } from "@tanstack/solid-router";
 import { currentCspNonce } from "./lib/csp-nonce";
 import { goToLogin, isSignedOutError } from "./lib/error-text";
+import { sessionQuery } from "./lib/session-query";
 import { routeTree } from "./routeTree.gen";
+import type { SessionUser } from "./server/auth/functions";
 
-export type RouterContext = { queryClient: QueryClient };
+export type RouterContext = {
+  queryClient: QueryClient;
+  /** Starts loading the code of these matches (the root's beforeLoad calls it). */
+  preloadRouteChunks: (matches: { routeId: string }[]) => void;
+};
+
+/** The router's own state handed from the server-rendered shell to the browser. */
+type Dehydrated = { session?: SessionUser | null };
 
 export function getRouter() {
   // One QueryClient per router (the server only builds one to render the shell).
@@ -25,9 +34,26 @@ export function getRouter() {
       },
     },
   });
+  // Route chunks load only after every beforeLoad has finished; starting them
+  // from the root's beforeLoad overlaps the download with the session check.
+  const preloadRouteChunks = (matches: { routeId: string }[]) => {
+    if (typeof window === "undefined") return;
+    for (const match of matches) {
+      const route = router.routesById[match.routeId as keyof typeof router.routesById];
+      // Errors surface (and are retried) when the router loads the chunk itself.
+      if (route) router.loadRouteChunk(route)?.catch(() => {});
+    }
+  };
   const router = createRouter({
     routeTree,
-    context: { queryClient } satisfies RouterContext,
+    context: { queryClient, preloadRouteChunks } satisfies RouterContext,
+    // The root's beforeLoad runs on the server (ssr "data-only"); hand its
+    // session result to the browser's Query cache as well.
+    dehydrate: (): Dehydrated => ({ session: queryClient.getQueryData(sessionQuery().queryKey) }),
+    hydrate: (data: Dehydrated) => {
+      if (data.session !== undefined)
+        queryClient.setQueryData(sessionQuery().queryKey, data.session);
+    },
     scrollRestoration: true,
     defaultPreload: "intent",
     // Loaders should read through queryClient.ensureQueryData; Query owns caching.

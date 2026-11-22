@@ -39,34 +39,8 @@ import {
 import { applyAttributeErrors } from "./item-form";
 import { LocationPicker, type Placement, placementInput } from "./location-picker";
 import { OwnerSelect, type OwnerValue } from "./owner-picker";
+import { useItemWrite } from "./use-item-write";
 import { VisibilityChoice } from "./visibility-choice";
-
-/** Runs an item write; reloads the item afterwards (and on a version conflict). */
-export function useItemWrite() {
-  const qc = useQueryClient();
-  const refresh = () =>
-    Promise.all([
-      qc.invalidateQueries({ queryKey: ["items"] }),
-      qc.invalidateQueries({ queryKey: ["locations"] }),
-    ]);
-  return async <T,>(
-    fn: () => Promise<T>,
-    opts: {
-      success?: string | ((r: T) => string);
-      onError?: (err: unknown) => boolean | undefined;
-    } = {},
-  ): Promise<T | undefined> => {
-    const r = await runAction(fn, {
-      success: opts.success,
-      onError: (err) => {
-        if (parseItemsError(err).code === "VERSION_CONFLICT") void refresh();
-        return opts.onError?.(err);
-      },
-    });
-    if (r !== undefined) await refresh();
-    return r;
-  };
-}
 
 function ActionDialog(props: {
   label: string;

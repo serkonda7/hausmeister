@@ -16,14 +16,23 @@ import { LocationTree } from "~/components/locations/location-tree";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { formatNumber } from "~/lib/format";
+import type { SearchItemsInput } from "~/lib/items/inputs";
 import { locationKindLabel } from "~/lib/items/labels";
-import { locationQuery } from "~/lib/items/queries";
+import { itemListQuery, locationQuery } from "~/lib/items/queries";
 import type { LocationDetail } from "~/lib/items/types";
 import { m } from "~/paraglide/messages";
+
+const contentsInput = (locationId: string): SearchItemsInput => ({
+  locationId,
+  locationScope: "direct",
+  sort: "name_asc",
+});
 
 export const Route = createFileRoute("/_authed/locations/$locationId")({
   loader: async ({ context, params }) => {
     if (params.locationId.length > 64) throw notFound();
+    // The contents list renders with the page; fetch it alongside the location.
+    void context.queryClient.prefetchInfiniteQuery(itemListQuery(contentsInput(params.locationId)));
     try {
       const d = await context.queryClient.ensureQueryData(locationQuery(params.locationId));
       return { name: d.name };
@@ -179,7 +188,7 @@ function LocationView(props: { loc: LocationDetail }) {
           </Show>
         </div>
         <ItemResults
-          input={{ locationId: l().id, locationScope: "direct", sort: "name_asc" }}
+          input={contentsInput(l().id)}
           view="list"
           label={m.locations_items_in({ name: l().name })}
           empty={<p class="text-sm text-muted-foreground">{m.locations_items_empty()}</p>}

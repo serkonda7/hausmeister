@@ -8,6 +8,7 @@ import { getLocationFn, listLocationsFn } from "~/server/locations/functions";
 import { searchFacetsFn, searchItemsFn } from "~/server/search/functions";
 import { listTagsFn } from "~/server/tags/functions";
 import type { SearchFilters, SearchItemsInput } from "./inputs";
+import type { HistoryPage } from "./types";
 
 export const itemSearchQuery = (input: SearchItemsInput) =>
   queryOptions({
@@ -43,10 +44,16 @@ export const itemGrantsQuery = (itemId: string) =>
     queryFn: () => listItemGrantsFn({ data: { itemId } }),
   });
 
-export const itemHistoryQuery = (itemId: string, cursor?: string) =>
-  queryOptions({
-    queryKey: ["items", "history", itemId, cursor ?? null],
-    queryFn: () => getItemHistoryFn({ data: { itemId, cursor } }),
+/** An item's history, newest first, 20 entries per page. */
+export const itemHistoryPagesQuery = (itemId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["items", "history-pages", itemId],
+    queryFn: ({ pageParam }) =>
+      getItemHistoryFn({
+        data: { itemId, limit: 20, ...(pageParam ? { cursor: pageParam } : {}) },
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: HistoryPage) => last.nextCursor,
   });
 
 export const locationsQuery = () =>

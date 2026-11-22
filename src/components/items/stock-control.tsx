@@ -17,7 +17,7 @@ import { STOCK_ADJUST_REASONS } from "~/lib/items/constants";
 import { stockReasonLabel } from "~/lib/items/labels";
 import { m } from "~/paraglide/messages";
 import { adjustStockFn } from "~/server/stock/functions";
-import { useItemWrite } from "./item-actions";
+import { useItemWrite } from "./use-item-write";
 
 type StockItem = {
   id: string;

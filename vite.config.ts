@@ -26,6 +26,12 @@ export default defineConfig({
                   name: "zod",
                   test: /[\\/]node_modules[\\/]zod[\\/]|[\\/]src[\\/]lib[\\/]zod-config\.ts$/,
                 },
+                // Paraglide emits one module per message, and every message shared by two routes became its own tiny chunk (dozens of requests per page).
+                // All German strings in one chunk instead: about 15 kB compressed, cached for good.
+                {
+                  name: "messages",
+                  test: /virtual:paraglide[\\/][^\\/]+[\\/]messages[\\/]/,
+                },
               ],
             },
           },
@@ -44,6 +50,8 @@ export default defineConfig({
     nitro({
       preset: "bun",
       plugins: ["./src/nitro/startup.ts"],
+      // Ships .br/.gz next to each asset; the server picks one by Accept-Encoding (Caddy passes encoded responses through).
+      compressPublicAssets: { gzip: true, brotli: true },
       ...(outDir ? { output: { dir: outDir }, buildDir: `${outDir}/.nitro` } : {}),
     }),
     viteSolid({ ssr: true }),

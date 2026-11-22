@@ -10,13 +10,19 @@ import type { RouterContext } from "~/router";
 import appCss from "~/styles/app.css?url";
 
 // SPA: the server renders only this shell (per request, so its scripts carry
-// the CSP nonce); every route, including this one's beforeLoad, runs in the
-// browser (`defaultSsr: false` in src/router.tsx).
+// the CSP nonce); every other route runs in the browser (`defaultSsr: false`
+// in src/start.ts). This route is `data-only`: its beforeLoad also runs on the
+// server, so the shell already carries the session and the browser skips that
+// round trip before it can load the page (src/router.tsx seeds the Query cache).
 export const Route = createRootRouteWithContext<RouterContext>()({
+  ssr: "data-only",
   // Every route can read `context.user` (SessionUser | null).
-  beforeLoad: async ({ context }) => ({
-    user: await context.queryClient.fetchQuery(sessionQuery()),
-  }),
+  beforeLoad: async ({ context, matches }) => {
+    // In-app navigations re-check a stale session first; fetch the matched
+    // routes' code meanwhile instead of after it.
+    context.preloadRouteChunks(matches);
+    return { user: await context.queryClient.fetchQuery(sessionQuery()) };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
