@@ -5,12 +5,10 @@ import { createSignal, For, type JSX, Show } from "solid-js";
 import { ItemResults } from "~/components/items/item-card";
 import { LoanListCard } from "~/components/loans/loan-actions";
 import { TransferCard } from "~/components/transfers/transfer";
-import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { inputClass } from "~/components/ui/input";
 import type { SearchItemsInput } from "~/lib/items/inputs";
 import { itemListQuery } from "~/lib/items/queries";
-import { roleLabel } from "~/lib/labels";
 import { loanOverviewQuery } from "~/lib/loans/queries";
 import type { LoanListRow } from "~/lib/loans/types";
 import { myProfileQuery } from "~/lib/session-query";
@@ -120,7 +118,6 @@ function Home() {
         <Show when={profile.data}>
           {(p) => (
             <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">{m.home_role({ role: roleLabel(p().role) })}</Badge>
               <span>
                 {p().groups.length
                   ? m.home_groups({ groups: p().groups.join(", ") })

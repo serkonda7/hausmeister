@@ -319,21 +319,6 @@ function TopBar(props: { user: SessionUser }) {
       </Link>
       <QuickSearch />
       <div class="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
-        <Show when={props.user.role !== "guest"}>
-          <Link
-            to="/items/new"
-            class={cn(
-              "inline-flex h-11 items-center gap-1.5 rounded-md px-3 text-sm font-semibold md:h-9",
-              "bg-primary-solid text-primary-solid-foreground hover:bg-primary-solid-hover",
-              focusRing,
-            )}
-            aria-label={m.nav_add_item()}
-            title={m.nav_add_item()}
-          >
-            <Icon name="plus" size={18} />
-            <span class="hidden lg:inline">{m.nav_add_short()}</span>
-          </Link>
-        </Show>
         <InboxLink />
         <UserMenu user={props.user} />
       </div>
