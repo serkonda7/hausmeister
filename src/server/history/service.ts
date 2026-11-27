@@ -26,6 +26,7 @@ import { atLeast, canSeeMoney, type Level } from '../authz'
 import type { AuthCtx } from '../authz/ctx'
 import type { AppDb } from '../db/client'
 import { attachments, type Event, events, groups, items, locations, users } from '../db/schema'
+import { decodeCursor, encodeCursor } from '../encoding'
 import { requireItem } from '../items/access'
 import { ItemsError, parseInput } from '../items/errors'
 import { visibleItemIds } from '../items/placement'
@@ -142,7 +143,7 @@ type Cursor = { at: number; id: string }
 
 function decode(raw: string): Cursor {
 	try {
-		const c = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Cursor
+		const c = decodeCursor(raw) as Cursor
 		if (typeof c?.at === 'number' && typeof c?.id === 'string') return c
 	} catch {
 		// fall through
@@ -179,12 +180,7 @@ export function getItemHistory(
 	const hasMore = rows.length > limit
 	const page = rows.slice(0, limit)
 	const last = page.at(-1)
-	const nextCursor =
-		hasMore && last
-			? Buffer.from(JSON.stringify({ at: last.at.getTime(), id: last.id })).toString(
-					'base64url',
-				)
-			: null
+	const nextCursor = hasMore && last ? encodeCursor({ at: last.at.getTime(), id: last.id }) : null
 
 	const receipts = canSeeMoney(level) ? new Set<string>() : receiptAttachmentIds(db, [item.id])
 	const entries: (HistoryEntry & { actorId: string | null })[] = []

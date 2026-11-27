@@ -73,6 +73,7 @@ import {
 	tags,
 	users,
 } from '../db/schema'
+import { decodeCursor as decodeJsonCursor, encodeCursor as encodeJsonCursor } from '../encoding'
 import { loadTypes } from '../item-types/service'
 import { ItemsError, parseInput } from '../items/errors'
 import { visibleItemIds } from '../items/placement'
@@ -360,12 +361,12 @@ function sortSpec(sort: ItemSort, ctx: AuthCtx): SortSpec {
 type Cursor = { s: ItemSort; k: (string | number | null)[] }
 
 function encodeCursor(c: Cursor): string {
-	return Buffer.from(JSON.stringify(c)).toString('base64url')
+	return encodeJsonCursor(c)
 }
 
 function decodeCursor(raw: string, sort: ItemSort, n: number): Cursor {
 	try {
-		const c = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Cursor
+		const c = decodeJsonCursor(raw) as Cursor
 		if (
 			c &&
 			c.s === sort &&

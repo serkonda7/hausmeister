@@ -13,6 +13,7 @@ import { visibleItemsWhere } from '../authz'
 import type { AuthCtx } from '../authz/ctx'
 import type { AppDb, DbOrTx } from '../db/client'
 import { groupMembers, type Item, itemGrants, items, notifications, users } from '../db/schema'
+import { decodeCursor, encodeCursor } from '../encoding'
 import { ItemsError, parseInput } from '../items/errors'
 
 type AudienceItem = Pick<Item, 'id' | 'ownerKind' | 'ownerId'>
@@ -146,10 +147,10 @@ const listInput = z.object({
 })
 
 type Cursor = { at: number; id: string }
-const encode = (c: Cursor) => Buffer.from(JSON.stringify(c)).toString('base64url')
+const encode = (c: Cursor) => encodeCursor(c)
 function decode(raw: string): Cursor {
 	try {
-		const c = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Cursor
+		const c = decodeCursor(raw) as Cursor
 		if (typeof c?.at === 'number' && typeof c?.id === 'string') return c
 	} catch {
 		// fall through

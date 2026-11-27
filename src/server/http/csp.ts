@@ -39,7 +39,7 @@ export function buildCsp(nonce: string): string {
 
 /** 16 random bytes, base64. */
 export function newNonce(): string {
-	return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64')
+	return crypto.getRandomValues(new Uint8Array(16)).toBase64()
 }
 
 const G = globalThis as unknown as { __hausmeisterCsp?: AsyncLocalStorage<string> }

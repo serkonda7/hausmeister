@@ -5,7 +5,6 @@
 // Writes are atomic (temp file, fsync, rename), so a reader never sees half a
 // file and a crash leaves at most a stale temp file (removed by the sweep).
 // Deleting blobs is the job of gc.ts, which checks references first.
-import { createHash } from 'node:crypto'
 import {
 	closeSync,
 	existsSync,
@@ -25,7 +24,7 @@ const SHA_RE = /^[0-9a-f]{64}$/
 export const isSha256 = (s: string) => SHA_RE.test(s)
 
 export function sha256Hex(bytes: Uint8Array): string {
-	return createHash('sha256').update(bytes).digest('hex')
+	return Bun.CryptoHasher.hash('sha256', bytes, 'hex')
 }
 
 export type BlobStore = ReturnType<typeof createBlobStore>

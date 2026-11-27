@@ -1,17 +1,16 @@
 // Streaming ZIP writer (PKWARE APPNOTE 6.3) with ZIP64, for exports larger than
-// 4 GiB (fflate's Zip has no ZIP64). Entries are written one after another:
+// 4 GiB. Entries are written one after another:
 // local header, data, data descriptor (CRC and sizes follow the data, so
 // nothing is buffered). Only the central directory (~100 bytes per entry) is
 // kept in memory until finish().
 //  - method 0 (stored) for files that are already compressed (photos, PDFs),
-//    method 8 (deflate, via fflate's streaming Deflate) for JSON/CSV/text.
+//    method 8 (raw deflate, via the web CompressionStream) for JSON/CSV/text.
 //  - names are UTF-8 (flag bit 11), times are Europe/Berlin DOS times plus a
 //    UTC "extended timestamp" extra field.
 //  - an entry gets a ZIP64 local header when its known size is >= 4 GiB (or
 //    when forced); the central directory and end record switch to ZIP64 as
 //    soon as an offset, size or the entry count overflows.
 import { crc32 } from 'node:zlib'
-import { Deflate } from 'fflate'
 
 const MAX32 = 0xffffffff
 const MAX16 = 0xffff
@@ -185,16 +184,32 @@ export class ZipWriter {
 		let crc = 0
 		let size = 0
 		let compressed = 0
-		let pending: Uint8Array[] = []
-		const deflate = method === 8 ? new Deflate({ level: 6 }) : null
-		if (deflate) deflate.ondata = (chunk) => pending.push(chunk)
-		const drain = async () => {
-			const list = pending
-			pending = []
-			for (const c of list) {
-				compressed += c.length
-				await this.emit(c)
-			}
+		// Deflated entries: chunks go into the compressor's writable side and a
+		// pump moves its output to `emit`, so the export's backpressure reaches
+		// the writer. If emitting fails (client gone), cancelling the readable
+		// errors the writable, so the pending write or close rejects too.
+		let deflate: WritableStreamDefaultWriter<BufferSource> | null = null
+		let pump: Promise<void> = Promise.resolve()
+		if (method === 8) {
+			const cs = new CompressionStream('deflate-raw')
+			deflate = cs.writable.getWriter()
+			const reader = cs.readable.getReader()
+			pump = (async () => {
+				try {
+					for (;;) {
+						const { done, value } = await reader.read()
+						if (done) return
+						compressed += value.length
+						await this.emit(value)
+					}
+				} catch (err) {
+					await reader.cancel(err).catch(() => {})
+					throw err
+				}
+			})()
+			// Seen by write()/close(); this only keeps an abandoned entry from
+			// raising an unhandled rejection.
+			pump.catch(() => {})
 		}
 
 		return {
@@ -203,8 +218,8 @@ export class ZipWriter {
 				crc = crc32(data, crc)
 				size += data.length
 				if (deflate) {
-					deflate.push(data, false)
-					await drain()
+					// DOM typings want an ArrayBuffer-backed view; callers never pass shared memory.
+					await deflate.write(data as Uint8Array<ArrayBuffer>)
 				} else {
 					compressed += data.length
 					await this.emit(data)
@@ -212,8 +227,8 @@ export class ZipWriter {
 			},
 			close: async () => {
 				if (deflate) {
-					deflate.push(new Uint8Array(0), true)
-					await drain()
+					await deflate.close()
+					await pump
 				}
 				if (!localZip64 && (size >= MAX32 || compressed >= MAX32))
 					throw new Error(`zip: ${path} exceeds 4 GiB without a ZIP64 header`)
