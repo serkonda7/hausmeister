@@ -1,11 +1,11 @@
 const STRINGS = {
-  connected: "connected",
-  offline: "not connected to tailscale VPN",
-  copy: "Copy",
-  copied: "Copied",
-  copyFailed: "Copy failed — select the URL manually",
-  empty: "No services configured.",
-  loadError: "Could not load services.json (open this page over HTTP/HTTPS, not as a file).",
+  connected: "verbunden",
+  offline: "nicht mit Tailscale VPN verbunden",
+  copy: "Kopieren",
+  copied: "Kopiert",
+  copyFailed: "Kopieren fehlgeschlagen — URL manuell auswählen",
+  empty: "Keine Dienste konfiguriert.",
+  loadError: "Konnte services.json nicht laden (öffne diese Seite über HTTP/HTTPS, nicht als Datei).",
 };
 
 const status = document.getElementById("status");
