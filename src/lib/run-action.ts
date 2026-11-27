@@ -1,7 +1,7 @@
-import { attachmentErrorText } from "~/components/attachments/errors";
-import { showToast } from "~/components/ui/toast";
-import { errorCode, errorText, goToLogin, isSignedOutError } from "./error-text";
-import { itemsErrorText, parseItemsError } from "./items/errors";
+import { attachmentErrorText } from '~/components/attachments/errors'
+import { showToast } from '~/components/ui/toast'
+import { errorCode, errorText, goToLogin, isSignedOutError } from './error-text'
+import { itemsErrorText, parseItemsError } from './items/errors'
 
 /**
  * German text for any error a server function or upload can throw: item,
@@ -9,9 +9,9 @@ import { itemsErrorText, parseItemsError } from "./items/errors";
  * attachment codes (ATTACHMENTS_*), then the app-wide codes (error-text.ts).
  */
 export function actionErrorText(err: unknown): string {
-  if (parseItemsError(err).code) return itemsErrorText(err);
-  if (errorCode(err)?.startsWith("ATTACHMENTS_")) return attachmentErrorText(err);
-  return errorText(err);
+	if (parseItemsError(err).code) return itemsErrorText(err)
+	if (errorCode(err)?.startsWith('ATTACHMENTS_')) return attachmentErrorText(err)
+	return errorText(err)
 }
 
 /**
@@ -22,24 +22,24 @@ export function actionErrorText(err: unknown): string {
  * return true from it to skip the toast.
  */
 export async function runAction<T>(
-  fn: () => Promise<T>,
-  opts: {
-    success?: string | ((r: T) => string);
-    onError?: (err: unknown) => boolean | undefined;
-  } = {},
+	fn: () => Promise<T>,
+	opts: {
+		success?: string | ((r: T) => string)
+		onError?: (err: unknown) => boolean | undefined
+	} = {},
 ): Promise<T | undefined> {
-  try {
-    const r = await fn();
-    const s = typeof opts.success === "function" ? opts.success(r) : opts.success;
-    if (s) showToast({ title: s, variant: "success" });
-    return r;
-  } catch (err) {
-    if (isSignedOutError(err)) {
-      goToLogin();
-      return undefined;
-    }
-    if (opts.onError?.(err) === true) return undefined;
-    showToast({ title: actionErrorText(err), variant: "error" });
-    return undefined;
-  }
+	try {
+		const r = await fn()
+		const s = typeof opts.success === 'function' ? opts.success(r) : opts.success
+		if (s) showToast({ title: s, variant: 'success' })
+		return r
+	} catch (err) {
+		if (isSignedOutError(err)) {
+			goToLogin()
+			return undefined
+		}
+		if (opts.onError?.(err) === true) return undefined
+		showToast({ title: actionErrorText(err), variant: 'error' })
+		return undefined
+	}
 }

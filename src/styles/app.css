@@ -5,151 +5,152 @@
    `primary` is the readable green for text, borders and rings;
    `primary-solid` fills buttons and chips (white text on it). */
 :root {
-  color-scheme: dark;
-  --background: #1b1c1f;
-  --foreground: #f5f5f5;
-  --muted: #2c2e33;
-  --muted-foreground: #a3a6ab;
-  --card: #232528;
-  --card-foreground: var(--foreground);
-  --popover: #2c2e33;
-  --popover-foreground: var(--foreground);
-  --primary: #08bf08;
-  --primary-foreground: #1b1c1f;
-  --primary-solid: #047a04;
-  --primary-solid-hover: #036a03;
-  --primary-solid-foreground: #ffffff;
-  /* Hover and current-page fill in the navigation. */
-  --primary-tint: #1e3722;
-  --secondary: #2c2e33;
-  --secondary-foreground: var(--foreground);
-  --accent: #33363b;
-  --accent-foreground: var(--foreground);
-  --destructive: #e5806b;
-  --destructive-foreground: #1b1c1f;
-  --success: #5be584;
-  --border: #3b3e44;
-  --input: #74777e;
-  --ring: #08bf08;
-  --radius: 0.4rem;
-  /* App shell (src/components/app-shell.tsx): top bar height and sidebar widths. */
-  --topbar-height: 3.5rem;
-  --sidebar-width: 14rem;
-  --sidebar-rail-width: 4rem;
+	color-scheme: dark;
+	--background: #1b1c1f;
+	--foreground: #f5f5f5;
+	--muted: #2c2e33;
+	--muted-foreground: #a3a6ab;
+	--card: #232528;
+	--card-foreground: var(--foreground);
+	--popover: #2c2e33;
+	--popover-foreground: var(--foreground);
+	--primary: #08bf08;
+	--primary-foreground: #1b1c1f;
+	--primary-solid: #047a04;
+	--primary-solid-hover: #036a03;
+	--primary-solid-foreground: #ffffff;
+	/* Hover and current-page fill in the navigation. */
+	--primary-tint: #1e3722;
+	--secondary: #2c2e33;
+	--secondary-foreground: var(--foreground);
+	--accent: #33363b;
+	--accent-foreground: var(--foreground);
+	--destructive: #e5806b;
+	--destructive-foreground: #1b1c1f;
+	--success: #5be584;
+	--border: #3b3e44;
+	--input: #74777e;
+	--ring: #08bf08;
+	--radius: 0.4rem;
+	/* App shell (src/components/app-shell.tsx): top bar height and sidebar widths. */
+	--topbar-height: 3.5rem;
+	--sidebar-width: 14rem;
+	--sidebar-rail-width: 4rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary-solid: var(--primary-solid);
-  --color-primary-solid-hover: var(--primary-solid-hover);
-  --color-primary-solid-foreground: var(--primary-solid-foreground);
-  --color-primary-tint: var(--primary-tint);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary-solid: var(--primary-solid);
+	--color-primary-solid-hover: var(--primary-solid-hover);
+	--color-primary-solid-foreground: var(--primary-solid-foreground);
+	--color-primary-tint: var(--primary-tint);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-success: var(--success);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-    /* Tailwind's ring offset defaults to white; match the dark page instead. */
-    --tw-ring-offset-color: var(--color-background);
-  }
-  body {
-    background: var(--color-background);
-    color: var(--color-foreground);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    -webkit-tap-highlight-color: transparent;
-  }
+	* {
+		border-color: var(--color-border);
+		/* Tailwind's ring offset defaults to white; match the dark page instead. */
+		--tw-ring-offset-color: var(--color-background);
+	}
+	body {
+		background: var(--color-background);
+		color: var(--color-foreground);
+		font-family:
+			system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+		-webkit-tap-highlight-color: transparent;
+	}
 }
 
 /* Loading notice of the server-rendered shell, until the app has started. */
 .boot-splash {
-  display: grid;
-  place-items: center;
-  min-height: 100dvh;
-  color: var(--color-muted-foreground);
+	display: grid;
+	place-items: center;
+	min-height: 100dvh;
+	color: var(--color-muted-foreground);
 }
 html[data-hydrated] .boot-splash {
-  display: none;
+	display: none;
 }
 
 /* Kobalte exposes open/closed state via data attributes; keep transitions subtle. */
 @keyframes hm-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 @keyframes hm-zoom-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+	from {
+		opacity: 0;
+		transform: scale(0.96);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
 }
 @keyframes hm-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.5rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+	from {
+		opacity: 0;
+		transform: translateY(0.5rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 @keyframes hm-drawer-in {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(0);
+	}
 }
 .hm-animate-drawer[data-expanded] {
-  animation: hm-drawer-in 180ms ease-out;
+	animation: hm-drawer-in 180ms ease-out;
 }
 .hm-animate-fade[data-expanded] {
-  animation: hm-fade-in 150ms ease-out;
+	animation: hm-fade-in 150ms ease-out;
 }
 .hm-animate-zoom[data-expanded] {
-  animation: hm-zoom-in 150ms ease-out;
+	animation: hm-zoom-in 150ms ease-out;
 }
 .hm-animate-slide[data-opened] {
-  animation: hm-slide-in 150ms ease-out;
+	animation: hm-slide-in 150ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
-  .hm-animate-fade,
-  .hm-animate-zoom,
-  .hm-animate-slide,
-  .hm-animate-drawer {
-    animation: none;
-  }
+	.hm-animate-fade,
+	.hm-animate-zoom,
+	.hm-animate-slide,
+	.hm-animate-drawer {
+		animation: none;
+	}
 }
 
 /* Label sheets (src/routes/_authed/labels.tsx). Named pages give each format
@@ -157,36 +158,36 @@ html[data-hydrated] .boot-splash {
    35.6 × 16.9 mm, 13.3 mm top and 11 mm side margins) and 62 × 29 mm
    thermal labels (one label per page). */
 @page labels-a4 {
-  size: A4 portrait;
-  margin: 0;
+	size: A4 portrait;
+	margin: 0;
 }
 @page labels-thermal {
-  size: 62mm 29mm;
-  margin: 0;
+	size: 62mm 29mm;
+	margin: 0;
 }
 .label-sheet-a4 {
-  page: labels-a4;
-  width: 210mm;
-  height: 297mm;
-  padding: 13.3mm 11mm 0;
-  display: grid;
-  grid-template-columns: repeat(5, 35.6mm);
-  grid-auto-rows: 16.9mm;
-  column-gap: 2.5mm;
-  align-content: start;
-  break-after: page;
+	page: labels-a4;
+	width: 210mm;
+	height: 297mm;
+	padding: 13.3mm 11mm 0;
+	display: grid;
+	grid-template-columns: repeat(5, 35.6mm);
+	grid-auto-rows: 16.9mm;
+	column-gap: 2.5mm;
+	align-content: start;
+	break-after: page;
 }
 .label-sheet-thermal {
-  page: labels-thermal;
-  width: 62mm;
-  height: 29mm;
-  break-after: page;
+	page: labels-thermal;
+	width: 62mm;
+	height: 29mm;
+	break-after: page;
 }
 @media print {
-  /* Paper is white: the dark tokens flip for printing. */
-  :root {
-    --background: #fff;
-    --foreground: #000;
-    --card: #fff;
-  }
+	/* Paper is white: the dark tokens flip for printing. */
+	:root {
+		--background: #fff;
+		--foreground: #000;
+		--card: #fff;
+	}
 }

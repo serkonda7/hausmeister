@@ -1,108 +1,108 @@
 :root {
-  color-scheme: light dark;
+	color-scheme: light dark;
 }
 
 * {
-  box-sizing: border-box;
+	box-sizing: border-box;
 }
 
 body {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 2rem 1rem 4rem;
-  font-family: system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #222;
-  background: #fafafa;
+	max-width: 48rem;
+	margin: 0 auto;
+	padding: 2rem 1rem 4rem;
+	font-family: system-ui, sans-serif;
+	font-size: 16px;
+	line-height: 1.5;
+	color: #222;
+	background: #fafafa;
 }
 
 .status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
 }
 
 .dot {
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 50%;
+	width: 0.7rem;
+	height: 0.7rem;
+	border-radius: 50%;
 }
 
 .is-online {
-  color: #2e7d32;
+	color: #2e7d32;
 }
 
 .is-offline {
-  color: #c62828;
+	color: #c62828;
 }
 
 .is-online .dot {
-  background: #2e7d32;
+	background: #2e7d32;
 }
 
 .is-offline .dot {
-  background: #c62828;
+	background: #c62828;
 }
 
 ul {
-  display: grid;
-  gap: 1rem;
-  margin: 2rem 0 0;
-  padding: 0;
-  list-style: none;
+	display: grid;
+	gap: 1rem;
+	margin: 2rem 0 0;
+	padding: 0;
+	list-style: none;
 }
 
 .card {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 1rem;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	padding: 1rem;
 }
 
 .card .name {
-  font-weight: 600;
+	font-weight: 600;
 }
 
 .url-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
 }
 
 code {
-  flex: 1;
-  overflow-wrap: anywhere;
-  font-size: 0.9em;
-  color: #555;
+	flex: 1;
+	overflow-wrap: anywhere;
+	font-size: 0.9em;
+	color: #555;
 }
 
 button {
-  flex: none;
-  padding: 0.35rem 0.8rem;
-  font: inherit;
-  cursor: pointer;
+	flex: none;
+	padding: 0.35rem 0.8rem;
+	font: inherit;
+	cursor: pointer;
 }
 
 @media (prefers-color-scheme: dark) {
-  body {
-    color: #eee;
-    background: #161616;
-  }
+	body {
+		color: #eee;
+		background: #161616;
+	}
 
-  code {
-    color: #aaa;
-  }
+	code {
+		color: #aaa;
+	}
 
-  .is-online {
-    color: #66bb6a;
-  }
+	.is-online {
+		color: #66bb6a;
+	}
 
-  .is-offline {
-    color: #ef5350;
-  }
+	.is-offline {
+		color: #ef5350;
+	}
 
-  .card {
-    border-color: #444;
-  }
+	.card {
+		border-color: #444;
+	}
 }

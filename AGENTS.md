@@ -11,7 +11,7 @@ Hausmeister: self-hosted family asset manager. Read DESIGN.md first. Bun 1.4, Ta
 - `src/server.ts` is the server entry (CSRF check, security headers). `src/nitro/startup.ts` validates env and migrates at process start.
 
 ## Commands
-`bun run dev` · `build` · `start` · `check` (= `lint` + `typecheck`) · `format` (Biome, writes) · `db:generate` (after schema edits) · `gen` (route tree + Paraglide; `typecheck` runs it first) · `create-admin-invite`. The project has no automated tests.
+`bun run dev` · `build` · `start` · `lint` (Biome, writes fixes) · `lint:ci` (Biome, read-only) · `check` (= `lint:ci` + `typecheck`) · `db:generate` (after schema edits) · `gen` (route tree + Paraglide; `typecheck` runs it first) · `create-admin-invite`. The project has no automated tests.
 
 ## Conventions
 - English code, identifiers and comments. Every user-facing string goes in `messages/de.json`, never inline.

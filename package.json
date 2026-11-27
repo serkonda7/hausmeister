@@ -11,10 +11,10 @@
     "create-admin-invite": "bun run scripts/create-admin-invite.ts",
     "gen": "bun run i18n && bun run scripts/gen.ts",
     "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy baseLocale --silent",
-    "lint": "biome check .",
-    "format": "biome check --write .",
+    "lint": "biome check --write",
+    "lint:ci": "biome ci",
     "typecheck": "bun run gen && tsc --noEmit",
-    "check": "bun run lint && bun run typecheck",
+    "check": "bun run lint:ci && bun run typecheck",
     "db:generate": "bun --bun drizzle-kit generate",
     "restore-test": "bash deploy/restore-test.sh",
     "check-tailnet": "bash deploy/check-tailnet.sh"

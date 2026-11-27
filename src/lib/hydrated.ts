@@ -3,5 +3,5 @@
 
 /** Marks the document as started (called once from the root shell). */
 export function markHydrated() {
-  document.documentElement.setAttribute("data-hydrated", "");
+	document.documentElement.setAttribute('data-hydrated', '')
 }

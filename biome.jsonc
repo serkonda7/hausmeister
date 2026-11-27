@@ -6,35 +6,19 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "**",
-      "!src/routeTree.gen.ts",
-      "!src/paraglide",
-      "!drizzle/meta",
-      "!.output",
-      "!.nitro",
-      "!.tanstack"
-    ]
+    "includes": ["**", "!**/*.md", "!**/*.svg", "!drizzle"]
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 100,
-    "includes": ["**", "!**/*.md"]
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double",
-      "semicolons": "always",
-      "trailingCommas": "all"
-    }
+    "useEditorconfig": true,
+    "lineWidth": 100
   },
   "linter": {
     "enabled": true,
     "rules": {
       "preset": "recommended",
       "style": {
+        "noDescendingSpecificity": "off",
         "noNonNullAssertion": "off"
       }
     }
@@ -46,9 +30,24 @@
       }
     }
   },
+  "javascript": {
+    "formatter": {
+      "semicolons": "asNeeded",
+      "trailingCommas": "all",
+      "quoteStyle": "single"
+    }
+  },
+  "html": {
+    "formatter": {
+      "enabled": true
+    }
+  },
   "css": {
     "parser": {
       "tailwindDirectives": true
+    },
+    "formatter": {
+      "enabled": true
     }
   }
 }
